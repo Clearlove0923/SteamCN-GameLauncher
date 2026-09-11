@@ -57,3 +57,43 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+procedure RemoveObsoleteLanguageDirectories;
+var
+  FindRec: TFindRec;
+  DirectoryName: String;
+  DirectoryPath: String;
+  NormalizedName: String;
+begin
+  { Upgrading an older installation does not automatically remove resource
+    directories that are absent from the new package. Identify WinUI language
+    directories by their MUI payload so user-created folders remain untouched. }
+  if not FindFirst(ExpandConstant('{app}\*'), FindRec) then
+    Exit;
+
+  try
+    repeat
+      DirectoryName := FindRec.Name;
+      DirectoryPath := AddBackslash(ExpandConstant('{app}')) + DirectoryName;
+      NormalizedName := Lowercase(DirectoryName);
+
+      if (DirectoryName <> '.') and (DirectoryName <> '..') and
+         DirExists(DirectoryPath) and
+         (NormalizedName <> 'zh-cn') and (NormalizedName <> 'en-us') and
+         (FileExists(AddBackslash(DirectoryPath) + 'Microsoft.ui.xaml.dll.mui') or
+          FileExists(AddBackslash(DirectoryPath) + 'Microsoft.UI.Xaml.Phone.dll.mui')) then
+      begin
+        DelTree(DirectoryPath, True, True, True);
+      end;
+    until not FindNext(FindRec);
+  finally
+    FindClose(FindRec);
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssInstall then
+    RemoveObsoleteLanguageDirectories;
+end;
