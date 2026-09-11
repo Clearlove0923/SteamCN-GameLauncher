@@ -3,7 +3,7 @@ param([string]$InnoCompiler)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $repoRoot 'SteamCN-GameLaunchAssistant.csproj'
+$projectPath = Join-Path $repoRoot 'SteamCN-GameLauncher.csproj'
 $release = Get-Content -LiteralPath (Join-Path $repoRoot 'version.json') -Raw | ConvertFrom-Json
 $version = $release.version
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Release version must be major.minor.patch.' }
@@ -50,7 +50,7 @@ foreach ($required in @("$assemblyName.exe", "$assemblyName.dll", "$assemblyName
 }
 Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $publishDir
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\languages\LICENSE.txt') -Destination (Join-Path $publishDir 'Inno-Chinese-Translation-LICENSE.txt')
-& $InnoCompiler "/DMyAppVersion=$version" "/DSourceDir=$publishDir" "/O$runRoot" (Join-Path $repoRoot 'SteamCN-GameLaunchAssistant.iss')
+& $InnoCompiler "/DMyAppVersion=$version" "/DSourceDir=$publishDir" "/O$runRoot" (Join-Path $repoRoot 'SteamCN-GameLauncher.iss')
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
 $installer = Join-Path $runRoot "$assemblyName-v$version-win-x64-setup.exe"
 if (-not (Test-Path -LiteralPath $installer)) { throw 'Installer was not produced.' }

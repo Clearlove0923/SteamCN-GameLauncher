@@ -13,7 +13,7 @@ internal static class Program
 
     private static readonly string EarlyCrashLogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SteamCN-GameLaunchAssistant",
+        "SteamCN-GameLauncher",
         "logs",
         "early-startup.log");
 

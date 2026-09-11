@@ -53,7 +53,7 @@ public class LogService
         {
             var fallback = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SteamCN-GameLaunchAssistant", "logs");
+                "SteamCN-GameLauncher", "logs");
             Directory.CreateDirectory(fallback);
             return fallback;
         }

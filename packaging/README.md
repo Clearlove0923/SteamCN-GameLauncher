@@ -13,7 +13,7 @@
 每次构建使用独立的 `Output/v<版本>-<随机标识>/` 目录，生成：
 
 - `publish/`：自包含 .NET 和 Windows App SDK 的 Windows x64 程序。
-- `SteamCN-GameLaunchAssistant-v<版本>-win-x64-setup.exe`：简体中文、英文安装包。
+- `SteamCN-GameLauncher-v<版本>-win-x64-setup.exe`：简体中文、英文安装包。
 - `SHA256SUMS.txt`：安装包校验值。
 
 脚本只构建本地产物；提交、打标签和上传 GitHub Release 单独进行。发布文件不包含 PDB 或日志，安装器包含完整发布目录以避免手写 DLL 清单漏项。
@@ -22,7 +22,7 @@
 
 ## 独立安装
 
-安装器使用本项目独立的 AppId，默认目录为 `SteamCN-GameLaunchAssistant`，不会与其他项目建立升级或卸载关系。
+安装器使用本项目独立的 AppId，默认目录为 `SteamCN-GameLauncher`，不会与其他项目建立升级或卸载关系。
 
 配置目录为 `%APPDATA%/SteamCN-GameLauncher`，单实例互斥标识为 `SteamCN-GameLauncher`。项目源码命名空间使用合法 C# 标识符 `SteamCNGameLaunchAssistant`，产物使用带连字符的名称。
 

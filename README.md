@@ -1,4 +1,4 @@
-# SteamCN-GameLaunchAssistant
+# SteamCN-GameLauncher
 不用下载国际服，不用繁琐的配置流程，只需几步即可在steam游玩国服二游并且享受steam的相关功能
 
 ## 主要功能

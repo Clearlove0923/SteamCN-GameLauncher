@@ -239,7 +239,7 @@
 
                         <!-- 应用图标区 -->
                         <Border Width="64" Height="64" CornerRadius="12">
-                            <Image Source="ms-appx:///Assets/Icons/SteamCN-GameLaunchAssistant.ico"
+                            <Image Source="ms-appx:///Assets/Icons/SteamCN-GameLauncher.ico"
                                    Stretch="Uniform"/>
                         </Border>
 

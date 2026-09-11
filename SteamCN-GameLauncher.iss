@@ -1,4 +1,4 @@
-﻿; Build through scripts/Publish-Release.ps1.
+; Build through scripts/Publish-Release.ps1.
 #ifndef MyAppVersion
   #error MyAppVersion must be supplied by the release script
 #endif
@@ -6,7 +6,7 @@
   #error SourceDir must be supplied by the release script
 #endif
 #define MyAppName "Steam国服游戏启动助手"
-#define MyAppIdName "SteamCN-GameLaunchAssistant"
+#define MyAppIdName "SteamCN-GameLauncher"
 #define MyAppExeName MyAppIdName + ".exe"
 #define MyAppURL "https://github.com/Violet0923/SteamCN-GameLauncher"
 
@@ -29,7 +29,7 @@ OutputBaseFilename={#MyAppIdName}-v{#MyAppVersion}-win-x64-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern windows11
-SetupIconFile=Assets\Icons\SteamCN-GameLaunchAssistant.ico
+SetupIconFile=Assets\Icons\SteamCN-GameLauncher.ico
 CloseApplications=yes
 RestartApplications=no
 

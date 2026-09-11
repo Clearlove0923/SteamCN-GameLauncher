@@ -100,7 +100,7 @@ public sealed partial class MainWindow : Window
 
         _appWindow.Title = AppInfo.WindowTitle;
 
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "SteamCN-GameLaunchAssistant.ico");
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "SteamCN-GameLauncher.ico");
         if (File.Exists(iconPath))
         {
             _appWindow.SetIcon(iconPath);

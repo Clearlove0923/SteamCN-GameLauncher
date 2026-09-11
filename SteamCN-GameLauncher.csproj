@@ -4,7 +4,7 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>SteamCNGameLaunchAssistant</RootNamespace>
-    <AssemblyName>SteamCN-GameLaunchAssistant</AssemblyName>
+    <AssemblyName>SteamCN-GameLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
@@ -17,7 +17,7 @@
     <AssemblyTitle>Steam国服游戏启动助手</AssemblyTitle>
     <Description>在 Steam 库中添加和管理国服游戏的启动配置</Description>
     <Company>Violet0923</Company>
-    <ApplicationIcon>Assets\Icons\SteamCN-GameLaunchAssistant.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\Icons\SteamCN-GameLauncher.ico</ApplicationIcon>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
 	<WindowsPackageType>None</WindowsPackageType>
   </PropertyGroup>
@@ -34,7 +34,7 @@
     <Page Remove="Output\**" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="SteamCN-GameLaunchAssistant.iss" />
+    <None Remove="SteamCN-GameLauncher.iss" />
   </ItemGroup>
 
   <ItemGroup>
@@ -60,7 +60,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Assets\Icons\SteamCN-GameLaunchAssistant.ico">
+    <None Update="Assets\Icons\SteamCN-GameLauncher.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

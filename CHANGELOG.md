@@ -29,7 +29,7 @@ Steam国服游戏启动助手 — 版本更新记录
 
 ## v2.5.0 (2026-09-04)
 
-- 项目、命名空间、程序 EXE 和安装包统一使用 SteamCN-GameLaunchAssistant；中文显示名称为「Steam国服游戏启动助手」。
+- 项目、命名空间、程序 EXE 和安装包统一使用 SteamCN-GameLauncher；中文显示名称为「Steam国服游戏启动助手」。
 - 正式及预览更新检查、项目和问题反馈链接改为本 fork，保留历史配置目录和安装器标识以支持升级。
 - 增加可重复运行的发布脚本，校验版本一致性、打包自包含运行库并生成 SHA-256 校验文件；安装器自动包含新增依赖。
 
@@ -122,7 +122,7 @@ v2.0.0 是对鸣潮 Steam 助手的完整重写，从底层框架到界面设计
 - 采用 **NavigationView 侧边栏导航**，主内容区与导航分离
 - 顶部标题栏统一显示应用名称
 - 所有卡片使用 `CardBackgroundFillColorDefaultBrush` 主题色，自动适配深色 / 浅色模式
-- 应用图标统一为 `SteamCN-GameLaunchAssistant.ico`
+- 应用图标统一为 `SteamCN-GameLauncher.ico`
 
 ---
 

@@ -10,7 +10,7 @@ public partial class App : Application
     public static Window MainWindow { get; private set; } = null!;
     private static readonly string CrashLogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SteamCN-GameLaunchAssistant",
+        "SteamCN-GameLauncher",
         "logs",
         "startup-crash.log");
     private static readonly string CrashLogFallbackPath = Path.Combine(
