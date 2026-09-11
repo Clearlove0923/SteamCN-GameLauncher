@@ -1,0 +1,11 @@
+{
+  "version": "2.6.1",
+  "releaseDate": "2026-09-11",
+  "availableAfter": "2026-09-11T00:00:00+08:00",
+  "message": "新增一键更新：自动获取游戏信息并安全覆盖 ACF；原配置按 AppID 备份到安装目录，最多保留 2 份且最长 30 天。",
+  "downloadUrl": {
+    "domestic": "https://github.com/Violet0923/SteamCN-GameLauncher/releases/latest",
+    "global": "https://github.com/Violet0923/SteamCN-GameLauncher/releases/latest"
+  },
+  "forceUpdate": false
+}

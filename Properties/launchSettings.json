@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SteamCN-GameLaunchAssistant (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SteamCN-GameLaunchAssistant (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
