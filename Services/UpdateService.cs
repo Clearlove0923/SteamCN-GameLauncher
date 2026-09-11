@@ -26,12 +26,10 @@ public sealed class UpdateService
     private const string GitHubProbeUrl =
         "https://raw.githubusercontent.com/Violet0923/SteamCN-GameLauncher/master/version.json";
 
-    // ── 测试版渠道地址 ────────────────────────────────────────────────────────
-    private const string BetaRawUrl =
-        "https://raw.githubusercontent.com/Violet0923/SteamCN-GameLauncher/master-preview/version.json";
-
-    private const string BetaMirrorUrl =
-        "https://ghfast.top/https://raw.githubusercontent.com/Violet0923/SteamCN-GameLauncher/master-preview/version.json";
+    // 独立仓库当前只保留 master；创建新的预览分支前，测试版渠道复用正式元数据，
+    // 避免请求不存在的分支。后续启用预览发布时只需在这里切换地址。
+    private const string BetaRawUrl = GitHubRawUrl;
+    private const string BetaMirrorUrl = MirrorRawUrl;
 
     // ── Debug 模式本地地址 ────────────────────────────────────────────────────
     private const string DebugLocalUrl = "http://127.0.0.1:9090/version.json";
