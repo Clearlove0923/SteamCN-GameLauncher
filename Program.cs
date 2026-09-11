@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
-namespace SteamCNGameLaunchAssistant;
+namespace SteamCNGameLauncher;
 
 internal static class Program
 {

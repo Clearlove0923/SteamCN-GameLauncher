@@ -1,6 +1,6 @@
 using System.Net;
-using SteamCNGameLaunchAssistant.Models;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Services;
 
 // Dependency-free regression runner: dotnet run --project Tests/SteamAppInfo.Tests
 var checks = 0;

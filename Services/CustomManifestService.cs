@@ -1,6 +1,6 @@
-using SteamCNGameLaunchAssistant.Models;
+using SteamCNGameLauncher.Models;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 /// <summary>
 /// 集中管理自定义 Manifest 配置，确保侧边栏和编辑页使用同一份持久化数据。

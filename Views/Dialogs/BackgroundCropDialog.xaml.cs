@@ -3,10 +3,10 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Windows.Foundation;
-using SteamCNGameLaunchAssistant.Models;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Services;
 
-namespace SteamCNGameLaunchAssistant.Views.Dialogs;
+namespace SteamCNGameLauncher.Views.Dialogs;
 
 /// <summary>固定输出画布，Viewbox 仅缩放预览显示，不改变保存的裁切坐标。</summary>
 public sealed partial class BackgroundCropDialog : ContentDialog

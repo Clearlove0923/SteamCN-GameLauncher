@@ -4,10 +4,10 @@ using Microsoft.UI.Xaml.Navigation;
 using System.Collections.Specialized;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage.Pickers;
-using SteamCNGameLaunchAssistant.Models;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Services;
 
-namespace SteamCNGameLaunchAssistant.Views.Pages;
+namespace SteamCNGameLauncher.Views.Pages;
 
 public sealed partial class CustomManifestPage : Page
 {

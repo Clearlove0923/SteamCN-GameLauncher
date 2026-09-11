@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-namespace SteamCNGameLaunchAssistant.Views.Pages;
+namespace SteamCNGameLauncher.Views.Pages;
 
 public sealed partial class EmptyGameLibraryPage : Page
 {

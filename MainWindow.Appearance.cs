@@ -2,9 +2,9 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Services;
 
-namespace SteamCNGameLaunchAssistant;
+namespace SteamCNGameLauncher;
 
 public sealed partial class MainWindow
 {

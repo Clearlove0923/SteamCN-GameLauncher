@@ -3,10 +3,10 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
 using Windows.UI;
-using SteamCNGameLaunchAssistant.Models;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Services;
 
-namespace SteamCNGameLaunchAssistant;
+namespace SteamCNGameLauncher;
 
 public sealed partial class MainWindow : Window
 {

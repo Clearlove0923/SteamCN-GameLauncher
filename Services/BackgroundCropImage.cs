@@ -3,7 +3,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 /// <summary>为预览与导出提供同一份已校正 EXIF 方向的预乘 BGRA 像素。</summary>
 public sealed class BackgroundCropImage

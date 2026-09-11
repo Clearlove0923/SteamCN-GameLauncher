@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
-using SteamCNGameLaunchAssistant.Models;
+using SteamCNGameLauncher.Models;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 public interface ISteamAppInfoService
 {

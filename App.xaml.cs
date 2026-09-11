@@ -1,9 +1,9 @@
 using Microsoft.UI.Xaml;
 using System.Runtime.InteropServices;
 using System.Text;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Services;
 
-namespace SteamCNGameLaunchAssistant;
+namespace SteamCNGameLauncher;
 
 public partial class App : Application
 {

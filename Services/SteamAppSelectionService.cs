@@ -1,6 +1,6 @@
-using SteamCNGameLaunchAssistant.Models;
+using SteamCNGameLauncher.Models;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 /// <summary>Pure selection policy, independent of HTTP and WinUI. No game-specific IDs or filenames.</summary>
 public static class SteamAppSelectionService

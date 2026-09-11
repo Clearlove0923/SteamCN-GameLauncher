@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SteamCNGameLaunchAssistant.Models;
+namespace SteamCNGameLauncher.Models;
 
 public class GameConfig
 {

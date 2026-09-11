@@ -1,7 +1,7 @@
 using System.Text.Json;
-using SteamCNGameLaunchAssistant.Models;
+using SteamCNGameLauncher.Models;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 public class SettingsService
 {

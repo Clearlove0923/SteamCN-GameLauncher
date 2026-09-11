@@ -3,7 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 
-namespace SteamCNGameLaunchAssistant.Controls;
+namespace SteamCNGameLauncher.Controls;
 
 /// <summary>侧栏分隔条：捕获指针并报告水平位移，不参与导航项的拖动排序。</summary>
 public sealed class SidebarResizeThumb : Control

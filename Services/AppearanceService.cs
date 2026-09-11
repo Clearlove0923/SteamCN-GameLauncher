@@ -1,9 +1,9 @@
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
-using SteamCNGameLaunchAssistant.Models;
+using SteamCNGameLauncher.Models;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 /// <summary>管理安装目录中的背景副本、原图和用户外观配置。</summary>
 public sealed class AppearanceService

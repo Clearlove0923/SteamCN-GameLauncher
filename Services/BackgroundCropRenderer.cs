@@ -1,4 +1,4 @@
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 // Coordinates are always expressed in output pixels, independently of UI scaling.
 public static class BackgroundCropRenderer

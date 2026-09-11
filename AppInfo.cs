@@ -1,4 +1,4 @@
-namespace SteamCNGameLaunchAssistant;
+namespace SteamCNGameLauncher;
 
 /// <summary>
 /// 应用版本信息的单一真相来源。

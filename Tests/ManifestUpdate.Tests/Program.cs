@@ -1,5 +1,5 @@
-using SteamCNGameLaunchAssistant.Models;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Services;
 
 var checks = 0;
 void Check(bool condition, string message)

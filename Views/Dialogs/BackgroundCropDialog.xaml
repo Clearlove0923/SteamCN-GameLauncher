@@ -1,5 +1,5 @@
 <ContentDialog
-    x:Class="SteamCNGameLaunchAssistant.Views.Dialogs.BackgroundCropDialog"
+    x:Class="SteamCNGameLauncher.Views.Dialogs.BackgroundCropDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="裁切背景 · 1440 × 810（16:9）"

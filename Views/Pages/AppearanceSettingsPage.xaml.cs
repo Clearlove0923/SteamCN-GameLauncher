@@ -4,9 +4,9 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Services;
 
-namespace SteamCNGameLaunchAssistant.Views.Pages;
+namespace SteamCNGameLauncher.Views.Pages;
 
 public sealed partial class AppearanceSettingsPage : Page
 {
@@ -184,7 +184,7 @@ public sealed partial class AppearanceSettingsPage : Page
     }
 
     private async Task CropAndSaveAsync(StorageFile source,
-        SteamCNGameLaunchAssistant.Models.BackgroundOptions? previous = null)
+        SteamCNGameLauncher.Models.BackgroundOptions? previous = null)
     {
         var image = await BackgroundCropImage.LoadAsync(source);
         if (!_active) return;

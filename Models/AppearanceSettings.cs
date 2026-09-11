@@ -1,4 +1,4 @@
-namespace SteamCNGameLaunchAssistant.Models;
+namespace SteamCNGameLauncher.Models;
 
 /// <summary>全局外观状态；图片效果和裁切参数按图库文件名分别保存。</summary>
 public sealed class AppearanceSettings

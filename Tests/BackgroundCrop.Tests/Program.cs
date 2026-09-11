@@ -1,4 +1,4 @@
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Services;
 
 var checks = 0;
 void Check(bool condition, string label)

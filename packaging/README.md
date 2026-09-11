@@ -24,7 +24,7 @@
 
 安装器使用本项目独立的 AppId，默认目录为 `SteamCN-GameLauncher`，不会与其他项目建立升级或卸载关系。
 
-配置目录为 `%APPDATA%/SteamCN-GameLauncher`，单实例互斥标识为 `SteamCN-GameLauncher`。项目源码命名空间使用合法 C# 标识符 `SteamCNGameLaunchAssistant`，产物使用带连字符的名称。
+配置目录为 `%APPDATA%/SteamCN-GameLauncher`，单实例互斥标识为 `SteamCN-GameLauncher`。项目源码命名空间使用合法 C# 标识符 `SteamCNGameLauncher`，产物使用带连字符的名称。
 
 ## 中文安装界面
 

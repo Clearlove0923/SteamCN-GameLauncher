@@ -1,9 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using SteamCNGameLaunchAssistant.Models;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Services;
 
-namespace SteamCNGameLaunchAssistant.Views.Pages;
+namespace SteamCNGameLauncher.Views.Pages;
 
 public sealed partial class CustomManifestPage
 {

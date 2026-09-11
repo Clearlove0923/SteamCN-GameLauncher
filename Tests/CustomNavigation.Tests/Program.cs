@@ -1,5 +1,5 @@
-using SteamCNGameLaunchAssistant.Models;
-using SteamCNGameLaunchAssistant.Services;
+using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Services;
 
 // All mutations use a uniquely named test file; never load the user's actual settings.
 var settingsPath = Path.Combine(AppContext.BaseDirectory, $"navigation-{Guid.NewGuid():N}.json");

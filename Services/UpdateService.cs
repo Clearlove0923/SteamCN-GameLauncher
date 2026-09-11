@@ -1,8 +1,8 @@
 using System.Net.Http;
 using System.Text.Json;
-using SteamCNGameLaunchAssistant.Models;
+using SteamCNGameLauncher.Models;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 /// <summary>
 /// 更新检查服务（单例）。

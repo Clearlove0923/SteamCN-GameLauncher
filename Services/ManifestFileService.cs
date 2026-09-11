@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 public sealed record ManifestBackupOptions(int MaximumCount, TimeSpan MaximumAge)
 {

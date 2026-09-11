@@ -1,7 +1,7 @@
 using Microsoft.Win32;
-using SteamCNGameLaunchAssistant.Models;
+using SteamCNGameLauncher.Models;
 
-namespace SteamCNGameLaunchAssistant.Services;
+namespace SteamCNGameLauncher.Services;
 
 /// <summary>
 /// 生成 ACF 所需的全部字段。鸣潮页与自定义 Manifest 页共用同一份参数模型。
