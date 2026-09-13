@@ -369,7 +369,6 @@ FodyWeavers.xsd
 .claude
 *.iss
 Output/
-docs/
 .worktrees/
 # Track the maintained installer source
 !/SteamCN-GameLauncher.iss
