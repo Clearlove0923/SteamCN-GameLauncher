@@ -30,7 +30,8 @@ Steam 启动选项示例：
 ```text
 /autoplay
 ```
-## 无限暖暖（Infinity Nikki）：跳过启动器界面并保持 Steam“游戏中”
+## 无限暖暖（Infinity Nikki）：
+- 跳过启动器界面并保持 Steam“游戏中”
 ### 背景
 Windows 版《无限暖暖》不是单一 EXE 启动。当前观察到的官方启动链为：
 ```text
