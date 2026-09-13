@@ -6,6 +6,7 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage.Pickers;
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
+using SteamCNGameLauncher.Services.Home;
 
 namespace SteamCNGameLauncher.Views.Pages;
 
@@ -145,6 +146,7 @@ public sealed partial class CustomManifestPage : Page
             LauncherExePath = txtLauncherExePath.Text.Trim(),
             ExecutableFileName = txtExecutableFileName.Text.Trim(),
             Language = langTag,
+            HomeLayoutProfileId = current?.HomeLayoutProfileId ?? HomeLayoutProfileCatalog.DefaultProfileId,
         };
     }
 
@@ -197,8 +199,8 @@ public sealed partial class CustomManifestPage : Page
         _deleted = false;
         LoadPreset(_preset);
 
-        // 保持下拉框与左侧导航的选中状态一致。
-        _customManifestService.Select(PresetId, notifyNavigation: true);
+        // Steam 配置页只切换正在编辑的配置，不触发主窗口跳转到首页。
+        _customManifestService.Select(PresetId);
     }
 
     private async void NewPreset_Click(object sender, RoutedEventArgs e)

@@ -13,8 +13,10 @@
         </DataTemplate>
     </Page.Resources>
 
-    <ScrollViewer Background="{StaticResource AppearancePageBackground}">
-        <StackPanel Padding="24" Spacing="16" MaxWidth="1000">
+    <ScrollViewer Background="{StaticResource AppearancePageBackground}"
+                  HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+        <!-- Steam 配置页随主内容区伸展，不再保留旧标题栏和固定宽度留白。 -->
+        <StackPanel Padding="24" Spacing="16" HorizontalAlignment="Stretch">
 
             <!-- 全局配置缺失提示（OnLoaded 判定后切换可见性） -->
             <InfoBar x:Name="globalConfigInfoBar"

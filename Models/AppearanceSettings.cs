@@ -25,8 +25,10 @@ public sealed class AppearanceSettings
 
 public sealed class BackgroundOptions
 {
-    // 原图位于 Backgrounds/Originals；裁切坐标基于 1440×810 输出画布。
+    // 旧配置没有尺寸字段，默认值用于将原 1440×810 坐标迁移到当前画布。
     public string SourceImage { get; set; } = "";
+    public int CropWidth { get; set; } = 1440;
+    public int CropHeight { get; set; } = 810;
     public double CropScale { get; set; }
     public double CropX { get; set; }
     public double CropY { get; set; }

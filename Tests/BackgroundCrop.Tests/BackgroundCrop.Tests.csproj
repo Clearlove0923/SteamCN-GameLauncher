@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Services/BackgroundCropRenderer.cs" Link="BackgroundCropRenderer.cs"/>
+    <Compile Include="../../Models/LauncherDimensions.cs" Link="LauncherDimensions.cs"/>
   </ItemGroup>
 </Project>

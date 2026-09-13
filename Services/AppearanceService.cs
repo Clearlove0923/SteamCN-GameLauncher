@@ -171,7 +171,10 @@ public sealed class AppearanceService
             File.Move(temporary, outputPath);
             Settings.Images[name] = new BackgroundOptions
             {
-                SourceImage = originalName, CropScale = scale, CropX = x, CropY = y,
+                SourceImage = originalName,
+                CropWidth = BackgroundCropRenderer.Width,
+                CropHeight = BackgroundCropRenderer.Height,
+                CropScale = scale, CropX = x, CropY = y,
                 Opacity = previous?.Opacity ?? .6, OverlayOpacity = previous?.OverlayOpacity ?? .25,
                 Stretch = "Fill"
             };

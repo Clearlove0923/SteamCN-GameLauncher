@@ -7,8 +7,10 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <ScrollViewer Background="{StaticResource AppearancePageBackground}">
-        <StackPanel Padding="24" Spacing="16" MaxWidth="1000">
+    <ScrollViewer Background="{StaticResource AppearancePageBackground}"
+                  HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+        <!-- 设置页使用全部可用内容宽度，并从已移除的标题栏区域开始排布。 -->
+        <StackPanel Padding="24" Spacing="16" HorizontalAlignment="Stretch">
 
             <!-- 页面标题 -->
             <TextBlock Text="设置" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,8"/>

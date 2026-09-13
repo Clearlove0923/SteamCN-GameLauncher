@@ -24,9 +24,16 @@ public sealed partial class BackgroundCropDialog : ContentDialog
     public BackgroundCropDialog(BackgroundCropImage image, BackgroundOptions? previous = null)
     {
         _image = image;
-        _coverScale = Math.Max(1440d / image.Width, 810d / image.Height);
-        _minimumScale = Math.Min(_coverScale * .05, Math.Min(1440d / image.Width, 810d / image.Height));
+        _coverScale = Math.Max((double)BackgroundCropRenderer.Width / image.Width,
+            (double)BackgroundCropRenderer.Height / image.Height);
+        _minimumScale = Math.Min(_coverScale * .05, Math.Min(
+            (double)BackgroundCropRenderer.Width / image.Width,
+            (double)BackgroundCropRenderer.Height / image.Height));
         InitializeComponent();
+        Title = $"裁切背景 · {BackgroundCropRenderer.Width} × {BackgroundCropRenderer.Height}（16:9）";
+        CropCanvas.Width = BackgroundCropRenderer.Width;
+        CropCanvas.Height = BackgroundCropRenderer.Height;
+        CropClip.Rect = new Rect(0, 0, BackgroundCropRenderer.Width, BackgroundCropRenderer.Height);
         ZoomSlider.Minimum = _minimumScale / _coverScale * 100;
         Resources["ContentDialogMaxWidth"] = 860d;
         CropImage.Source = image.Preview;
@@ -34,9 +41,14 @@ public sealed partial class BackgroundCropDialog : ContentDialog
         if (previous != null && double.IsFinite(previous.CropScale) && previous.CropScale > 0
             && double.IsFinite(previous.CropX) && double.IsFinite(previous.CropY))
         {
-            ImageScale = Math.Clamp(previous.CropScale, _minimumScale, _coverScale * 4);
-            OffsetX = previous.CropX;
-            OffsetY = previous.CropY;
+            var oldWidth = previous.CropWidth > 0 ? previous.CropWidth : 1440;
+            var oldHeight = previous.CropHeight > 0 ? previous.CropHeight : 810;
+            var migrationScaleX = (double)BackgroundCropRenderer.Width / oldWidth;
+            var migrationScaleY = (double)BackgroundCropRenderer.Height / oldHeight;
+            var migrationScale = Math.Min(migrationScaleX, migrationScaleY);
+            ImageScale = Math.Clamp(previous.CropScale * migrationScale, _minimumScale, _coverScale * 4);
+            OffsetX = previous.CropX * migrationScaleX;
+            OffsetY = previous.CropY * migrationScaleY;
         }
         else Center();
         Draw();
@@ -69,18 +81,20 @@ public sealed partial class BackgroundCropDialog : ContentDialog
 
     private void Center()
     {
-        OffsetX = (1440 - _image.Width * ImageScale) / 2;
-        OffsetY = (810 - _image.Height * ImageScale) / 2;
+        OffsetX = (BackgroundCropRenderer.Width - _image.Width * ImageScale) / 2;
+        OffsetY = (BackgroundCropRenderer.Height - _image.Height * ImageScale) / 2;
     }
 
     private void Zoom_Changed(object sender, RangeBaseValueChangedEventArgs e)
     {
-        if (!_loading) Zoom(_coverScale * e.NewValue / 100, new Point(720, 405));
+        if (!_loading) Zoom(_coverScale * e.NewValue / 100,
+            new Point(BackgroundCropRenderer.Width / 2d, BackgroundCropRenderer.Height / 2d));
     }
     private void Cover_Click(object sender, RoutedEventArgs e) { ImageScale = _coverScale; Center(); Draw(); }
     private void Fit_Click(object sender, RoutedEventArgs e)
     {
-        ImageScale = Math.Min(1440d / _image.Width, 810d / _image.Height);
+        ImageScale = Math.Min((double)BackgroundCropRenderer.Width / _image.Width,
+            (double)BackgroundCropRenderer.Height / _image.Height);
         Center(); Draw();
     }
     private void Center_Click(object sender, RoutedEventArgs e) { Center(); Draw(); }

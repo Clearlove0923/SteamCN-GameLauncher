@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Models/Home/HomeContentContracts.cs" Link="Models/Home/HomeContentContracts.cs" />
+    <Compile Include="../../Models/Home/GameScreenshotPathContracts.cs" Link="Models/Home/GameScreenshotPathContracts.cs" />
+    <Compile Include="../../Services/Home/HomeContentJson.cs" Link="Services/Home/HomeContentJson.cs" />
+    <None Include="../../contracts/samples/home-content-v1.json" Link="home-content-v1.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../contracts/samples/game-screenshot-path-v1.json" Link="game-screenshot-path-v1.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

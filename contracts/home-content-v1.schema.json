@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://steamcn-game-launcher.local/contracts/home-content-v1.schema.json",
+  "title": "SteamCN Game Launcher home content envelope",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "requestId", "providerId", "fetchedAt", "content", "errors"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "requestId": { "type": "string", "minLength": 1 },
+    "providerId": { "type": "string", "minLength": 1 },
+    "fetchedAt": { "type": "string", "format": "date-time" },
+    "content": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["banners", "news"],
+      "properties": {
+        "background": {
+          "type": ["object", "null"],
+          "additionalProperties": true,
+          "properties": {
+            "videoUrl": { "type": ["string", "null"] },
+            "imageUrl": { "type": ["string", "null"] },
+            "localPath": { "type": ["string", "null"] }
+          }
+        },
+        "banners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["id"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "title": { "type": ["string", "null"] },
+              "imageUrl": { "type": ["string", "null"] },
+              "localPath": { "type": ["string", "null"] },
+              "targetUrl": { "type": ["string", "null"] },
+              "startsAt": { "type": ["string", "null"], "format": "date-time" },
+              "endsAt": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        },
+        "news": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["id", "title"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "category": { "type": ["string", "null"] },
+              "title": { "type": "string", "minLength": 1 },
+              "summary": { "type": ["string", "null"] },
+              "imageUrl": { "type": ["string", "null"] },
+              "targetUrl": { "type": ["string", "null"] },
+              "publishedAt": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        },
+        "updateInfo": { "type": ["object", "null"] }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message", "recoverable"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 },
+          "recoverable": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

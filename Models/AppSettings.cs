@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 
+using SteamCNGameLauncher.Models.Home;
+
 namespace SteamCNGameLauncher.Models;
 
 public class AppSettings
 {
     public AppearanceSettings Appearance { get; set; } = new();
-    public double SidebarWidth { get; set; } = 210;
     // ===== 全局通用 Steam 配置（v2.2.0 起由设置页统一管理） =====
     public string SteamInstallPath { get; set; } = "";
     public string SteamLibraryPath { get; set; } = "";
@@ -152,6 +153,7 @@ public class CustomManifestPreset
     public string LauncherExePath { get; set; } = "";      // 游戏启动器 exe 完整路径（用于直接打开启动器）
     public string ExecutableFileName { get; set; } = "";   // v2.3.0 新增：Steam 占位 exe 文件名
     public string Language { get; set; } = "schinese";
+    public string HomeLayoutProfileId { get; set; } = HomeLayoutProfile.MihoyoLauncherId;
 
     public CustomManifestPreset Clone() => new()
     {
@@ -168,5 +170,6 @@ public class CustomManifestPreset
         LauncherExePath = LauncherExePath,
         ExecutableFileName = ExecutableFileName,
         Language = Language,
+        HomeLayoutProfileId = HomeLayoutProfileId,
     };
 }

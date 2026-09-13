@@ -373,3 +373,9 @@ docs/
 .worktrees/
 # Track the maintained installer source
 !/SteamCN-GameLauncher.iss
+
+# Track the maintained C#/Python integration documents.
+!docs/
+docs/*
+!docs/HOMEPAGE_CONTENT_ARCHITECTURE.md
+!docs/PYTHON_BACKEND_INTEGRATION.md

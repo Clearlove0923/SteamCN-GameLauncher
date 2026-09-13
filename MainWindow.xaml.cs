@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
 using Windows.UI;
@@ -13,34 +15,70 @@ public sealed partial class MainWindow : Window
     private string _forceDownloadUrl = "";
     private AppWindow? _appWindow;
     private readonly CustomManifestService _customManifestService = CustomManifestService.Instance;
-    private bool _refreshingCustomNavigation;
+    private readonly GameExecutableIconService _gameIconService = new();
+    private readonly DispatcherTimer _gameLibraryCloseTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    private bool _pointerOverGameLibraryTrigger;
+    private bool _pointerOverGameLibraryOverlay;
+    private string? _pendingHomeGameId;
     private bool _addingCustomManifest;
 
-    private sealed record CustomNavigationTag(string Id);
+    private sealed class GameLibraryEntry : INotifyPropertyChanged
+    {
+        private ImageSource? _icon;
+
+        public GameLibraryEntry(string id, string name, string executablePath)
+            => (Id, Name, ExecutablePath) = (id, name, executablePath);
+
+        public string Id { get; }
+        public string Name { get; }
+        public string ExecutablePath { get; }
+        public ImageSource? Icon
+        {
+            get => _icon;
+            set
+            {
+                if (ReferenceEquals(_icon, value)) return;
+                _icon = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Icon)));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+    }
 
     public MainWindow()
     {
         InitializeComponent();
+        NavView.CompactPaneLength = LauncherDimensions.SidebarWidth;
+        GameLibraryOverlay.Margin = new Thickness(LauncherDimensions.SidebarWidth + 12, 8, 0, 0);
+        TitleDragRegion.Margin = new Thickness(LauncherDimensions.SidebarWidth, 0, 150, 0);
         InitializeAppearance();
-        InitializeGameReordering();
-        InitializeSidebarResizing();
+        _gameLibraryCloseTimer.Tick += (_, _) =>
+        {
+            _gameLibraryCloseTimer.Stop();
+            if (!_pointerOverGameLibraryTrigger && !_pointerOverGameLibraryOverlay)
+                GameLibraryOverlay.Visibility = Visibility.Collapsed;
+        };
 
         ExtendsContentIntoTitleBar = true;
-        SetTitleBar(TopBarGrid);
+        SetTitleBar(TitleDragRegion);
 
         ConfigureFixedWindow();
 
         ((FrameworkElement)Content).ActualThemeChanged += (_, _) => ApplyTitleBarColors();
 
-        txtTitleBar.Text = AppInfo.AppName;
-
         // 订阅更新通知（主窗口负责全局展示）
         UpdateService.Instance.UpdateAvailable += OnUpdateAvailable;
         _customManifestService.NavigationChanged += OnCustomNavigationChanged;
-        Closed += (_, _) => _customManifestService.NavigationChanged -= OnCustomNavigationChanged;
+        Closed += (_, _) =>
+        {
+            _gameLibraryCloseTimer.Stop();
+            _customManifestService.NavigationChanged -= OnCustomNavigationChanged;
+        };
 
-        // 恢复上次使用的自定义游戏；没有游戏时展示添加入口。
-        RefreshCustomNavigation(_customManifestService.GetInitialSidebarId());
+        // 首页是默认页面；游戏列表只是切换入口，不拥有独立页面。
+        RefreshCustomNavigation();
+        NavView.SelectedItem = HomeNavItem;
     }
 
     // ── 更新通知处理 ──────────────────────────────────────────────────────────
@@ -106,7 +144,7 @@ public sealed partial class MainWindow : Window
             _appWindow.SetIcon(iconPath);
         }
 
-        _appWindow.Resize(new SizeInt32(1440, 810));
+        _appWindow.Resize(new SizeInt32(LauncherDimensions.WindowWidth, LauncherDimensions.WindowHeight));
 
         if (_appWindow.Presenter is OverlappedPresenter presenter)
         {
@@ -150,18 +188,27 @@ public sealed partial class MainWindow : Window
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        if (_refreshingCustomNavigation || _reorderSource != null) return;
         if (args.SelectedItem is not NavigationViewItem item) return;
-
-        if (item.Tag is CustomNavigationTag customTag)
-        {
-            NavigateToCustom(customTag.Id);
-            return;
-        }
+        HideGameLibraryOverlay();
 
         var tag = item.Tag?.ToString();
         switch (tag)
         {
+            case "Home":
+                var gameId = _pendingHomeGameId ?? _customManifestService.GetInitialSidebarId();
+                _pendingHomeGameId = null;
+                if (string.IsNullOrWhiteSpace(gameId)) ShowEmptyGameLibrary();
+                else NavigateToHome(gameId);
+                break;
+            case "SteamConfiguration":
+                NavigateToSteamConfiguration();
+                break;
+            case "Screenshots":
+                ContentFrame.Navigate(typeof(Views.Pages.ScreenshotGalleryPage), _customManifestService.GetInitialSidebarId());
+                break;
+            case "GameLaunchTest":
+                ContentFrame.Navigate(typeof(Views.Pages.GameLaunchTestPage));
+                break;
             case "Settings":
                 ContentFrame.Navigate(typeof(Views.Pages.SettingsPage));
                 break;
@@ -171,59 +218,16 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void RefreshCustomNavigation(string? preferredId = null)
+    private void RefreshCustomNavigation()
     {
-        CancelGameReordering();
-        var selectionId = preferredId ?? ((NavView.SelectedItem as NavigationViewItem)?.Tag as CustomNavigationTag)?.Id;
         var games = _customManifestService.GetSidebarItems();
-        if (games.Count > 0 && !string.IsNullOrWhiteSpace(preferredId)
-            && _customManifestService.GetById(preferredId) == null)
-            preferredId = games[0].Id;
-        _refreshingCustomNavigation = true;
-        try
-        {
-            var dynamicItems = NavView.MenuItems
-                .OfType<NavigationViewItem>()
-                .Where(item => item.Tag is CustomNavigationTag)
-                .ToList();
-            foreach (var item in dynamicItems)
-                NavView.MenuItems.Remove(item);
-
-            var insertIndex = NavView.MenuItems.IndexOf(AddCustomNavItem);
-            CustomGamesHeader.Visibility = games.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-            foreach (var preset in games)
-            {
-                var item = new NavigationViewItem
-                {
-                    Content = preset.Name,
-                    Tag = new CustomNavigationTag(preset.Id),
-                    Icon = new FontIcon { Glyph = "\uE7FC" }
-                };
-                ToolTipService.SetToolTip(item, $"{preset.Name}（可拖动调整顺序）");
-                NavView.MenuItems.Insert(insertIndex++, item);
-            }
-
-            if (games.Count == 0)
-                NavView.SelectedItem = null;
-            else if (!string.IsNullOrWhiteSpace(selectionId))
-            {
-                // 旧版内置预设仍可通过页面下拉框访问，但不再有固定的侧边栏入口。
-                // 找不到对应导航项时清除选中态，避免错误高亮“外观设置”等其他页面。
-                NavView.SelectedItem = NavView.MenuItems
-                    .OfType<NavigationViewItem>()
-                    .FirstOrDefault(item => item.Tag is CustomNavigationTag custom
-                        && string.Equals(custom.Id, selectionId, StringComparison.OrdinalIgnoreCase));
-            }
-        }
-        finally
-        {
-            _refreshingCustomNavigation = false;
-        }
-
-        if (games.Count == 0)
-            ShowEmptyGameLibrary();
-        else if (!string.IsNullOrWhiteSpace(preferredId))
-            NavigateToCustom(preferredId);
+        var entries = games.Select(game => new GameLibraryEntry(
+            game.Id,
+            game.Name,
+            game.ClientExePath)).ToList();
+        GameLibraryItems.ItemsSource = entries;
+        if (entries.Count == 0) HideGameLibraryOverlay();
+        _ = LoadGameLibraryIconsAsync(entries);
     }
 
     private void ShowEmptyGameLibrary()
@@ -249,10 +253,82 @@ public sealed partial class MainWindow : Window
         _customManifestService.Select(id);
     }
 
-    private async void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
+    private void NavigateToHome(string? id)
     {
-        if (args.InvokedItemContainer == AddCustomNavItem)
-            await AddGameAsync();
+        if (!string.IsNullOrWhiteSpace(id)) _customManifestService.Select(id);
+        ContentFrame.Navigate(typeof(Views.Pages.LauncherHomePage), id);
+    }
+
+    private void NavigateToSteamConfiguration()
+    {
+        var id = _customManifestService.GetInitialSidebarId();
+        if (string.IsNullOrWhiteSpace(id)) ShowEmptyGameLibrary();
+        else NavigateToCustom(id);
+    }
+
+    private void GameLibraryNavItem_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        // 覆盖层与导航项处于同一个窗口命中树中，不会因 Popup 边界反复触发开关。
+        _pointerOverGameLibraryTrigger = true;
+        _gameLibraryCloseTimer.Stop();
+        RefreshCustomNavigation();
+        if (GameLibraryItems.Items.Count > 0)
+            GameLibraryOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void GameLibraryNavItem_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        _pointerOverGameLibraryTrigger = false;
+        StartGameLibraryCloseTimer();
+    }
+
+    private void GameLibraryOverlay_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        _pointerOverGameLibraryOverlay = true;
+        _gameLibraryCloseTimer.Stop();
+    }
+
+    private void GameLibraryOverlay_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        _pointerOverGameLibraryOverlay = false;
+        StartGameLibraryCloseTimer();
+    }
+
+    private void StartGameLibraryCloseTimer()
+    {
+        _gameLibraryCloseTimer.Stop();
+        _gameLibraryCloseTimer.Start();
+    }
+
+    private void HideGameLibraryOverlay()
+    {
+        _gameLibraryCloseTimer.Stop();
+        _pointerOverGameLibraryTrigger = false;
+        _pointerOverGameLibraryOverlay = false;
+        GameLibraryOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private async Task LoadGameLibraryIconsAsync(IEnumerable<GameLibraryEntry> entries)
+    {
+        foreach (var entry in entries)
+            entry.Icon = await _gameIconService.LoadAsync(entry.ExecutablePath, 64);
+    }
+
+    private void GameLibraryItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: GameLibraryEntry selected }) return;
+
+        HideGameLibraryOverlay();
+        _customManifestService.Select(selected.Id);
+        if (ReferenceEquals(NavView.SelectedItem, HomeNavItem))
+        {
+            NavigateToHome(selected.Id);
+            return;
+        }
+
+        // 先保存目标游戏，再选中首页；SelectionChanged 只会展示这个明确选择的游戏。
+        _pendingHomeGameId = selected.Id;
+        NavView.SelectedItem = HomeNavItem;
     }
 
     private async Task AddGameAsync()
@@ -297,7 +373,28 @@ public sealed partial class MainWindow : Window
 
     private void OnCustomNavigationChanged(string? preferredId)
     {
-        DispatcherQueue.TryEnqueue(() => RefreshCustomNavigation(preferredId));
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            RefreshCustomNavigation();
+            // null 表示仅刷新游戏列表顺序，当前页面和内容必须保持不变。
+            if (string.IsNullOrWhiteSpace(preferredId)) return;
+
+            var targetId = _customManifestService.GetSidebarItems().Any(game =>
+                string.Equals(game.Id, preferredId, StringComparison.OrdinalIgnoreCase))
+                ? preferredId
+                : null;
+            var selectedPage = (NavView.SelectedItem as NavigationViewItem)?.Tag?.ToString();
+            if (selectedPage == "Home")
+            {
+                if (targetId == null) ShowEmptyGameLibrary();
+                else NavigateToHome(targetId);
+            }
+            else if (selectedPage == "SteamConfiguration")
+            {
+                if (targetId == null) ShowEmptyGameLibrary();
+                else NavigateToCustom(targetId);
+            }
+        });
     }
 
     private async Task ShowInfoAsync(string message)

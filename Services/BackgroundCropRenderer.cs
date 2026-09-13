@@ -1,10 +1,12 @@
+using SteamCNGameLauncher.Models;
+
 namespace SteamCNGameLauncher.Services;
 
 // Coordinates are always expressed in output pixels, independently of UI scaling.
 public static class BackgroundCropRenderer
 {
-    public const int Width = 1440;
-    public const int Height = 810;
+    public const int Width = LauncherDimensions.WindowWidth;
+    public const int Height = LauncherDimensions.WindowHeight;
 
     public static byte[] Render(byte[] source, int width, int height, double scale, double x, double y)
     {

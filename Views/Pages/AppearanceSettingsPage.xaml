@@ -25,7 +25,7 @@
                         <Button x:Name="DeleteButton" Content="删除所选图片" Click="Delete_Click"/>
                         <Button x:Name="RecropButton" Content="重新裁切" Click="Recrop_Click"/>
                     </StackPanel>
-                    <TextBlock Text="支持 JPG、PNG，每张最多 40 MB。导入后裁切为 1440×810，空白填白色；原图保存在 Backgrounds/Originals。重新裁切会新增背景，保留旧版本。"
+                    <TextBlock Text="支持 JPG、PNG，每张最多 40 MB。导入后裁切为 1920×1080，空白填白色；原图保存在 Backgrounds/Originals。重新裁切会新增背景，保留旧版本。"
                                TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <TextBlock x:Name="EmptyHint" Text="还没有背景图片，点击“导入图片”添加。"/>
                     <GridView x:Name="Gallery" SelectionMode="Single" SelectionChanged="Gallery_SelectionChanged" MaxHeight="250"

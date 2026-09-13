@@ -5,50 +5,22 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:SteamCNGameLauncher.Controls"
     mc:Ignorable="d"
     Title="Steam国服游戏启动助手">
 
     <Grid x:Name="WindowRoot" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="48"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Image x:Name="BackgroundImage" Grid.RowSpan="3" IsHitTestVisible="False" Visibility="Collapsed"/>
-        <Border x:Name="BackgroundOverlay" Grid.RowSpan="3" IsHitTestVisible="False"
+        <Image x:Name="BackgroundImage" Grid.RowSpan="2" IsHitTestVisible="False" Visibility="Collapsed"/>
+        <Border x:Name="BackgroundOverlay" Grid.RowSpan="2" IsHitTestVisible="False"
                 Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}" Visibility="Collapsed"/>
-
-        <!-- 顶部标题栏 -->
-        <Grid x:Name="TopBarGrid" Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
-                <TextBlock x:Name="txtTitleBar"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"/>
-
-                <!-- 普通更新提示按钮（标题右侧，默认隐藏） -->
-                <Button x:Name="btnUpdateBadge"
-                        Visibility="Collapsed"
-                        VerticalAlignment="Center"
-                        Margin="12,0,0,0"
-                        Padding="10,4"
-                        Background="#1A2D6B"
-                        BorderThickness="0"
-                        CornerRadius="4"
-                        Click="BtnUpdateBadge_Click">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xEA6A;" FontSize="13" Foreground="White"/>
-                        <TextBlock Text="发现新版本" FontSize="12" Foreground="White" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Grid>
 
         <!-- 强制更新横幅（forceUpdate=true 时显示，占满整行） -->
         <InfoBar x:Name="forceUpdateBanner"
-                 Grid.Row="1"
+                 Grid.Row="0"
                  Severity="Error"
                  Title="必须更新才能继续使用"
                  IsOpen="False"
@@ -61,37 +33,45 @@
         </InfoBar>
 
         <NavigationView x:Name="NavView"
-                        Grid.Row="2"
+                        Grid.Row="1"
                         IsBackButtonVisible="Collapsed"
                         IsSettingsVisible="False"
-                        PaneDisplayMode="Left"
-                        OpenPaneLength="210"
-                        CompactPaneLength="48"
-                        IsPaneOpen="True"
-                        SelectionChanged="NavView_SelectionChanged"
-                        ItemInvoked="NavView_ItemInvoked">
+                        PaneDisplayMode="LeftCompact"
+                        OpenPaneLength="260"
+                        CompactPaneLength="68"
+                        IsPaneOpen="False"
+                        IsPaneToggleButtonVisible="False"
+                        IsTitleBarAutoPaddingEnabled="False"
+                        SelectionChanged="NavView_SelectionChanged">
 
             <NavigationView.MenuItems>
-                <NavigationViewItemHeader x:Name="CustomGamesHeader" Content="已添加的游戏"/>
-                <!-- 自定义页面导航项由 MainWindow 从设置动态插入到此按钮之前 -->
-                <NavigationViewItem x:Name="AddCustomNavItem"
-                                    Content="添加游戏"
-                                    Tag="AddCustomManifest"
-                                    SelectsOnInvoked="False">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE710;"/>
-                    </NavigationViewItem.Icon>
+                <NavigationViewItem x:Name="GameLibraryNavItem" Content="游戏列表" Tag="GameLibrary"
+                                    Margin="0,12,0,0"
+                                    SelectsOnInvoked="False" PointerEntered="GameLibraryNavItem_PointerEntered"
+                                    PointerExited="GameLibraryNavItem_PointerExited"
+                                    ToolTipService.ToolTip="游戏列表">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xF0E2;"/></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItemSeparator/>
+                <NavigationViewItem x:Name="HomeNavItem" Content="首页" Tag="Home" ToolTipService.ToolTip="首页">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;"/></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Steam 配置" Tag="SteamConfiguration" ToolTipService.ToolTip="Steam 配置">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Repair"/></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="截图" Tag="Screenshots" ToolTipService.ToolTip="游戏截图">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xEB9F;"/></NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <!-- 底部设置入口 -->
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="外观" Tag="AppearanceSettings">
+                <NavigationViewItem Content="外观" Tag="AppearanceSettings" ToolTipService.ToolTip="外观设置">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE790;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="设置" Tag="Settings">
+                <NavigationViewItem Content="设置" Tag="Settings" ToolTipService.ToolTip="软件设置">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE713;"/>
                     </NavigationViewItem.Icon>
@@ -101,31 +81,59 @@
             <Frame x:Name="ContentFrame"/>
         </NavigationView>
 
-        <Border x:Name="GameReorderIndicator" Grid.Row="2" Height="3"
-                HorizontalAlignment="Left" VerticalAlignment="Top"
-                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                CornerRadius="1.5" IsHitTestVisible="False" Visibility="Collapsed"/>
+        <!-- 游戏列表使用主窗口内的稳定覆盖层，避免 Flyout 改变命中区域造成悬停闪烁。 -->
+        <Border x:Name="GameLibraryOverlay" Grid.Row="1" Canvas.ZIndex="10"
+                Margin="114,8,0,0" Padding="6" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Background="Transparent" Visibility="Collapsed"
+                PointerEntered="GameLibraryOverlay_PointerEntered"
+                PointerExited="GameLibraryOverlay_PointerExited">
+            <ItemsControl x:Name="GameLibraryItems">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="14"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Width="58" Height="58" Padding="0" Background="Transparent"
+                                BorderThickness="0" Click="GameLibraryItem_Click"
+                                ToolTipService.ToolTip="{Binding Name}"
+                                AutomationProperties.Name="{Binding Name}">
+                            <Grid Width="56" Height="56">
+                                <Border CornerRadius="12" Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                                    <Grid>
+                                    <FontIcon Glyph="&#xE7FC;" FontSize="24"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <Image Source="{Binding Icon}" Width="56" Height="56"
+                                               Stretch="UniformToFill"/>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
 
-        <controls:SidebarResizeThumb x:Name="SidebarResizeHandle" Grid.Row="2"
-                Width="8" HorizontalAlignment="Left" VerticalAlignment="Stretch"
-                IsTabStop="True" Opacity="0.35"
-                AutomationProperties.Name="调整侧边栏宽度"
-                ToolTipService.ToolTip="拖动调整侧边栏宽度；双击恢复默认。也可用左右方向键调整。"
-                DragDelta="SidebarResize_DragDelta" DragCompleted="SidebarResize_DragCompleted"
-                KeyDown="SidebarResize_KeyDown" DoubleTapped="SidebarResize_DoubleTapped">
-            <controls:SidebarResizeThumb.Template>
-                <ControlTemplate TargetType="controls:SidebarResizeThumb">
-                    <Grid Background="Transparent">
-                        <Border Width="2" HorizontalAlignment="Center"
-                                Background="{ThemeResource ControlStrongFillColorDefaultBrush}"/>
-                    </Grid>
-                </ControlTemplate>
-            </controls:SidebarResizeThumb.Template>
-        </controls:SidebarResizeThumb>
+        <!-- 无可见标题栏：仅保留透明拖动区域和系统右上角窗口按钮。 -->
+        <Grid x:Name="TitleDragRegion" Grid.RowSpan="2" Canvas.ZIndex="20"
+              Height="48" Margin="0,0,150,0" HorizontalAlignment="Stretch"
+              VerticalAlignment="Top" Background="Transparent"/>
+
+        <!-- 普通更新提示不再占用一整行，在首页内容上方按需浮动显示。 -->
+        <Button x:Name="btnUpdateBadge" Grid.RowSpan="2" Canvas.ZIndex="21"
+                Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Margin="118,10,0,0" Padding="10,4" Background="#1A2D6B"
+                BorderThickness="0" CornerRadius="4" Click="BtnUpdateBadge_Click">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <FontIcon Glyph="&#xEA6A;" FontSize="13" Foreground="White"/>
+                <TextBlock Text="发现新版本" FontSize="12" Foreground="White" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
 
         <!-- 强制更新全屏遮罩（锁定整个内容区，不影响标题栏） -->
         <Grid x:Name="forceUpdateOverlay"
-              Grid.Row="1" Grid.RowSpan="2"
+              Grid.Row="0" Grid.RowSpan="2"
               Visibility="Collapsed"
               Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
               Opacity="0.97">

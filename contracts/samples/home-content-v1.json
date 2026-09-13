@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "requestId": "contract-test-1",
+  "providerId": "hoyoplay-json",
+  "fetchedAt": "2026-09-13T00:00:00Z",
+  "content": {
+    "background": {
+      "videoUrl": "https://example.invalid/background.mp4",
+      "imageUrl": "https://example.invalid/background.webp",
+      "localPath": null
+    },
+    "banners": [
+      {
+        "id": "banner-1",
+        "title": "活动标题",
+        "imageUrl": "https://example.invalid/banner.webp",
+        "localPath": null,
+        "targetUrl": "https://example.invalid/activity/1",
+        "startsAt": null,
+        "endsAt": null
+      }
+    ],
+    "news": [
+      {
+        "id": "news-1",
+        "category": "活动",
+        "title": "资讯标题",
+        "summary": null,
+        "imageUrl": null,
+        "targetUrl": "https://example.invalid/news/1",
+        "publishedAt": "2026-09-13T00:00:00Z"
+      }
+    ],
+    "updateInfo": null
+  },
+  "errors": []
+}

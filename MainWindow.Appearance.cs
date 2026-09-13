@@ -98,7 +98,5 @@ public sealed partial class MainWindow
             _paneBrush.FallbackColor = solid.Color;
         }
         _paneBrush.Opacity = enabled ? 0 : defaultPane.Opacity;
-        TopBarGrid.Background = enabled ? new SolidColorBrush(Colors.Transparent)
-            : (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
     }
 }
