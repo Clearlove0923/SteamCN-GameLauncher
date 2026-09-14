@@ -50,17 +50,17 @@
                                     SelectsOnInvoked="False" PointerEntered="GameLibraryNavItem_PointerEntered"
                                     PointerExited="GameLibraryNavItem_PointerExited"
                                     ToolTipService.ToolTip="游戏列表">
-                    <NavigationViewItem.Icon><FontIcon Glyph="&#xF0E2;"/></NavigationViewItem.Icon>
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE7FC;" Foreground="White"/></NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItemSeparator/>
                 <NavigationViewItem x:Name="HomeNavItem" Content="首页" Tag="Home" ToolTipService.ToolTip="首页">
-                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;"/></NavigationViewItem.Icon>
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" Foreground="White"/></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Steam 配置" Tag="SteamConfiguration" ToolTipService.ToolTip="Steam 配置">
-                    <NavigationViewItem.Icon><SymbolIcon Symbol="Repair"/></NavigationViewItem.Icon>
+                <NavigationViewItem Content="Steam 配置" Tag="SteamConfiguration" ToolTipService.ToolTip="游戏配置">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Repair" Foreground="White"/></NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem Content="截图" Tag="Screenshots" ToolTipService.ToolTip="游戏截图">
-                    <NavigationViewItem.Icon><FontIcon Glyph="&#xEB9F;"/></NavigationViewItem.Icon>
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xEB9F;" Foreground="White"/></NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
@@ -68,12 +68,12 @@
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem Content="外观" Tag="AppearanceSettings" ToolTipService.ToolTip="外观设置">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE790;"/>
+                        <FontIcon Glyph="&#xE790;" Foreground="White"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem Content="设置" Tag="Settings" ToolTipService.ToolTip="软件设置">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE713;"/>
+                        <FontIcon Glyph="&#xE713;" Foreground="White"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
@@ -82,37 +82,49 @@
         </NavigationView>
 
         <!-- 游戏列表使用主窗口内的稳定覆盖层，避免 Flyout 改变命中区域造成悬停闪烁。 -->
-        <Border x:Name="GameLibraryOverlay" Grid.Row="1" Canvas.ZIndex="10"
-                Margin="114,8,0,0" Padding="6" HorizontalAlignment="Left" VerticalAlignment="Top"
-                Background="Transparent" Visibility="Collapsed"
+        <!-- 浮层必须高于透明标题拖动区，否则其上半部分会丢失指针命中并反复关闭。 -->
+        <Border x:Name="GameLibraryOverlay" Grid.Row="1" Canvas.ZIndex="30"
+                Margin="67,12,0,0" Padding="10" MaxWidth="1600"
+                HorizontalAlignment="Left" VerticalAlignment="Top"
+                Background="Transparent" BorderThickness="0"
+                CornerRadius="0,12,12,0" Visibility="Collapsed"
                 PointerEntered="GameLibraryOverlay_PointerEntered"
                 PointerExited="GameLibraryOverlay_PointerExited">
-            <ItemsControl x:Name="GameLibraryItems">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="14"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Button Width="58" Height="58" Padding="0" Background="Transparent"
-                                BorderThickness="0" Click="GameLibraryItem_Click"
-                                ToolTipService.ToolTip="{Binding Name}"
-                                AutomationProperties.Name="{Binding Name}">
-                            <Grid Width="56" Height="56">
-                                <Border CornerRadius="12" Background="{ThemeResource ControlFillColorSecondaryBrush}">
-                                    <Grid>
-                                    <FontIcon Glyph="&#xE7FC;" FontSize="24"
-                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                        <Image Source="{Binding Icon}" Width="56" Height="56"
-                                               Stretch="UniformToFill"/>
-                                    </Grid>
-                                </Border>
-                            </Grid>
-                        </Button>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="14">
+                <ItemsControl x:Name="GameLibraryItems">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="14"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Width="58" Height="58" Padding="0" Background="Transparent"
+                                    BorderThickness="0" Click="GameLibraryItem_Click"
+                                    ToolTipService.ToolTip="{Binding Name}"
+                                    AutomationProperties.Name="{Binding Name}">
+                                <Grid Width="56" Height="56">
+                                    <Border CornerRadius="12" Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                                        <Grid>
+                                            <FontIcon Glyph="&#xE7FC;" FontSize="24"
+                                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <Image Source="{Binding Icon}" Width="56" Height="56"
+                                                   Stretch="UniformToFill"/>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button x:Name="OpenGameConfigurationButton" Width="58" Height="58"
+                        Padding="0" Background="#554F4F4F" BorderThickness="0"
+                        CornerRadius="12" Click="OpenGameConfigurationButton_Click"
+                        ToolTipService.ToolTip="添加游戏"
+                        AutomationProperties.Name="添加游戏">
+                    <FontIcon Glyph="&#xE710;" FontSize="26" Foreground="White"/>
+                </Button>
+            </StackPanel>
         </Border>
 
         <!-- 无可见标题栏：仅保留透明拖动区域和系统右上角窗口按钮。 -->

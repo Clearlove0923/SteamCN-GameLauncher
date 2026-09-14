@@ -41,10 +41,16 @@ try
     Check(service.GetInitialSidebarId() == readded.Id, "game can be added after deleting all games");
     store.Save(new AppSettings
     {
-        CurrentCustomManifest = new CustomManifestPreset { AppId = "123", GameDisplayName = "Legacy data" }
+        CurrentCustomManifest = new CustomManifestPreset
+        {
+            AppId = "123",
+            GameDisplayName = "Legacy data",
+            LaunchArguments = "-dx11"
+        }
     });
-    Check(service.GetInitialSidebarId() == null && service.GetAll().Any(p => p.AppId == "123"),
-        "old settings migration preserves data without introducing a default sidebar game");
+    Check(service.GetInitialSidebarId() == null
+        && service.GetAll().Any(p => p.AppId == "123" && p.LaunchArguments == "-dx11"),
+        "old settings migration preserves data and launch arguments without introducing a default sidebar game");
     Check(!store.Load().Appearance.Enabled, "legacy settings default to original appearance");
     store.Update(s =>
     {

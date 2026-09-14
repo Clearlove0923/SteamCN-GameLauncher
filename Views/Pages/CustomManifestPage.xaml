@@ -26,12 +26,12 @@
                      IsOpen="False"
                      IsClosable="False"/>
 
-            <!-- 预设管理：保留原自定义页的完整下拉切换功能 -->
+            <!-- 游戏配置管理 -->
             <Border Background="{StaticResource AppearanceCardBackground}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="8" Padding="16">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="预设" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="游戏配置" FontSize="16" FontWeight="SemiBold"/>
                     <ComboBox x:Name="cmbPreset"
                               HorizontalAlignment="Stretch"
                               DisplayMemberPath="Name"
@@ -41,26 +41,36 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Button x:Name="btnNewPreset" Content="新建" Click="NewPreset_Click"/>
-                        <Button Grid.Column="1" x:Name="btnSaveAsPreset" Content="另存为" Click="SaveAsPreset_Click"/>
-                        <Button Grid.Column="2" x:Name="btnRenamePreset" Content="重命名" Click="RenamePreset_Click"/>
-                        <Button Grid.Column="3" x:Name="btnDeletePreset" Content="删除" Click="DeletePreset_Click"/>
-                        <Button Grid.Column="4" x:Name="btnOneClickUpdate" Content="一键更新"
-                                Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Right"
-                                MinWidth="180" Click="OneClickUpdate_Click"/>
+                        <Button Grid.Column="1" x:Name="btnRenamePreset" Content="重命名" Click="RenamePreset_Click"/>
+                        <Button Grid.Column="2" x:Name="btnDeletePreset" Content="删除" Click="DeletePreset_Click"/>
+                    </Grid>
+                    <!-- 常用配置操作并排放置，避免用户在页面上下寻找保存入口。 -->
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="btnOneClickUpdate" Content="一键更新 Steam 配置"
+                                Style="{StaticResource AccentButtonStyle}"
+                                HorizontalAlignment="Stretch" Click="OneClickUpdate_Click"/>
+                        <Button Grid.Column="1" x:Name="btnOpenLauncher" Content="打开游戏启动器"
+                                HorizontalAlignment="Stretch" Click="OpenLauncher_Click"/>
+                        <Button Grid.Column="2" x:Name="btnSave" Content="保存配置"
+                                Style="{StaticResource AccentButtonStyle}"
+                                HorizontalAlignment="Stretch" Click="Save_Click"/>
                     </Grid>
                 </StackPanel>
             </Border>
 
-            <!-- 游戏标识 -->
+            <!-- Steam 启动配置：集中维护 App、Depot、Build 和 Manifest 标识。 -->
             <Border Background="{StaticResource AppearanceCardBackground}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="8" Padding="16">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="游戏标识" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="Steam 启动配置" FontSize="16" FontWeight="SemiBold"/>
 
                     <Grid ColumnSpacing="12" RowSpacing="12">
                         <Grid.ColumnDefinitions>
@@ -102,6 +112,25 @@
                                 <ComboBoxItem Tag="japanese" Content="japanese - 日本語"/>
                                 <ComboBoxItem Tag="koreana"  Content="koreana - 한국어"/>
                             </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                    <TextBlock Text="填写 AppID 后，点击上方“自动获取游戏信息”可一并获取公开分支的 BuildID 和 Manifest。"
+                               TextWrapping="Wrap" FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="BuildID" FontWeight="Medium"/>
+                            <TextBox x:Name="txtBuildId" PlaceholderText="自动获取或手动填入"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="6">
+                            <TextBlock Text="Manifest" FontWeight="Medium"/>
+                            <TextBox x:Name="txtManifest" PlaceholderText="自动获取或手动填入"/>
                         </StackPanel>
                     </Grid>
 
@@ -160,7 +189,7 @@
                             <Button Grid.Column="2" Content="清除" Click="ClearLauncherExe_Click"/>
                         </Grid>
                     </StackPanel>
-                    <TextBlock Text="提示：该路径用于下方的「打开游戏启动器」功能，并会随当前预设保存。"
+                    <TextBlock Text="提示：该路径用于下方的「打开游戏启动器」功能，并会随当前游戏配置保存。"
                                TextWrapping="Wrap"
                                FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
@@ -179,28 +208,18 @@
                 </StackPanel>
             </Border>
 
-            <!-- BuildID 和 Manifest -->
+            <!-- 特殊启动参数独立于文件路径配置，便于后续扩展启动方式。 -->
             <Border Background="{StaticResource AppearanceCardBackground}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="8" Padding="16">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="BuildID 和 Manifest" FontSize="16" FontWeight="SemiBold"/>
-                    <TextBlock Text="填写 AppID 后，点击上方「自动获取游戏信息」即可一并获取公开分支的 BuildID 和 Manifest。"
-                               TextWrapping="Wrap" FontSize="12"/>
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="BuildID"/>
-                            <TextBox x:Name="txtBuildId" PlaceholderText="自动获取或手动填入"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="8">
-                            <TextBlock Text="Manifest"/>
-                            <TextBox x:Name="txtManifest" PlaceholderText="自动获取或手动填入"/>
-                        </StackPanel>
-                    </Grid>
+                    <TextBlock Text="特殊启动参数" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBox x:Name="txtLaunchArguments"
+                             Header="启动参数（可选）"
+                             PlaceholderText="例如 -dx11；无需填写 %command%"/>
+                    <TextBlock Text="提示：参数会插入真实 EXE 与 %command% 之间，并随当前游戏配置保存。"
+                               TextWrapping="Wrap" FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
             </Border>
 
@@ -215,14 +234,6 @@
                         Content="复制启动命令到剪贴板"
                         HorizontalAlignment="Stretch"
                         Click="CopyCommand_Click"/>
-                <Button x:Name="btnOpenLauncher"
-                        Content="打开游戏启动器"
-                        HorizontalAlignment="Stretch"
-                        Click="OpenLauncher_Click"/>
-                <Button x:Name="btnSave"
-                        Content="保存当前配置"
-                        HorizontalAlignment="Stretch"
-                        Click="Save_Click"/>
             </StackPanel>
 
             <!-- 运行日志 -->

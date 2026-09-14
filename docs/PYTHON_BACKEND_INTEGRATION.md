@@ -7,7 +7,8 @@
 - C# DTO、服务接口、传输接口和 JSON 解析入口已经建立。
 - Python Pydantic 模型、Provider 基类、七个 Provider 类和注册表已经建立。
 - Provider 类目前是接口骨架，尚未实现厂商请求与解析。
-- 首页目前仍显示静态占位内容，后续通过 `IHomeContentService` 接入数据。
+- 首页资讯栏已通过 `HomeBannerAndNews` 消费统一 DTO，并由 `IHomeContentService` 提供数据。当前使用
+  `PreviewHomeContentService` 显示接入前的占位内容；接入 Python 后替换服务实现即可，无需修改页面控件。
 - 截图目录使用独立接口，不属于 `HomeContent`。
 
 ## 固定首页模型
@@ -118,8 +119,8 @@ Python 只返回固定模板；C# 使用本机 Steam 设置展开 `{steamInstall
 在仓库根目录执行：
 
 ```powershell
-dotnet build Tests\HomeContentContract.Tests\HomeContentContract.Tests.csproj --configuration Debug -p:OutDir=..\..\bin\Debug\Tests\HomeContentContract\
-dotnet bin\Debug\Tests\HomeContentContract\HomeContentContract.Tests.dll
+dotnet build Tests\HomeContentContract.Tests\HomeContentContract.Tests.csproj --configuration Debug -p:OutDir=..\..\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\HomeContentContract\
+dotnet bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\HomeContentContract\HomeContentContract.Tests.dll
 python -m compileall -q python\home_content
 ```
 

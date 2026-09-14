@@ -150,6 +150,7 @@ public class CustomManifestPreset
     public string GameDisplayName { get; set; } = "";
     public string InstallDir { get; set; } = "";
     public string ClientExePath { get; set; } = "";        // 真实游戏 exe 完整路径（用于复制启动命令）
+    public string LaunchArguments { get; set; } = "";      // 写入 Steam LaunchOptions 的可选启动参数
     public string LauncherExePath { get; set; } = "";      // 游戏启动器 exe 完整路径（用于直接打开启动器）
     public string ExecutableFileName { get; set; } = "";   // v2.3.0 新增：Steam 占位 exe 文件名
     public string Language { get; set; } = "schinese";
@@ -167,6 +168,7 @@ public class CustomManifestPreset
         GameDisplayName = GameDisplayName,
         InstallDir = InstallDir,
         ClientExePath = ClientExePath,
+        LaunchArguments = LaunchArguments,
         LauncherExePath = LauncherExePath,
         ExecutableFileName = ExecutableFileName,
         Language = Language,

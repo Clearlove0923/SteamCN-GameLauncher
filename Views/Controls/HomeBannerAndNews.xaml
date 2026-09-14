@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl x:Class="SteamCNGameLauncher.Views.Controls.HomeBannerAndNews"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SteamCNGameLauncher.Views.Controls">
+    <!-- 在固定设计画布内排版，再整体适配外框，避免系统 DPI 缩放挤占三行资讯空间。 -->
+    <Viewbox Stretch="Fill">
+        <Border x:Name="DesignSurface" Width="576" Height="425"
+                Background="#E8171717" CornerRadius="14">
+            <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="BannerRow" Height="261.5"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 参照 Starward：Banner 独占上半区，轮播按钮隐藏，悬停时显示页码并暂停。 -->
+            <Grid x:Name="BannerContainer"
+                  PointerEntered="BannerContainer_PointerEntered"
+                  PointerExited="BannerContainer_PointerExited">
+                <Border Background="#FF1767A8" CornerRadius="14,14,0,0">
+                    <Grid>
+                        <FlipView x:Name="BannerFlipView"
+                                  Background="Transparent"
+                                  HorizontalContentAlignment="Stretch"
+                                  VerticalContentAlignment="Stretch"
+                                  ItemsSource="{x:Bind BannerItems}"
+                                  Loaded="BannerFlipView_Loaded"
+                                  SelectionChanged="BannerFlipView_SelectionChanged">
+                            <FlipView.ItemTemplate>
+                                <DataTemplate x:DataType="local:HomeBannerDisplayItem">
+                                    <Grid Tapped="Banner_Tapped">
+                                        <Image Source="{x:Bind ImageSource}"
+                                               Stretch="UniformToFill"/>
+                                        <Border VerticalAlignment="Bottom"
+                                                Padding="20,30,20,16">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                                    <GradientStop Offset="0" Color="#00000000"/>
+                                                    <GradientStop Offset="1" Color="#C8000000"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <TextBlock Text="{x:Bind Title}"
+                                                       FontSize="18" FontWeight="SemiBold"
+                                                       Foreground="White"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </FlipView.ItemTemplate>
+                        </FlipView>
+
+                        <StackPanel x:Name="BannerEmptyState"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Spacing="10">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="42" Foreground="White"/>
+                            <TextBlock Text="等待 Python 首页内容"
+                                       FontSize="18" FontWeight="SemiBold" Foreground="White"/>
+                        </StackPanel>
+
+                        <Border x:Name="BannerCounterBorder"
+                                Padding="10,3" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                Background="#B8000000" CornerRadius="10,0,0,0"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="BannerCounter" FontSize="13" Foreground="#FFE4E4E4"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- 分类名称和数量由 Provider 数据决定；横向滚动可容纳三个以上的分类。 -->
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="42"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <ScrollViewer x:Name="CategoryScrollViewer"
+                              Padding="12,0,12,0"
+                              HorizontalScrollMode="Enabled"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollMode="Disabled"
+                              VerticalScrollBarVisibility="Disabled"
+                              ZoomMode="Disabled"
+                              PointerWheelChanged="CategoryScrollViewer_PointerWheelChanged">
+                    <ItemsRepeater ItemsSource="{x:Bind NewsGroups}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Orientation="Horizontal" Spacing="4"/>
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="local:HomeNewsGroup">
+                                <Button MinWidth="72" Height="42" Padding="12,3"
+                                        Background="Transparent" BorderThickness="0"
+                                        Click="CategoryButton_Click">
+                                    <Grid>
+                                        <TextBlock Text="{x:Bind Header}" FontSize="17" FontWeight="Bold"
+                                                   Foreground="White" Opacity="{x:Bind HeaderOpacity, Mode=OneWay}"/>
+                                        <Border Height="3" Margin="0,0,0,1"
+                                                VerticalAlignment="Bottom"
+                                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                CornerRadius="2"
+                                                Visibility="{x:Bind SelectionIndicatorVisibility, Mode=OneWay}"/>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </ScrollViewer>
+
+                <!-- 资讯行高固定为 34，当前尺寸可完整显示三条；更多内容通过滚轮查看。 -->
+                <Grid Grid.Row="1" Margin="20,0,12,10">
+                    <ScrollViewer HorizontalScrollMode="Disabled"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollMode="Enabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  ZoomMode="Disabled">
+                        <ItemsRepeater ItemsSource="{x:Bind SelectedNewsItems}">
+                            <ItemsRepeater.Layout>
+                                <StackLayout Spacing="2"/>
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate x:DataType="local:HomeNewsDisplayItem">
+                                    <Button Height="34" Padding="4,2"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Background="Transparent" BorderThickness="0"
+                                            Click="NewsItem_Click">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{x:Bind Title}" FontSize="15"
+                                                       VerticalAlignment="Center" Foreground="White"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{x:Bind DateText}"
+                                                       FontSize="14" VerticalAlignment="Center"
+                                                       Foreground="#FFB8B8B8"/>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </ScrollViewer>
+                    <TextBlock x:Name="NewsEmptyState" Text="暂无内容"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="#FFB8B8B8"/>
+                </Grid>
+            </Grid>
+            </Grid>
+        </Border>
+    </Viewbox>
+</UserControl>

@@ -16,11 +16,14 @@ public sealed partial class MainWindow : Window
     private AppWindow? _appWindow;
     private readonly CustomManifestService _customManifestService = CustomManifestService.Instance;
     private readonly GameExecutableIconService _gameIconService = new();
-    private readonly DispatcherTimer _gameLibraryCloseTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    private readonly DispatcherTimer _gameLibraryCloseTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private bool _pointerOverGameLibraryTrigger;
     private bool _pointerOverGameLibraryOverlay;
     private string? _pendingHomeGameId;
     private bool _addingCustomManifest;
+    private bool _restoringNavigationSelection;
+    private bool _confirmingNavigation;
+    private NavigationViewItem? _lastAcceptedNavigationItem;
 
     private sealed class GameLibraryEntry : INotifyPropertyChanged
     {
@@ -50,7 +53,8 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         NavView.CompactPaneLength = LauncherDimensions.SidebarWidth;
-        GameLibraryOverlay.Margin = new Thickness(LauncherDimensions.SidebarWidth + 12, 8, 0, 0);
+        // 与侧栏重叠一个逻辑像素，鼠标横向移动时不会经过无命中间隙。
+        GameLibraryOverlay.Margin = new Thickness(LauncherDimensions.SidebarWidth - 1, 12, 0, 0);
         TitleDragRegion.Margin = new Thickness(LauncherDimensions.SidebarWidth, 0, 150, 0);
         InitializeAppearance();
         _gameLibraryCloseTimer.Tick += (_, _) =>
@@ -78,6 +82,7 @@ public sealed partial class MainWindow : Window
 
         // 首页是默认页面；游戏列表只是切换入口，不拥有独立页面。
         RefreshCustomNavigation();
+        _lastAcceptedNavigationItem = HomeNavItem;
         NavView.SelectedItem = HomeNavItem;
     }
 
@@ -111,11 +116,10 @@ public sealed partial class MainWindow : Window
 
     private void BtnUpdateBadge_Click(object sender, RoutedEventArgs e)
     {
-        // 跳转到设置页
+        // 统一通过 SelectionChanged 导航，使未保存配置检查不会被绕过。
         NavView.SelectedItem = NavView.FooterMenuItems
             .OfType<NavigationViewItem>()
             .FirstOrDefault(i => i.Tag?.ToString() == "Settings");
-        ContentFrame.Navigate(typeof(Views.Pages.SettingsPage));
     }
 
     private async void BtnForceUpdateDownload_Click(object sender, RoutedEventArgs e)
@@ -186,9 +190,45 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    private async void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         if (args.SelectedItem is not NavigationViewItem item) return;
+
+        if (_restoringNavigationSelection) return;
+
+        // 配置页允许用户保存、放弃或取消本次侧边栏切换。
+        if (!_confirmingNavigation
+            && !ReferenceEquals(item, _lastAcceptedNavigationItem)
+            && ContentFrame.Content is Views.Pages.CustomManifestPage configurationPage)
+        {
+            _confirmingNavigation = true;
+            var canLeave = false;
+            try
+            {
+                canLeave = await configurationPage.ConfirmUnsavedChangesAsync();
+            }
+            finally
+            {
+                _confirmingNavigation = false;
+            }
+
+            if (!canLeave)
+            {
+                _pendingHomeGameId = null;
+                _restoringNavigationSelection = true;
+                try
+                {
+                    NavView.SelectedItem = _lastAcceptedNavigationItem;
+                }
+                finally
+                {
+                    _restoringNavigationSelection = false;
+                }
+                return;
+            }
+        }
+
+        _lastAcceptedNavigationItem = item;
         HideGameLibraryOverlay();
 
         var tag = item.Tag?.ToString();
@@ -226,7 +266,6 @@ public sealed partial class MainWindow : Window
             game.Name,
             game.ClientExePath)).ToList();
         GameLibraryItems.ItemsSource = entries;
-        if (entries.Count == 0) HideGameLibraryOverlay();
         _ = LoadGameLibraryIconsAsync(entries);
     }
 
@@ -247,8 +286,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // 先导航，让旧页面在 OnNavigatedFrom 中保存；再记录新选中项，
-        // 否则旧页的自动保存会把 CurrentCustomManifestId 改回旧 Id。
+        // 页面内部负责提示未保存内容；这里仅执行已确认的配置导航。
         ContentFrame.Navigate(typeof(Views.Pages.CustomManifestPage), id);
         _customManifestService.Select(id);
     }
@@ -261,9 +299,9 @@ public sealed partial class MainWindow : Window
 
     private void NavigateToSteamConfiguration()
     {
-        var id = _customManifestService.GetInitialSidebarId();
-        if (string.IsNullOrWhiteSpace(id)) ShowEmptyGameLibrary();
-        else NavigateToCustom(id);
+        // 没有已添加游戏时仍打开内置配置，用户可在页面中点击“新建”。
+        var id = _customManifestService.GetInitialSidebarId() ?? _customManifestService.GetBuiltInId();
+        NavigateToCustom(id);
     }
 
     private void GameLibraryNavItem_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
@@ -271,9 +309,8 @@ public sealed partial class MainWindow : Window
         // 覆盖层与导航项处于同一个窗口命中树中，不会因 Popup 边界反复触发开关。
         _pointerOverGameLibraryTrigger = true;
         _gameLibraryCloseTimer.Stop();
-        RefreshCustomNavigation();
-        if (GameLibraryItems.Items.Count > 0)
-            GameLibraryOverlay.Visibility = Visibility.Visible;
+        // 列表只在配置变化时重建；悬停期间替换 ItemsSource 会改变命中树并造成闪烁。
+        GameLibraryOverlay.Visibility = Visibility.Visible;
     }
 
     private void GameLibraryNavItem_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
@@ -319,16 +356,30 @@ public sealed partial class MainWindow : Window
         if (sender is not FrameworkElement { DataContext: GameLibraryEntry selected }) return;
 
         HideGameLibraryOverlay();
-        _customManifestService.Select(selected.Id);
         if (ReferenceEquals(NavView.SelectedItem, HomeNavItem))
         {
             NavigateToHome(selected.Id);
             return;
         }
 
-        // 先保存目标游戏，再选中首页；SelectionChanged 只会展示这个明确选择的游戏。
+        // 先暂存目标游戏，未保存提示确认离开后才真正切换当前配置。
         _pendingHomeGameId = selected.Id;
         NavView.SelectedItem = HomeNavItem;
+    }
+
+    private void OpenGameConfigurationButton_Click(object sender, RoutedEventArgs e)
+    {
+        HideGameLibraryOverlay();
+        var configurationItem = NavView.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => string.Equals(
+                item.Tag?.ToString(), "SteamConfiguration", StringComparison.Ordinal));
+        if (configurationItem == null) return;
+
+        if (ReferenceEquals(NavView.SelectedItem, configurationItem))
+            NavigateToSteamConfiguration();
+        else
+            NavView.SelectedItem = configurationItem;
     }
 
     private async Task AddGameAsync()

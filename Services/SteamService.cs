@@ -251,7 +251,13 @@ public class SteamService
     /// <summary>
     /// 自定义 Manifest 页用：基于用户指定的 EXE 完整路径直接生成启动命令。
     /// </summary>
-    public string GenerateLaunchCommandFromExe(string exePath) => $"\"{exePath}\" %command%";
+    public string GenerateLaunchCommandFromExe(string exePath, string? launchArguments = null)
+    {
+        var arguments = launchArguments?.Trim();
+        return string.IsNullOrWhiteSpace(arguments)
+            ? $"\"{exePath}\" %command%"
+            : $"\"{exePath}\" {arguments} %command%";
+    }
 
     /// <summary>
     /// 确保 common\&lt;installDir&gt; 目录存在并放置占位 exe（仅当不存在时创建，绝不覆盖真实文件）。

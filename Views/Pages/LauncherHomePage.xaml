@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Page x:Class="SteamCNGameLauncher.Views.Pages.LauncherHomePage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:controls="using:SteamCNGameLauncher.Views.Controls">
     <Grid Background="{StaticResource AppearancePageBackground}">
         <!-- 首页内容覆盖在全窗口背景上，位置按 1920×1080 米哈游启动器参考布局设置。 -->
         <Border Background="#14000000" IsHitTestVisible="False"/>
@@ -21,75 +22,61 @@
         <!-- 资讯面板尺寸由 HomeLayoutProfile 控制，不同 Provider 可使用不同布局档案。 -->
         <Border x:Name="NewsPanel" Width="576" Height="425" Margin="90,0,0,76"
                 HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                Background="#DE111111" CornerRadius="14">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition x:Name="NewsHeroRow" Height="261.5"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <Border Margin="0" CornerRadius="14,14,0,0"
-                        Background="{ThemeResource AccentFillColorDefaultBrush}">
-                    <Grid Padding="28">
-                        <FontIcon Glyph="&#xE8A5;" FontSize="54"
-                                  HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <TextBlock Text="资讯主图区域" FontSize="25" FontWeight="Bold"/>
-                            <TextBlock Text="支持图片轮播与链接跳转" FontSize="15"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="34"
-                            Margin="24,20,24,12">
-                    <TextBlock Text="活动" FontSize="18" FontWeight="Bold"/>
-                    <TextBlock Text="公告" FontSize="18" Opacity="0.65"/>
-                    <TextBlock Text="资讯" FontSize="18" Opacity="0.65"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2" Margin="24,0,24,18" Spacing="10">
-                    <Grid>
-                        <TextBlock Text="【有奖活动】游戏资讯内容占位" FontSize="15"/>
-                        <TextBlock Text="09/12" FontSize="15" HorizontalAlignment="Right" Opacity="0.7"/>
-                    </Grid>
-                    <Grid>
-                        <TextBlock Text="【公告】版本更新内容占位" FontSize="15"/>
-                        <TextBlock Text="09/10" FontSize="15" HorizontalAlignment="Right" Opacity="0.7"/>
-                    </Grid>
-                </StackPanel>
-            </Grid>
+                Background="Transparent" CornerRadius="14">
+            <controls:HomeBannerAndNews x:Name="HomeContentPanel"/>
         </Border>
 
         <!-- 启动区固定在右下，保持与米哈游启动器相同的视觉锚点。 -->
-        <StackPanel x:Name="LaunchDock" Margin="0,0,90,54"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Spacing="10">
-            <StackPanel x:Name="LaunchButtonRow" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
-                <Button x:Name="StartGameButton" Width="282" Height="84" CornerRadius="42"
-                        Background="#FFFFD21F" Foreground="#FF171717" BorderThickness="0"
-                        IsEnabled="False">
-                    <StackPanel x:Name="StartGameButtonContent" Orientation="Horizontal" Spacing="16"
-                                HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE768;" FontSize="28"/>
-                        <TextBlock Text="开始游戏" FontSize="24" FontWeight="Bold"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
+        <StackPanel x:Name="LaunchDock" Margin="0,0,90,90"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom">
+            <Border x:Name="LaunchButtonGroupBackground"
+                    HorizontalAlignment="Right" Background="#18353941" CornerRadius="42"
+                    PointerEntered="LaunchButtonGroup_PointerEntered"
+                    PointerExited="LaunchButtonGroup_PointerExited">
+            <StackPanel x:Name="LaunchButtonRow" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="0">
+                <Button x:Name="StartGameButton" Width="186" Height="84" CornerRadius="42"
+                        Padding="0" Background="Transparent" Foreground="White" BorderThickness="0"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                        IsEnabled="False" Click="StartGameButton_Click">
+                    <Grid>
+                        <!-- 独立背景层避免 WinUI 默认 PointerOver 状态覆盖自定义透明度。 -->
+                        <Border x:Name="StartGameButtonBackground" Background="Transparent"
+                                CornerRadius="42,0,0,42"/>
+                        <StackPanel x:Name="StartGameButtonContent" Orientation="Horizontal" Spacing="10"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border Width="40" Height="40" CornerRadius="20" Background="#18272B32">
+                                <FontIcon x:Name="StartGamePlayIcon" Glyph="&#xE768;" FontSize="18" Foreground="White"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock x:Name="StartGameText" Text="开始游戏" FontSize="22" FontWeight="Bold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
                 </Button>
-                <Button x:Name="LaunchSettingsButton" Width="84" Height="84" CornerRadius="42" Background="#E6353941"
-                        BorderThickness="0" IsEnabled="False"
+                <Button x:Name="LaunchMenuButton" Width="93" Height="84" CornerRadius="42"
+                        Padding="0" Background="Transparent" BorderThickness="0"
+                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                         ToolTipService.ToolTip="启动设置">
-                    <FontIcon x:Name="LaunchSettingsIcon" Glyph="&#xE700;" FontSize="28"/>
+                    <Button.Flyout>
+                        <MenuFlyout Placement="TopEdgeAlignedRight">
+                            <MenuFlyoutSubItem Text="游戏启动方式">
+                                <ToggleMenuFlyoutItem x:Name="SteamLaunchModeItem" Text="通过 Steam 启动"
+                                                      IsChecked="True" Click="LaunchModeMenuItem_Click"/>
+                                <ToggleMenuFlyoutItem x:Name="DirectLaunchModeItem" Text="直接启动游戏（后续）"
+                                                      IsEnabled="False"/>
+                                <ToggleMenuFlyoutItem x:Name="LauncherLaunchModeItem" Text="打开游戏启动器（后续）"
+                                                      IsEnabled="False"/>
+                            </MenuFlyoutSubItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <Grid>
+                        <FontIcon x:Name="LaunchMenuIcon" Width="36" Height="36"
+                                  Glyph="&#xE713;" FontSize="26"
+                                  Foreground="White"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
                 </Button>
             </StackPanel>
-            <Border x:Name="SteamLaunchOptions" Width="282" Height="50"
-                    Background="#C9111111" CornerRadius="22" Padding="16,8"
-                    HorizontalAlignment="Right">
-                <StackPanel x:Name="SteamLaunchOptionsContent" Orientation="Horizontal" Spacing="10"
-                            HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <CheckBox Content="使用 Steam 启动" IsChecked="True" IsEnabled="False"/>
-                    <TextBlock Text="说明" VerticalAlignment="Center" Opacity="0.65"/>
-                    <FontIcon Glyph="&#xE76C;" FontSize="13" VerticalAlignment="Center"/>
-                </StackPanel>
             </Border>
         </StackPanel>
     </Grid>

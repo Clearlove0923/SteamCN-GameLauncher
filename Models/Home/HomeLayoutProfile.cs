@@ -15,9 +15,7 @@ public sealed record HomeLayoutProfile(
     double LaunchBottom,
     double StartButtonWidth,
     double StartButtonHeight,
-    double LaunchSettingsButtonSize,
-    double SteamLaunchOptionsWidth,
-    double SteamLaunchOptionsHeight)
+    double LaunchMenuButtonWidth)
 {
     public const string MihoyoLauncherId = "mihoyo-launcher";
 }

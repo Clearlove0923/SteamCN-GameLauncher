@@ -18,12 +18,10 @@ public sealed class HomeLayoutProfileCatalog
                 NewsLeft: 90,
                 NewsBottom: 76,
                 LaunchRight: 90,
-                LaunchBottom: 54,
-                StartButtonWidth: 282,
+                LaunchBottom: 90,
+                StartButtonWidth: 186,
                 StartButtonHeight: 84,
-                LaunchSettingsButtonSize: 84,
-                SteamLaunchOptionsWidth: 282,
-                SteamLaunchOptionsHeight: 50)
+                LaunchMenuButtonWidth: 93)
         };
 
     public HomeLayoutProfile Resolve(string? id) =>

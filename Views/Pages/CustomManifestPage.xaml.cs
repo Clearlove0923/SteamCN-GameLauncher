@@ -22,6 +22,7 @@ public sealed partial class CustomManifestPage : Page
     private bool _suppressSelectionChanged;
     private bool _formLoaded;
     private bool _deleted;
+    private bool _switchingPreset;
 
     public string PresetId { get; private set; } = "";
 
@@ -51,7 +52,6 @@ public sealed partial class CustomManifestPage : Page
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         ResetGameInfoLookup();
-        PersistCurrentPreset(showFailureLog: false);
         if (_logScrollHandler != null)
             _logService.Logs.CollectionChanged -= _logScrollHandler;
     }
@@ -78,7 +78,6 @@ public sealed partial class CustomManifestPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         ResetGameInfoLookup();
-        PersistCurrentPreset(showFailureLog: false);
         base.OnNavigatedFrom(e);
     }
 
@@ -95,6 +94,7 @@ public sealed partial class CustomManifestPage : Page
             txtDisplayName.Text = preset.GameDisplayName;
             txtInstallDir.Text = preset.InstallDir;
             txtClientExePath.Text = preset.ClientExePath;
+            txtLaunchArguments.Text = preset.LaunchArguments;
             txtLauncherExePath.Text = preset.LauncherExePath;
             txtExecutableFileName.Text = preset.ExecutableFileName;
             txtBuildId.Text = preset.BuildId;
@@ -143,6 +143,7 @@ public sealed partial class CustomManifestPage : Page
             GameDisplayName = txtDisplayName.Text.Trim(),
             InstallDir = txtInstallDir.Text.Trim(),
             ClientExePath = txtClientExePath.Text.Trim(),
+            LaunchArguments = txtLaunchArguments.Text.Trim(),
             LauncherExePath = txtLauncherExePath.Text.Trim(),
             ExecutableFileName = txtExecutableFileName.Text.Trim(),
             Language = langTag,
@@ -173,70 +174,69 @@ public sealed partial class CustomManifestPage : Page
         }
     }
 
-    private void Preset_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void Preset_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_suppressSelectionChanged || cmbPreset.SelectedItem is not CustomManifestPreset selected)
+        if (_suppressSelectionChanged || _switchingPreset
+            || cmbPreset.SelectedItem is not CustomManifestPreset selected)
             return;
         if (string.Equals(selected.Id, PresetId, StringComparison.OrdinalIgnoreCase))
             return;
 
-        if (!PersistCurrentPreset())
+        _switchingPreset = true;
+        try
         {
-            RefreshPresetComboBox(PresetId);
-            return;
-        }
+            if (!await ConfirmUnsavedChangesAsync())
+            {
+                RefreshPresetComboBox(PresetId);
+                return;
+            }
 
-        var target = _customManifestService.GetById(selected.Id);
-        if (target == null)
+            var target = _customManifestService.GetById(selected.Id);
+            if (target == null)
+            {
+                _presets = _customManifestService.GetAll().ToList();
+                RefreshPresetComboBox(PresetId);
+                return;
+            }
+
+            _preset = target;
+            PresetId = target.Id;
+            _deleted = false;
+            LoadPreset(_preset);
+
+            // Steam 配置页只切换正在编辑的配置，不触发主窗口跳转到首页。
+            _customManifestService.Select(PresetId);
+        }
+        finally
         {
-            _presets = _customManifestService.GetAll().ToList();
-            RefreshPresetComboBox(PresetId);
-            return;
+            _switchingPreset = false;
         }
-
-        _preset = target;
-        PresetId = target.Id;
-        _deleted = false;
-        LoadPreset(_preset);
-
-        // Steam 配置页只切换正在编辑的配置，不触发主窗口跳转到首页。
-        _customManifestService.Select(PresetId);
     }
 
     private async void NewPreset_Click(object sender, RoutedEventArgs e)
     {
-        var name = await PromptForPresetNameAsync("新建自定义", "");
+        if (!await ConfirmUnsavedChangesAsync()) return;
+
+        var name = await PromptForPresetNameAsync("新建游戏配置", "");
         if (name == null) return;
 
         var created = _customManifestService.Create(name);
         if (created == null)
         {
-            await ShowInfoAsync("无法新建自定义配置，请稍后重试。");
+            await ShowInfoAsync("无法新建游戏配置，请稍后重试。");
             return;
         }
-        _logService.AddLog($"[自定义页] 已新建自定义：{name}");
-    }
-
-    private async void SaveAsPreset_Click(object sender, RoutedEventArgs e)
-    {
-        var name = await PromptForPresetNameAsync("另存为新自定义", "");
-        if (name == null) return;
-
-        var created = _customManifestService.Create(name, BuildPresetFromUI());
-        if (created == null)
-        {
-            await ShowInfoAsync("无法保存新的自定义配置，请稍后重试。");
-            return;
-        }
-        _logService.AddLog($"[自定义页] 已另存为新自定义：{name}");
+        _logService.AddLog($"[Steam配置页] 已新建游戏配置：{name}");
     }
 
     private async void RenamePreset_Click(object sender, RoutedEventArgs e)
     {
+        if (!await ConfirmUnsavedChangesAsync()) return;
+
         var current = GetSelectedPreset();
         if (current == null) return;
 
-        var name = await PromptForPresetNameAsync("重命名自定义", current.Name, current.Id);
+        var name = await PromptForPresetNameAsync("重命名游戏配置", current.Name, current.Id);
         if (name == null) return;
 
         if (!_customManifestService.Rename(current.Id, name))
@@ -259,8 +259,8 @@ public sealed partial class CustomManifestPage : Page
 
         var dialog = new ContentDialog
         {
-            Title = "删除自定义",
-            Content = $"确定要删除自定义「{current.Name}」吗？此操作不可撤销。",
+            Title = "删除游戏配置",
+            Content = $"确定要删除游戏配置「{current.Name}」吗？此操作不可撤销。",
             PrimaryButtonText = "删除",
             CloseButtonText = "取消",
             XamlRoot = XamlRoot
@@ -283,7 +283,7 @@ public sealed partial class CustomManifestPage : Page
     /// </summary>
     private async Task<string?> PromptForPresetNameAsync(string title, string defaultText, string? excludeId = null)
     {
-        var textBox = new TextBox { Text = defaultText, PlaceholderText = "请输入预设名称" };
+        var textBox = new TextBox { Text = defaultText, PlaceholderText = "请输入游戏配置名称" };
         var dialog = new ContentDialog
         {
             Title = title,
@@ -297,13 +297,13 @@ public sealed partial class CustomManifestPage : Page
         var name = textBox.Text.Trim();
         if (string.IsNullOrEmpty(name))
         {
-            await ShowInfoAsync("预设名称不能为空。");
+            await ShowInfoAsync("游戏配置名称不能为空。");
             return null;
         }
 
         if (_customManifestService.NameExists(name, excludeId))
         {
-            await ShowInfoAsync($"已存在同名预设「{name}」，请换一个名称。");
+            await ShowInfoAsync($"已存在同名游戏配置「{name}」，请换一个名称。");
             return null;
         }
 
@@ -492,7 +492,14 @@ public sealed partial class CustomManifestPage : Page
             if (await confirmDialog.ShowAsync() != ContentDialogResult.Primary) return;
         }
 
-        var command = _steamService.GenerateLaunchCommandFromExe(exePath);
+        var launchArguments = txtLaunchArguments.Text.Trim();
+        if (launchArguments.Contains("%command%", StringComparison.OrdinalIgnoreCase))
+        {
+            await ShowInfoAsync("特殊启动参数中不需要填写 %command%，软件会自动添加。");
+            return;
+        }
+
+        var command = _steamService.GenerateLaunchCommandFromExe(exePath, launchArguments);
 
         var dataPackage = new DataPackage();
         dataPackage.SetText(command);
@@ -544,16 +551,65 @@ public sealed partial class CustomManifestPage : Page
         if (PersistCurrentPreset())
         {
             _logService.AddLog("[自定义页] 已保存当前配置");
-            await ShowInfoAsync("当前配置已保存。下次打开该页将自动恢复。");
+            await ShowInfoAsync("配置已保存。下次打开该页将自动恢复。");
         }
         else
         {
-            await ShowInfoAsync("当前配置保存失败，请稍后重试。");
+            await ShowInfoAsync("配置保存失败，请稍后重试。");
         }
     }
 
     /// <summary>
-    /// 把当前表单按稳定 Id 原子写回，页面离开时也会自动保存。
+    /// 在离开页面或切换游戏配置前询问如何处理未保存内容。
+    /// 返回 false 时调用方必须取消本次切换。
+    /// </summary>
+    public async Task<bool> ConfirmUnsavedChangesAsync()
+    {
+        if (!HasUnsavedChanges()) return true;
+
+        var dialog = new ContentDialog
+        {
+            Title = "配置尚未保存",
+            Content = $"游戏配置“{_preset?.Name}”包含未保存的修改。",
+            PrimaryButtonText = "保存",
+            SecondaryButtonText = "不保存",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Secondary) return true;
+        if (result != ContentDialogResult.Primary) return false;
+
+        if (PersistCurrentPreset()) return true;
+        await ShowInfoAsync("配置保存失败，已取消切换。");
+        return false;
+    }
+
+    private bool HasUnsavedChanges()
+    {
+        if (!_formLoaded || _deleted || _preset == null) return false;
+        var form = BuildPresetFromUI();
+        return !SameEditableFields(_preset, form);
+    }
+
+    private static bool SameEditableFields(CustomManifestPreset left, CustomManifestPreset right) =>
+        string.Equals(left.AppId, right.AppId, StringComparison.Ordinal)
+        && string.Equals(left.DepotId, right.DepotId, StringComparison.Ordinal)
+        && string.Equals(left.BuildId, right.BuildId, StringComparison.Ordinal)
+        && string.Equals(left.Manifest, right.Manifest, StringComparison.Ordinal)
+        && string.Equals(left.GameDisplayName, right.GameDisplayName, StringComparison.Ordinal)
+        && string.Equals(left.InstallDir, right.InstallDir, StringComparison.Ordinal)
+        && string.Equals(left.ClientExePath, right.ClientExePath, StringComparison.Ordinal)
+        && string.Equals(left.LaunchArguments, right.LaunchArguments, StringComparison.Ordinal)
+        && string.Equals(left.LauncherExePath, right.LauncherExePath, StringComparison.Ordinal)
+        && string.Equals(left.ExecutableFileName, right.ExecutableFileName, StringComparison.Ordinal)
+        && string.Equals(left.Language, right.Language, StringComparison.Ordinal)
+        && string.Equals(left.HomeLayoutProfileId, right.HomeLayoutProfileId, StringComparison.Ordinal);
+
+    /// <summary>
+    /// 把当前表单按稳定 Id 原子写回；离开页面时由未保存提示决定是否调用。
     /// </summary>
     private bool PersistCurrentPreset(bool showFailureLog = true)
     {

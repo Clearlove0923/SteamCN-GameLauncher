@@ -11,7 +11,7 @@ public sealed partial class MainWindow
     private readonly AppearanceService _appearance = AppearanceService.Instance;
     private string _loadedBackground = "";
     private int _backgroundRequest;
-    private readonly AcrylicBrush _paneBrush = new();
+    private readonly SolidColorBrush _paneBrush = new();
     private readonly SolidColorBrush _expandedPaneBrush = new();
     private readonly SolidColorBrush _contentBrush = new();
 
@@ -72,31 +72,12 @@ public sealed partial class MainWindow
         };
         var pageBrush = (SolidColorBrush)Application.Current.Resources["AppearancePageBackground"];
         var defaultPage = (SolidColorBrush)Application.Current.Resources["SolidBackgroundFillColorSecondaryBrush"];
-        var defaultPane = (Brush)Application.Current.Resources["NavigationViewDefaultPaneBackground"];
         pageBrush.Color = enabled ? Colors.Transparent : defaultPage.Color;
         _contentBrush.Color = enabled ? Colors.Transparent
             : ((SolidColorBrush)Application.Current.Resources["NavigationViewContentBackground"]).Color;
-        _expandedPaneBrush.Color = enabled ? Colors.Transparent
-            : Application.Current.Resources["NavigationViewExpandedPaneBackground"] switch
-            {
-                SolidColorBrush brush => brush.Color,
-                Windows.UI.Color color => color,
-                _ => Colors.Transparent
-            };
-        // Use private brushes so disabling the background restores the original theme materials.
-        if (defaultPane is AcrylicBrush acrylic)
-        {
-            _paneBrush.TintColor = acrylic.TintColor;
-            _paneBrush.TintOpacity = acrylic.TintOpacity;
-            _paneBrush.TintLuminosityOpacity = acrylic.TintLuminosityOpacity;
-            _paneBrush.FallbackColor = acrylic.FallbackColor;
-            _paneBrush.AlwaysUseFallback = acrylic.AlwaysUseFallback;
-        }
-        else if (defaultPane is SolidColorBrush solid)
-        {
-            _paneBrush.AlwaysUseFallback = true;
-            _paneBrush.FallbackColor = solid.Color;
-        }
-        _paneBrush.Opacity = enabled ? 0 : defaultPane.Opacity;
+        // 侧栏保持稳定的深灰底色，避免背景图片影响导航图标辨识度。
+        var paneColor = Windows.UI.Color.FromArgb(235, 55, 55, 55);
+        _paneBrush.Color = paneColor;
+        _expandedPaneBrush.Color = paneColor;
     }
 }
