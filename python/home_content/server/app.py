@@ -17,13 +17,16 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
+import httpx
 from fastapi import FastAPI, HTTPException, status
 from pydantic import ValidationError
 
 from ..models import (
     GameScreenshotPathEnvelope,
     GameScreenshotPathRequest,
+    HomeContent,
     HomeContentEnvelope,
+    HomeContentError,
     HomeContentRequest,
 )
 from ..provider_registry import create_provider
@@ -98,12 +101,31 @@ def create_app() -> FastAPI:
                 request.provider_id,
             )
             return build_sample_envelope(request)
-        except ValidationError as error:
-            logger.exception("provider %s produced invalid content", request.provider_id)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Provider output failed validation: {error.errors()}",
-            ) from error
+        except (httpx.HTTPError, ValueError, ValidationError) as error:
+            # Provider fetches the upstream launcher API; on failure we
+            # surface the error in the envelope so the WinUI client can
+            # decide whether to keep the cached background or fall back
+            # to the static placeholder. Schema validity is preserved.
+            logger.warning(
+                "provider %s failed (%s): %s",
+                request.provider_id,
+                type(error).__name__,
+                error,
+            )
+            return HomeContentEnvelope(
+                schema_version=1,
+                request_id=request.request_id,
+                provider_id=request.provider_id,
+                fetched_at=datetime.now(timezone.utc),
+                content=HomeContent(),
+                errors=[
+                    HomeContentError(
+                        code=f"provider_{type(error).__name__}",
+                        message=str(error) or "HoYoPlay Provider failed without message.",
+                        recoverable=True,
+                    )
+                ],
+            )
 
     @app.post(
         "/v1/screenshot-paths",

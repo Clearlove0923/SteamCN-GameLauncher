@@ -2,6 +2,62 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-14 21:30:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 实现真实 Provider `HoYoPlayJsonProvider`（`python/home_content/providers/hoyoplay_json.py`）：主端点 `https://hyp-api.mihoyo.com/hyp/hyp-connect/api/getAllGameBasicInfo`（CN）/ `sg-hyp-api.hoyoverse.com`（OS），按 `providerOptions.launcher_id` + `region` 选 launcher，按 `gameBiz` 或 `game_id` 前缀（`hk4e/hkrpg/bh3/nap/hyg/abc`）选游戏，未匹配时退回 launcher 列表的第一个游戏。响应仅取背景：优先有 `video.url` 的候选，降级到 `background.url`，候选 URL 必须通过 CDN 域名白名单（`*.mihoyo.com`、`*.hoyoverse.com`、`*.yuanshen.com`、`*.bh3.com`、`*.honkaistarrail.com`、`*.zenlesszonezero.com`、`*.miyoushe.com`）。
+- `models.py` 把 Pydantic 类型注解统一改写为 `Optional[X]`：`from __future__ import annotations` + `Optional[str/Optional[datetime/...] = None`，避免 Pydantic 2.x 在 Python 3.10 之前的运行时报 `str | None` 类型错。
+- `server/app.py` 把 Provider 抛出的 `httpx.HTTPError` / `ValueError` / `ValidationError` 统一转换为 `HomeContentEnvelope.errors`，HTTP 状态码仍为 200；客户端通过 `errors` 决定降级策略，`NotImplementedError` 仍走 sample envelope。
+- 新增脱敏样本 `contracts/samples/hoyoplay-cn-launcher-info.json`：基于 2026-09-14 真实响应（CN/zh-cn/launcher_id=`jGHBHlcOq1`），URL 中 32 字符 hex hash 替换为 `HASH32`，保留每个 biz 一条 background 用于回归。
+- 新增 Provider 文档 `docs/HOYOPLAY_PROVIDER.md`：记录验证日期、区域、语言、入口、launcher_id、biz 映射、白名单策略、回退方案与已知限制。
+- 新增 `python/tests/test_hoyoplay_provider.py`：10 项 pytest，覆盖白名单过滤、视频优先、biz 过滤、未知 game 退回、retcode != 0、空响应。Provider 支持 `httpx.AsyncClient` 注入，测试用 `MockTransport` 喂入脱敏样本，不访问真实网络。
+- `.gitignore` 在 `docs/` 白名单里追加 `HOYOPLAY_PROVIDER.md`。
+
+### 验证结果
+
+- `pytest python/tests/test_hoyoplay_provider.py`：10 项全部通过，耗时 0.16s。
+- HTTP 端到端 `HomeContentE2E.Tests`：12 项仍全部通过（Provider 不再退回 sample，envelope 来自真实 `hyp-api`）。
+- `dotnet build HomeContentE2E.Tests.csproj -c Debug -p:Platform=x64`：0 个警告、0 个错误。
+- 直接 `python -m home_content.server.main` 启动 Worker 后 `Invoke-RestMethod` 调 `/v1/home-content`，返回的 envelope 真实携带 `launcher-webstatic.mihoyo.com` 的 webm 视频和 webp 海报 URL。
+- 5 个游戏（`nap_cn`/`hk4e_cn`/`hkrpg_cn`/`bh3_cn`/未知 `game_id`）的真实接口抽样表现符合预期。
+
+### 当前限制
+
+- 当前 Provider 仅返回背景，未补齐 banner / news（主端点不提供）；老的 `<host>/mdk/launcher/api/content` 端点按游戏单独抓样本尚未启动。
+- URL 域名白名单手工维护，新增 CDN 域名需更新 `ALLOWED_HOST_SUFFIXES`。
+- MIME / MD5 / 尺寸校验在 Provider 中未做；按 AGENTS.md 要求，应在 C# 端 `HttpHomeContentTransport` 拉取后由缓存层负责（待办）。
+- OS 端点仅按社区维护的 launcher_id 接入，未独立采样；国际服玩家需要单独验证一次。
+
+## 2026-09-14 21:14:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 新增 Python 端 FastAPI 服务骨架：`python/home_content/server/app.py` 暴露 `GET /healthz`、`POST /v1/home-content` 和 `POST /v1/screenshot-paths`；`main.py` 提供 uvicorn 启动入口；`sample_provider.py` 在真实 Provider 落地前提供确定性示例 envelope，便于 C# 端先行联调。
+- 扩展 `pyproject.toml`：加入 `fastapi`、`uvicorn[standard]`、`httpx[http2]` 三个运行时依赖；同时把 `requires-python` 调整为 `>=3.10`，并将 Pydantic 类型注解统一改写为 `Optional[X]` 形式以兼容 3.10 与 3.11，避免 PEP 604 在 3.9 之前的运行时错误。
+- 新增 C# 端 `Services/Home/HttpHomeContentTransport.cs`：实现 `IHomeContentTransport`，通过 `HttpClient` 调用 Python Worker 的 `/v1/home-content`，使用既有的 `HomeContentJson` 反序列化 envelope，并在网络错误与 schema 错误时统一抛出 `HomeContentTransportException`，便于上层降级策略使用。
+- 新增端到端回归测试 `Tests/HomeContentE2E.Tests`：测试程序自包含——若 `127.0.0.1:8765` 不可达则通过 `HOMECONTENT_VENV`（默认 `%TEMP%\home-content-env`）与 `HOMECONTENT_CWD`（默认仓库 `python/` 根）自动 spawn Python Worker，跑完自动清理。覆盖 schemaVersion、providerId/requestId 回传、background video/poster URL、banners/news 必填字段、未知 providerId 必须返回 400。
+- `HttpHomeContentTransport` 兼容 .NET 8/10：`Accept` 头改用 `MediaTypeWithQualityHeaderValue`，避免 .NET 10 SDK 收紧的 `MediaTypeHeaderValue` 签名差异。
+
+### 验证结果
+
+- `HomeContentE2E.Tests`：12 项检查全部通过；测试过程中 Python Worker 子进程成功启动、关闭，无残留进程。
+- Python 模块导入（`home_content.server.app`、`provider_registry`、`models`）在临时 venv 下成功。
+- `dotnet build HomeContentE2E.Tests.csproj -c Debug -p:Platform=x64`：0 个警告、0 个错误。
+- `git diff --check`：通过。
+
+### 当前限制
+
+- 真实 Provider 仍是 `PendingHomeContentProvider`，所有 adapter 落到 sample envelope；接入厂商数据时只需实现各自的 `fetch` 方法，FastAPI 路由层不再改动。
+- e2e 测试当前以 `net10.0` 作为本地构建目标（环境只装了 .NET 10 SDK），主项目仍保持 `net8.0-windows10.0.19041.0`；装好 .NET 8 后应改回 `net8.0`。
+- Debug 产物落主项目 `bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\HomeContentE2E.Tests\`，未按 AGENTS.md 迁移到 E 盘目录（当前环境无 E: 盘）。
+
 ## 2026-09-14 20:29:21 +08:00
 
 - 推送人员：`Violet0923`

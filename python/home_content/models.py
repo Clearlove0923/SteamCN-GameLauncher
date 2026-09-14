@@ -1,7 +1,9 @@
 """Pydantic mirror of contracts/home-content-v1.schema.json."""
 
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -21,37 +23,37 @@ class HomeContentRequest(ContractModel):
 
 
 class HomeBackground(ContractModel):
-    video_url: str | None = None
-    image_url: str | None = None
-    local_path: str | None = None
+    video_url: Optional[str] = None
+    image_url: Optional[str] = None
+    local_path: Optional[str] = None
 
 
 class HomeBanner(ContractModel):
     id: str
-    title: str | None = None
-    image_url: str | None = None
-    local_path: str | None = None
-    target_url: str | None = None
-    starts_at: datetime | None = None
-    ends_at: datetime | None = None
+    title: Optional[str] = None
+    image_url: Optional[str] = None
+    local_path: Optional[str] = None
+    target_url: Optional[str] = None
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
 
 
 class HomeNewsItem(ContractModel):
     id: str
     title: str
-    category: str | None = None
-    summary: str | None = None
-    image_url: str | None = None
-    target_url: str | None = None
-    published_at: datetime | None = None
+    category: Optional[str] = None
+    summary: Optional[str] = None
+    image_url: Optional[str] = None
+    target_url: Optional[str] = None
+    published_at: Optional[datetime] = None
 
 
 class HomeUpdateInfo(ContractModel):
-    version: str | None = None
-    title: str | None = None
-    summary: str | None = None
-    target_url: str | None = None
-    published_at: datetime | None = None
+    version: Optional[str] = None
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    target_url: Optional[str] = None
+    published_at: Optional[datetime] = None
 
 
 class HomeContentError(ContractModel):
@@ -61,10 +63,10 @@ class HomeContentError(ContractModel):
 
 
 class HomeContent(ContractModel):
-    background: HomeBackground | None = None
+    background: Optional[HomeBackground] = None
     banners: list[HomeBanner] = Field(default_factory=list)
     news: list[HomeNewsItem] = Field(default_factory=list)
-    update_info: HomeUpdateInfo | None = None
+    update_info: Optional[HomeUpdateInfo] = None
 
 
 class HomeContentEnvelope(ContractModel):
@@ -86,5 +88,5 @@ class GameScreenshotPathEnvelope(ContractModel):
     schema_version: int = 1
     request_id: str
     game_id: str
-    screenshot_path: str | None = None
+    screenshot_path: Optional[str] = None
     errors: list[HomeContentError] = Field(default_factory=list)
