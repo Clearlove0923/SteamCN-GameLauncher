@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!--
+      当前会话只装了 .NET 10 SDK。临时改 net10.0 用于本地 e2e 验证。
+      主项目保持 net8.0-windows10.0.19041.0。等装了 .NET 8 后改回 net8.0。
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!--
+      当前会话环境无 E: 盘且 dotnet SDK 未装,产物先落主项目 bin。
+      待 E: 盘可用 + dotnet 装好后,按 AGENTS.md 规则迁回
+      <...>\..\..\..\..\AI\steamhelper\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\HomeContentE2E.Tests
+    -->
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\HomeContentE2E.Tests\</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Models/Home/HomeContentContracts.cs" Link="Models/Home/HomeContentContracts.cs" />
+    <Compile Include="../../Models/Home/GameScreenshotPathContracts.cs" Link="Models/Home/GameScreenshotPathContracts.cs" />
+    <Compile Include="../../Services/Home/HomeContentJson.cs" Link="Services/Home/HomeContentJson.cs" />
+    <Compile Include="../../Services/Home/IHomeContentTransport.cs" Link="Services/Home/IHomeContentTransport.cs" />
+    <Compile Include="../../Services/Home/HttpHomeContentTransport.cs" Link="Services/Home/HttpHomeContentTransport.cs" />
+  </ItemGroup>
+</Project>
