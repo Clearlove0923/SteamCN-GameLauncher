@@ -1,0 +1,115 @@
+{
+  "proxy_rsps": [
+    {
+      "kind": "get_main_bg_image",
+      "get_main_bg_image_rsp": {
+        "main_bg_image": {
+          "url": "https://gl-utils-public.hg-cdn.com/hg-utils/prod/eppcsuwqpaueijqk/YDUTE5gscDZ229CW/98/80/9880985a55cb4bf175b76ccd4ded9723.png",
+          "md5": "fed0d045",
+          "video_url": "https://gl-utils-public.hg-cdn.com/hg-utils/prod/eppcsuwqpaueijqk/YDUTE5gscDZ229CW/36/07/3607ba2c86410df64d7eee11eb1d90e3.mp4"
+        }
+      }
+    },
+    {
+      "kind": "get_banner",
+      "get_banner_rsp": {
+        "banners": [
+          {
+            "url": "https://gl-utils-public.hg-cdn.com/hg-utils/prod/eppcsuwqpaueijqk/YDUTE5gscDZ229CW/3e/43/3e439cbb2eb4210265f109060898ab09.jpg",
+            "md5": "42534a54",
+            "jump_url": "https://endfield.gryphline.com/news/6172",
+            "id": "1302",
+            "need_token": false
+          },
+          {
+            "url": "https://gl-utils-public.hg-cdn.com/hg-utils/prod/eppcsuwqpaueijqk/YDUTE5gscDZ229CW/fe/43/fe43847242b06af28d02aa5b07b2372f.jpg",
+            "md5": "1ef7df45",
+            "jump_url": "https://endfield.gryphline.com/news/5208",
+            "id": "1344",
+            "need_token": false
+          },
+          {
+            "url": "https://gl-utils-public.hg-cdn.com/hg-utils/prod/eppcsuwqpaueijqk/YDUTE5gscDZ229CW/07/55/0755c117e070854bf24139c0f92adf72.jpg",
+            "md5": "2ab2da3e",
+            "jump_url": "https://endfield.gryphline.com/news/4481",
+            "id": "1259",
+            "need_token": false
+          }
+        ]
+      }
+    },
+    {
+      "kind": "get_announcement",
+      "get_announcement_rsp": {
+        "tabs": [
+          {
+            "tabName": "Notices",
+            "announcements": [
+              {
+                "content": "[Winter Hunt] Chartered Headhunting",
+                "jump_url": "https://endfield.gryphline.com/news/6172",
+                "start_ts": "1788235200000",
+                "id": "984",
+                "need_token": false,
+                "pin": 0
+              },
+              {
+                "content": "[Deep Cold Issue] LTO Details",
+                "jump_url": "https://endfield.gryphline.com/news/4480",
+                "start_ts": "1788237000000",
+                "id": "998",
+                "need_token": false,
+                "pin": 0
+              }
+            ],
+            "tab_id": "48"
+          },
+          {
+            "tabName": "Events",
+            "announcements": [
+              {
+                "content": "New Version Discussion",
+                "jump_url": "https://www.skport.com/article?id=2093178817402799422&hg_media=launcher&hg_link_campaign=banner&hg_link_name=DreamscapeofWind",
+                "start_ts": "1788346800000",
+                "id": "1026",
+                "need_token": false,
+                "pin": 0
+              },
+              {
+                "content": "Typhoeus's Snowfield Survival Manual",
+                "jump_url": "https://www.skport.com/article?id=2095343107828303875&hg_media=launcher&hg_link_campaign=banner&hg_link_name=Typhoeus",
+                "start_ts": "1788433200000",
+                "id": "1054",
+                "need_token": false,
+                "pin": 0
+              }
+            ],
+            "tab_id": "49"
+          },
+          {
+            "tabName": "News",
+            "announcements": [
+              {
+                "content": "Arknights: Endfield [Dreamscape of Wind and Snow] Version DEV Comm",
+                "jump_url": "https://endfield.gryphline.com/news/4481",
+                "start_ts": "1787392800000",
+                "id": "943",
+                "need_token": false,
+                "pin": 0
+              },
+              {
+                "content": "Discord Game Stats Widget Updates",
+                "jump_url": "https://endfield.gryphline.com/special/discord-binding",
+                "start_ts": "1788256800000",
+                "id": "1012",
+                "need_token": false,
+                "pin": 0
+              }
+            ],
+            "tab_id": "50"
+          }
+        ]
+      }
+    }
+  ]
+}

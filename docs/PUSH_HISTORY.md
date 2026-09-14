@@ -2,6 +2,37 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-14 23:20:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 实现真实 Provider `HypergryphBatchProvider`（`python/home_content/providers/hypergryph_batch.py`）：鹰角《明日方舟：终末地》及同厂商游戏的单端点批量协议 `POST https://launcher.gryphline.com/api/proxy/web/batch_proxy`（Global）/ `https://launcher.hypergryph.com/api/proxy/web/batch_proxy`（CN）。Provider 在一次 POST 里并发请求 `get_main_bg_image` / `get_banner` / `get_announcement` 三种 `kind`，统一从 `proxy_rsps[]` 中提取对应 `*_rsp`。背景优先 `video_url`，降级 `url`；Banner 来自 `banners[]`，id 字段做稳定 ID；News 来自 `tabs[].announcements[]`，英文 tabName 映射到中文分类（`Notices→公告`、`Events→活动`、`News→资讯`），其他保留原文。`start_ts`（毫秒）转 UTC `datetime`。
+- 候选 URL 通过 host 白名单（`.hg-cdn.com` / `.hycdn.cn` / `.gryphline.com` / `.hypergryph.com` / `.skport.com` / `.skland.com`），scheme 必须为 `http(s)`，白名单外的 banner / jump_url 直接丢弃，背景无候选时 `HomeBackground=None`。`json.JSONDecodeError` 在 Provider 层被包装为 `ValueError`，与 Kuro / HoYo 行为一致。
+- 默认常量 `DEFAULT_APP_CODE=YDUTE5gscDZ229CW`、`DEFAULT_CHANNEL=6`、`DEFAULT_SUB_CHANNEL=6`、`DEFAULT_LANGUAGE=en-us`、`DEFAULT_REGION=os`；`providerOptions` 支持覆盖 `region` / `baseUrl` / `appCode` / `channel` / `subChannel` / `language`。Global 与 CN 入口通过 `region=cn` 切换（自动取 `launcher.hypergryph.com/api` 与 `appCode=6LL0KJuqHBVz33WK / channel=1 / subChannel=1 / language=zh-cn`）。
+- 新增脱敏样本 `contracts/samples/hypergryph-batch-envelope.json`：基于 2026-09-14 真实响应（Global/en-us/终末地），合并三个 `kind` 的 `proxy_rsps[]`，md5 缩短到 8 位，banner / announcement 列表裁剪到 3 / 2 条；保留真实 CDN / 官方域名以便 allow-list 校验路径与生产一致。
+- 新增 Provider 文档 `docs/HYPERGRYPH_BATCH_PROVIDER.md`：记录验证日期、采样游戏 / 语言、batch_proxy 单端点协议、字段映射、tabName → 中文分类映射、默认常量、白名单、回退方案与已知限制（`appCode` 反编译来源 / `data_version` 当前为空 / 未映射 `url_config` `sidebar` `single_ent`）。
+- 新增 `python/tests/test_hypergryph_batch_provider.py`：23 项 pytest，覆盖 allow-list、白名单过滤、`start_ts` 转 UTC、`providerOptions` 覆盖、空 envelope、缺 `proxy_rsps` envelope、非 JSON 响应、HTTP 5xx 上抛。Provider 支持 `httpx.AsyncClient` 注入，测试用 `MockTransport` 喂入脱敏样本，不访问真实网络。
+- `.gitignore` 在 `docs/` 白名单里追加 `HYPERGRYPH_BATCH_PROVIDER.md`。
+
+### 验证结果
+
+- `pytest python/tests/test_hypergryph_batch_provider.py`：23 项全部通过，耗时 0.21s。
+- `pytest python/tests/`：HoYoPlayProvider 10 项 + KuroLauncherProvider 13 项 + HypergryphBatchProvider 23 项共 46 项全部通过，耗时 0.22s。
+- 直接 `python -m home_content.providers.hypergryph_batch`（probe 脚本）调真实接口：Global 端点返回 `proxy_rsps[0..2]`，其中 `get_main_bg_image_rsp.main_bg_image` 携带 MP4 + PNG，`get_banner_rsp.banners` 含 9 条 banner（CDN + 森空岛跳转），`get_announcement_rsp.tabs` 含 Notices / Events / News 三类。CN 端点（`launcher.hypergryph.com`，`zh-cn`）返回结构一致，CDN host 为 `hg-utils-public.hycdn.cn`。
+
+### 当前限制
+
+- `appCode` / `base` URL 来自 [`daydreamer-json/ak-endfield-api-archive`](https://github.com/daydreamer-json/ak-endfield-api-archive) 的 `config.ts` 反编译（base64 编码），鹰角不公开字符串。发版后可能更换，需要重新采样。
+- `data_version` 字段当前始终为空字符串，Provider 不做版本协商；若鹰角后续引入版本化协议，需要扩展 `_extract_responses` 并新增缓存键策略。
+- `get_url_config`、`get_sidebar`、`get_single_ent` 未映射到 `HomeContent`：前者是充值/问卷链接（无 UI 落点）；`sidebar` 是社交媒体入口（不属于首页布局）；`single_ent` 当前响应为空（没有版本按钮）。
+- Global 多语言（`de-de`/`es-mx`/`fr-fr`/`ja-jp`/`ko-kr`/`zh-tw` 等）通过 `defaultSettings.launcherWebLang` 在 `launcherWeb.ts` 中定义，但 Provider 默认 `en-us`；其他语言通过 `providerOptions.language` 切换。
+- CN 仅 `zh-cn`（`defaultSettings.launcherWebLangCN`）；其他语言通过 `providerOptions.language` 切换时由 Provider 透传给上游，未做独立验证。
+- Provider 在 FastAPI 入口的 `provider_registry` 中尚未注册；`/v1/home-content` 用 `providerId=hypergryph-batch` 仍走 sample envelope。注册逻辑作为下一个迭代的样本扩展项。
+- MIME / MD5 / 尺寸校验未做；按 AGENTS.md 要求由 C# 端 `HttpHomeContentTransport` 拉取后的缓存层负责（待办）。
+
 ## 2026-09-14 22:30:00 +08:00
 
 - 推送人员：`Violet0923`
