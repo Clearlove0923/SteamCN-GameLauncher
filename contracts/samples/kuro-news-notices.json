@@ -1,0 +1,77 @@
+{
+  "guidance": {
+    "desc": "Unavailable",
+    "activity": {
+      "title": "Event",
+      "sort": 1,
+      "functionSwitch": 0,
+      "contents": []
+    },
+    "notice": {
+      "title": "Notice",
+      "sort": 2,
+      "functionSwitch": 1,
+      "contents": [
+        {
+          "content": "[Where Santu Beckons] Featured Resonator Convene",
+          "jumpUrl": "https://x.com/Wuthering_Waves/status/2097520378021318943?s=20",
+          "time": "09-09"
+        },
+        {
+          "content": "[Version 3.6 Featured Resonator/Weapon Convene: Phase Ⅱ]",
+          "jumpUrl": "https://x.com/Wuthering_Waves/status/2097524142291427833?s=20",
+          "time": "09-09"
+        }
+      ]
+    },
+    "news": {
+      "title": "News",
+      "sort": 3,
+      "functionSwitch": 1,
+      "contents": [
+        {
+          "content": "Post-Lament Anthropocene: Stars Intertwined | Jingran",
+          "jumpUrl": "https://x.com/Wuthering_Waves/status/2096070820976279716?s=20",
+          "time": "09-09"
+        },
+        {
+          "content": "Profile Reveal | Nether Qi Art — Jingran",
+          "jumpUrl": "https://x.com/Wuthering_Waves/status/2096434462762438820?s=20",
+          "time": "09-09"
+        }
+      ]
+    }
+  },
+  "slideshow": [
+    {
+      "url": "https://hw-pcdownload-qcloud.aki-game.net/launcher/news/slide-picture/oaz2ch1k7vk1563l6b.jpg",
+      "jumpUrl": "https://youtube.com/live/nMa_e5ChL6w?feature=share",
+      "md5": "HASH32",
+      "carouselNotes": "3.7前瞻预告"
+    },
+    {
+      "url": "https://hw-pcdownload-qcloud.aki-game.net/launcher/news/slide-picture/zpbd5sns1cxvrsb09k.png",
+      "jumpUrl": "https://youtu.be/djzijQBFN4A?si=nbJGw8SSU8kMW9vi",
+      "md5": "HASH32",
+      "carouselNotes": "景燃角色pv"
+    },
+    {
+      "url": "https://hw-pcdownload-qcloud.aki-game.net/launcher/news/slide-picture/41djg3rfmj90yjgm2k.png",
+      "jumpUrl": "https://youtu.be/AYOqDVuCKMk?si=9EXYpx3fSQUcDT6J",
+      "md5": "HASH32",
+      "carouselNotes": "景燃实机视频"
+    },
+    {
+      "url": "https://hw-pcdownload-qcloud.aki-game.net/launcher/news/slide-picture/3k45z8fjhuispzh6l2.jpg",
+      "jumpUrl": "https://youtu.be/ksCqVD10Cqc?si=lGEuuYpXrbl4dp6G",
+      "md5": "HASH32",
+      "carouselNotes": "3.6pv"
+    },
+    {
+      "url": "https://hw-pcdownload-qcloud.aki-game.net/launcher/news/slide-picture/l44ojq2reewisxzqny.jpg",
+      "jumpUrl": "https://payment.kurogame-service.com/pay/wutheringwaves/login",
+      "md5": "HASH32",
+      "carouselNotes": "kuro充值中心"
+    }
+  ]
+}

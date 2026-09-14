@@ -2,6 +2,34 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-14 22:30:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 实现真实 Provider `KuroLauncherProvider`（`python/home_content/providers/kuro_launcher.py`）：库洛鸣潮启动器的三层 CDN JSON 抓取，按顺序拉 `launcher-config`（`functionCode.background` 动态 hash）、`wallpapers-slogan`（MP4 + 首帧 webp + 标语 png）、`news-notices`（`guidance.{activity,notice,news}` 三个分类 + `slideshow` 轮播）。背景优先 `videoFile`，降级 `firstFrameImage`，候选 URL 通过 CDN 域名白名单（`.kurogame.com` / `.kurogames.com` / `.aki-game.net`）。Banner 来自 `slideshow[]`，News 来自 `guidance` 三个分类，跳过 `functionSwitch == 0` 的分类。
+- `providerOptions` 支持覆盖 `appId` / `appKey` / `gameId` / `language`；默认常量（`50004_obOHXFrFanqsaIEOmuKroCcbZkQRBC7c` / `G153` / `en`）来自 `KRApp.conf`（`base64(XOR(data, 0x63))`）解码。
+- 新增脱敏样本 `contracts/samples/kuro-{launcher-config,wallpapers-slogan,news-notices}.json`：2026-09-14 真实响应的样本，`guidance` 三个分类真实样本包含 notice + news，activity 的 `functionSwitch=0` 用于验证跳过逻辑。
+- 新增 Provider 文档 `docs/KURO_PROVIDER.md`：记录验证日期、采样游戏、语言、三层端点、字段映射、默认常量、白名单、回退方案与已知限制。
+- 新增 `python/tests/test_kuro_launcher_provider.py`：13 项 pytest，覆盖白名单过滤、视频优先、biz 默认值、三层端点串联、`functionCode.background` 缺失抛错、HTTP 错误传播、`providerOptions` URL 覆盖。Provider 支持 `httpx.AsyncClient` 注入，测试用 `MockTransport` 路由不同 URL 到不同 fixture，不访问真实网络。
+- `.gitignore` 在 `docs/` 白名单里追加 `KURO_PROVIDER.md`。
+
+### 验证结果
+
+- `pytest python/tests/test_kuro_launcher_provider.py`：13 项全部通过，耗时 0.16s。
+- `pytest python/tests/`：HoYoPlayProvider 10 项 + KuroLauncherProvider 13 项共 23 项全部通过。
+- 直接 `python -m home_content.providers.kuro_launcher` 调真实接口，envelope 携带 `hw-pcdownload-qcloud.aki-game.net` MP4 视频 + WebP 海报 + 5 个 banner + 多个 notice/news 项。
+
+### 当前限制
+
+- Kuro 启动器当前只下发 `en.json`；请求 `zh-cn.json` 会拿到空响应。增加语言需等 Kuro 发布对应文件或本地 PlayerAgent 注入。
+- 国服 / CN 入口未独立验证：`G153` 当前是 Global 端点，国服可能用不同的 `appId` / `appKey` / `gameId` / CDN。
+- `slogan` PNG 标题叠加图未映射到 `HomeContent`，UI 需要时由 C# 端单独请求。
+- `activity` 分类常为 `functionSwitch=0`（当前版本没有活动），Provider 自动跳过。
+- MIME / MD5 / 尺寸校验未做；按 AGENTS.md 要求由 C# 端 `HttpHomeContentTransport` 拉取后的缓存层负责（待办）。
+
 ## 2026-09-14 21:30:00 +08:00
 
 - 推送人员：`Violet0923`
