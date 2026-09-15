@@ -2,6 +2,40 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-15 21:25:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 实现真实 Provider `NetEaseStaticCmsProvider`（`python/home_content/providers/netease_static_cms.py`）：网易《燕云十六声》（Where Winds Meet）官方营销站点的 NIE 静态 CMS 解析器。CN 入口 `https://www.yysls.cn/index.html`（杭州网易雷火 / NIE static-CMS 模板），HMT 入口 `https://www.wherewindsmeetgame.com/hmt/index.html`（Sony 台湾繁体联运 / Sony 营销模板，结构不同暂未解析）。营销站点在 HTML 中直接 server-side render 整个首页：`#news` panel 下包含 banner swiper + 4 个 `.news-list-N` 资讯列表容器。
+- Banner 从 `.slide-news .banner .swiper-slide > a` 解析；图片走 `data-src`（Swiper lazy load）否则 `src`，标题取 `title` 属性，跳转 URL 是 `<a href>`。背景没有硬编码——`<video class="bg">` 是上游 JS bundle 运行时注入——Provider 把第一张 banner 图作为 `HomeBackground.image_url` 兜底，让 C# UI 在 launcher 自带背景视频未下载完成前有静态底图。
+- 资讯从 `.slide-news .news-wrap .news-list-N` 解析；N=0 "最新" 用 `KIND_CATEGORY`（`新闻→资讯`、`公告→公告`、`活动→活动`），N=1/2/3 用 `TAB_CATEGORY`（`资讯/公告/活动`）。每行 `<a class="link" href>` 携带 `.date`（`MM/DD` 月日格式）/ `.kind` / `.title` / `.desc`，target_url 用 `<a href>`，允许 host 白名单过滤。`MM/DD` 用当前 UTC 年补齐（上游不发年份，启动器每 10–30 分钟刷新一次，跨年偏差自动收敛）。
+- `ALLOWED_HOST_SUFFIXES` 仅接受 `.yysls.cn` / `.netease.com` / `.nie.netease.com` / `.wherewindsmeetgame.com` / `.easebar.com` / `.fp.ps.easebar.com` / `.yysls.v.netease.com` / `.yysls-build-na.fp.ps.easebar.com`；scheme 必须 http(s)。第三方跳转（`mp.weixin.qq.com` / `space.bilibili.com` / `weibo.com` 等社交域名）默认丢弃，不显示在 UI 上。`providerOptions` 支持 `maxBanners=0` 关掉 banner（仍保留 news 列表），`newsPerTab=0` 关掉对应 tab 的资讯。
+- `parse_home_html` 用两个正则：`<div class="panel" id="news">(.*?)<div class="panel" id="media">` 抓整段 news panel；`_BANNER_LINK_RE` / `_NEWS_LIST_RE`（按 tab 分组）+ `_NEWS_LINK_RE`（按 row）解出原始行。缺 panel 时包 `ValueError`，HTTP 5xx 时降级为空 envelope。
+- 默认常量 `DEFAULT_REGION=cn`、`DEFAULT_BASE_CN=https://www.yysls.cn`、`DEFAULT_HOME_PATH_CN=/index.html`、`DEFAULT_BASE_HMT=https://www.wherewindsmeetgame.com`、`DEFAULT_MAX_BANNERS=4`、`DEFAULT_NEWS_PER_TAB=4`；`providerOptions` 支持 `region` / `homePageUrl`（完整 URL，不拼接 path）/ `maxBanners` / `newsPerTab`。HMT 区域暂只占位不解析，等下次把 `newsBanner` / `newsList` 模板结构画完再补。
+- 新增脱敏样本 `contracts/samples/yysls-cn.json`：基于 2026-09-15 真实响应（`www.yysls.cn/index.html`，57KB），用两个正则抽出 5 张 banner + 40 条 news（4 个 tab × 10 条），`trimmedHtml` 是剥掉 `<style>` / `<script>` / `<link>` 后保留 `.slide-news` 结构的精简 HTML，供 round-trip 测试用；原始抓包走 `contracts/samples/_raw_yysls/`（`.gitignore` 已排除，不入库）。
+- 新增 Provider 文档 `docs/NETEASE_STATIC_CMS_PROVIDER.md`：验证日期、采样区域、2 个端点 URL、`#news` panel HTML 模板与字段映射、`TAB_CATEGORY` / `KIND_CATEGORY` / 默认常量、白名单、`MM/DD` 用当前年的回退方案、HMT 模板未实现说明、社交跳转丢弃说明。
+- 新增 `python/tests/test_netease_static_cms_provider.py`：29 项 pytest，覆盖默认值 / allow-list / `TAB_CATEGORY` & `KIND_CATEGORY` 映射 / `_parse_mmdd_date`（含用当前年回退）/ `parse_home_html`（news panel 缺失、round-trip、banner 抽取）/ `_build_background` / `_build_banners`（`maxBanners` 上限、host 白名单、跳转丢弃）/ `_build_news_items`（per-tab 上限、4 类覆盖、空标题、host 白名单）/ 端到端 fetch（CN 默认路径、HMT 端点、homePageUrl 覆盖、maxBanners=0、HTTP 5xx、panel 缺失）。Provider 支持 `httpx.AsyncClient` 注入，测试用 `MockTransport` 喂入脱敏样本，不访问真实网络。
+- `.gitignore` 在 `docs/` 白名单里追加 `NETEASE_STATIC_CMS_PROVIDER.md`（`contracts/samples/_raw_*/` 已在上一轮覆盖，连带本次的 `_raw_yysls/` 一起不入库）。
+
+### 验证结果
+
+- `pytest python/tests/test_netease_static_cms_provider.py`：29 项全部通过，耗时 0.20s。
+- `pytest python/tests/`：HoYoPlayProvider 10 项 + KuroLauncherProvider 13 项 + HypergryphBatchProvider 23 项 + PerfectWorldHybridProvider 41 项 + NextJsDataProvider 39 项 + NetEaseStaticCmsProvider 29 项共 **155 项**全部通过，耗时 0.33s。
+- 直接 probe 真实端点：`https://www.yysls.cn/index.html` 返回 200（57KB HTML，banner swiper 4+ 张图、news-list-{0,1,2,3} 共 40 条 news row，`<video class="bg">` 在 markup 中是空 src 由 JS 注入）；`https://www.wherewindsmeetgame.com/hmt/index.html` 返回 200（36KB HTML，结构不同用 `newsBanner` / `newsList` 模板，banner 容器空需 JS 注入）。
+
+### 当前限制
+
+- 端点来自对网易 NIE 静态 CMS 的反向工程，非公开 API。`#news` panel 结构（`slide-news` / `news-list-N` / `link` class 名）随时可能改版。每次 rebase / 大版本后需要重新采样脱敏样本（保留 `contracts/samples/_raw_yysls/` 抓包，仅本地不入库）。
+- 背景视频不在 HTML 里，是 `<video class="bg">` 由上游 JS bundle 在 viewport 上注入。Provider 只暴露第一张 banner 图作为静态兜底；后续可让 `LocalLauncherAssetProvider` 在 launcher 安装目录探测真实 bg.mp4 覆盖回来。
+- 资讯 `.date` 只有 `MM/DD`，缺年份。Provider 用当前 UTC 年补齐——春节 / 跨年边界的资讯可能短暂标错年份，但启动器每 10–30 分钟刷新，跨年后一小时左右自愈。
+- HMT（`wherewindsmeetgame.com`）区域目前只占位 `DEFAULT_BASE_HMT`，模板 `newsBanner` / `newsList` 解析未实现。AGENTS.md 要求 CN / HMT 不共用 endpoint / 假设，所以等下一次把繁体模板结构画清楚再单独补 `parse_hmt_home_html`，不与 NIE static-CMS 混用。
+- Banner `href` 中带社交跳转（`mp.weixin.qq.com` / `weibo.com` / `space.bilibili.com` 等）一律被白名单丢弃，不进 UI。如果 launcher 想做"分享到微博"快捷入口，需要单独建一个 `social_links` channel，不在当前 Provider 里。
+- Provider 在 FastAPI 入口的 `provider_registry` 中尚未注册；`/v1/home-content` 用 `providerId=netease-static-cms` 仍走 sample envelope。注册逻辑作为下一个迭代的样本扩展项。
+- MIME / MD5 / 尺寸校验未做；按 AGENTS.md 要求由 C# 端 `HttpHomeContentTransport` 拉取后的缓存层负责（待办）。
+
 ## 2026-09-15 21:05:00 +08:00
 
 - 推送人员：`Violet0923`
