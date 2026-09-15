@@ -1,0 +1,28 @@
+{
+  "data": {
+    "total": 2,
+    "data": [
+      {
+        "id": 1030,
+        "title": "《无限暖暖》9月10日更新完成",
+        "section": 1,
+        "info": null,
+        "publish_time": "2026-09-10T03:00:00.000Z",
+        "cover": "https://webstatic.papegames.com/5af052bffce5c899/images/bg/1mwZNTqMrfKoU4fD.jpg",
+        "abstract": "「缄默的绘彩」「旋落的帧影」限定共鸣现已开启！"
+      },
+      {
+        "id": 1029,
+        "title": "《无限暖暖》9月10日更新预告",
+        "section": 1,
+        "info": null,
+        "publish_time": "2026-09-08T10:00:00.000Z",
+        "cover": "https://webstatic.papegames.com/5af052bffce5c899/images/bg/uiimAvyG76Ws3oLo.jpg",
+        "abstract": "《无限暖暖》2.9版本「向晴空绽放」现已全球同步开启！"
+      }
+    ]
+  },
+  "ret": 0,
+  "msg": "ok",
+  "timestamp": 1789476962142
+}

@@ -1,0 +1,28 @@
+{
+  "data": {
+    "total": 2,
+    "data": [
+      {
+        "id": 133,
+        "title": "9月10日停服維護說明",
+        "section": 1,
+        "info": null,
+        "publish_time": "2026-09-08T10:00:00.000Z",
+        "cover": "https://webstatic.infoldgames.com/7d325eec933f05b1/images/bg/r38K67dR3M14SSRk.png",
+        "abstract": "9月10日停服維護說明"
+      },
+      {
+        "id": 131,
+        "title": "8月28日停服維護說明",
+        "section": 1,
+        "info": null,
+        "publish_time": "2026-08-26T10:15:00.000Z",
+        "cover": "https://webstatic.infoldgames.com/7d325eec933f05b1/images/bg/7SlEi5uH6ypgKZOi.png",
+        "abstract": "8月28日停服維護說明"
+      }
+    ]
+  },
+  "ret": 0,
+  "msg": "ok",
+  "timestamp": 1789476961211
+}

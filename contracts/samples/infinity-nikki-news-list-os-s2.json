@@ -1,0 +1,28 @@
+{
+  "data": {
+    "total": 2,
+    "data": [
+      {
+        "id": 130,
+        "title": "2.9版本 「向晴空綻放」 活動說明",
+        "section": 2,
+        "info": null,
+        "publish_time": "2026-08-23T04:10:01.000Z",
+        "cover": "https://webstatic.infoldgames.com/7d325eec933f05b1/images/bg/kYDZXjwjNUtmfMu4.png",
+        "abstract": "2.9版本 「向晴空綻放」 活動說明"
+      },
+      {
+        "id": 28,
+        "title": "1.1版本「願望節」活動說明\t",
+        "section": 2,
+        "info": null,
+        "publish_time": "2024-12-26T16:00:00.000Z",
+        "cover": "https://webstatic.infoldgames.com/7d325eec933f05b1/images/bg/CbdLzwma94CgdvfT.png",
+        "abstract": "1.1版本「願望節」活動說明\t"
+      }
+    ]
+  },
+  "ret": 0,
+  "msg": "ok",
+  "timestamp": 1789476961461
+}

@@ -2,6 +2,40 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-15 21:05:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 实现真实 Provider `NextJsDataProvider`（`python/home_content/providers/nextjs_data.py`）：叠纸《无限暖暖》（Infinity Nikki）官方营销站点的 Next.js `__NEXT_DATA__` 解析器。OS 入口 `https://infinitynikki.infoldgames.com/{locale}/home`（INFOLD PTE. LTD.），CN 入口 `https://infinitynikki.nuanpaper.com/home`（上海暖叠 / Papergames），资讯列表通过 `GET /api/news?section={0,1,2}&offset=&limit=&locale=` 拉取，每次 fetch 串行调 1 个 home + 3 个 section 端点。OS 端 `<video src=…>` 硬编码背景；CN 端 `<video poster=…>` 无 `src` 时回退到 `pageData.page.pv_list[label="pc 首屏背景视频"].value`（CDN）。`parse_home_html` 用正则 `<script id="__NEXT_DATA__" type="application/json">(.+?)</script>` 抽出整段 JSON，缺 blob / 非 JSON 都包成 `ValueError`。
+- 横幅分两类：`pageData.newsbanner[]` 是首页顶部轮播（仅图片、无跳转 URL），`_build_top_banners` 按 `id` 拼出 `in-newsbanner-<id>`，图片走 allow-list 白名单，未通过直接丢弃（不渲染空 banner）；`pageData.page.actBannerlist[]` 是运行时活动横幅，结构是 `{__type: "json", label, value}`，`value` 是 JSON 字符串（含 `bannerimg` / `link` / `starttime` / `endtime`），`_build_activity_banners` 用 `json.loads` 解析，目标 URL 也走白名单；非法 JSON 跳过并 `logger.warning`。
+- 资讯按 `/api/news` 三 section 拉：`section=0 → 资讯`、`section=1 → 公告`、`section=2 → 活动`（与 Tab 顺序一致）。`SECTION_CATEGORY` 显式映射；`_build_news_items` 用 `id` + region + section 拼稳定 ID，target_url = `<newsBase>/news/<id>`（绝对），空标题 / 非允许 host 的封面自动剔除。`publish_time` 是 `2026-09-10T03:00:00.000Z` 这类带毫秒的 ISO 8601，`_parse_iso` 兼容 `Z` / `+HH:MM` / 裸 datetime，归一化到 UTC；`actBannerlist` 用 `YYYY-MM-DD HH:MM:SS`，`_parse_naive` 优先 strptime 三种格式再回退 `_parse_iso`。
+- `ALLOWED_HOST_SUFFIXES` 仅接受 `.infoldgames.com` / `.papegames.com` / `.nuanpaper.com` / `.webstatic.infoldgames.com` / `.webstatic.papegames.com` / `.assets.infoldgames.com` / `.assets.papegames.com` / `.assets.nuanpaper.com`；scheme 必须 http(s)；子域按 suffix 匹配（`eng.papegames.com` 也放行），前缀伪装（`evil.com/assets.infoldgames.com/x.png`）拒绝。`httpx.HTTPError` / `json.JSONDecodeError` 在 Provider 层包 `logger.warning`，网络端点 5xx 时 banner/news 自动降级为空，背景 video 缺失时 `HomeBackground` 仍然生成但不携带视频。
+- 默认常量 `DEFAULT_BASE_OS=https://infinitynikki.infoldgames.com` / `DEFAULT_BASE_CN=https://infinitynikki.nuanpaper.com` / `DEFAULT_LOCALE_OS=zh-TW` / `DEFAULT_LOCALE_CN=zh-CN` / `DEFAULT_PAGE_PATH=/home` / `DEFAULT_NEWS_LIMIT=4` / `DEFAULT_REGION=os`；`providerOptions` 支持覆盖 `region` / `locale` / `homePageUrl`（完整 URL，不拼接 locale / pagePath）/ `newsApiBase` / `pagePath` / `newsLimit`。CN 调 `/api/news` 时不附带 `locale=` 参数。
+- 新增脱敏样本 `contracts/samples/infinity-nikki-{home-os,home-cn,news-list-{os,cn}-s{0,1,2},news-detail-{os,cn}}.json` 共 10 个文件：基于 2026-09-15 实采响应，HTML 走 `<__NEXT_DATA__>` 正则拆出 `nextData` + `<video src=...>` + `<video poster=...>` 三段，删掉与 provider 无关的 i18n/法律/资源 URL 字段（保留 `tabName` / `newsTextSign` / `versionPvUrl` / `pv_list` / `actBannerlist` / `newsbanner` 等），保留真实 CDN 域名以便 allow-list 校验路径与生产一致，list 裁到 2 条。原始 HTML/JSON 抓在 `contracts/samples/_raw_infinity_nikki/`（`.gitignore` 已排除，不入库）。
+- 新增 Provider 文档 `docs/NEXTJS_DATA_PROVIDER.md`：验证日期、采样区域、语言、4 个端点 URL 与响应示例、`__NEXT_DATA__` 与 `/api/news` 字段映射、`SECTION_CATEGORY` / `ALLOWED_HOST_SUFFIXES` / 默认常量、`providerOptions` 全表、CN 背景 pv_list 回退、newsbanner 无跳转 URL 等限制。
+- 新增 `python/tests/test_nextjs_data_provider.py`：39 项 pytest，覆盖默认值 / allow-list / `_parse_iso` / `_parse_naive` / `parse_home_html`（含缺 blob、非 JSON、`<video src>` / `<video poster>` 抽取、不匹配其他 `<script>` 标签）/ `_resolve_pv_video` / `_build_background` / `_build_top_banners`（白名单拒绝）/ `_build_activity_banners`（JSON 解码失败、目标 host 拒绝）/ `_build_news_items`（空标题、非法 cover、section 映射）/ 端到端 fetch（OS 全路径、CN pv_list 回退、首页 5xx 降级、所有端点 500 全空、providerOptions.homePageUrl 覆盖、news 返回非 dict）。Provider 支持 `httpx.AsyncClient` 注入，测试用 `MockTransport` 喂入脱敏样本，不访问真实网络。
+- `.gitignore` 在 `docs/` 白名单里追加 `NEXTJS_DATA_PROVIDER.md`，新增 `contracts/samples/_raw_*/` 排除规则避免原始抓包入库。
+
+### 验证结果
+
+- `pytest python/tests/test_nextjs_data_provider.py`：39 项全部通过，耗时 0.36s。
+- `pytest python/tests/`：HoYoPlayProvider 10 项 + KuroLauncherProvider 13 项 + HypergryphBatchProvider 23 项 + PerfectWorldHybridProvider 41 项 + NextJsDataProvider 39 项共 **126 项**全部通过，耗时 0.37s。
+- 直接 probe 真实端点：OS 端 `https://infinitynikki.infoldgames.com/zh-TW/home` 返回 200（HTML 含 `<video src=…bc3a08b841873ed2.mp4>` + 完整 `__NEXT_DATA__`）；CN 端 `https://infinitynikki.nuanpaper.com/home` 返回 200（HTML 仅 `<video poster=…>` + `__NEXT_DATA__.pageData.page.pv_list`）；`/api/news?section={0,1,2}` 三 section 都返回 `{data: {total, data[]}, ret: 0, msg: "ok", timestamp}` envelope，`section=0` 总数 44 条、`section=1` 82 条、`section=2` 4 条（国际服），CN 端总数更大（资讯 792 条）。
+
+### 当前限制
+
+- 端点来自对叠纸 Next.js 营销站点的反向工程，非公开 API；首页结构、字段命名（`newsbanner` / `actBannerlist` / `pv_list`）随时可能改版。每次 rebase / 大版本后需要重新采样脱敏样本（保留 `contracts/samples/_raw_infinity_nikki/` 抓包，仅本地不入库）。
+- `newsbanner` 不携带跳转 URL，C# UI 端要么绑定固定的"打开内嵌新闻 inbox"行为，要么只展示图。当前 Provider 把 `target_url=None` 透传，不伪造跳转。
+- `actBannerlist.value` 是 JSON 字符串（不是对象），解析失败的行被静默丢弃并 `logger.warning`；如果上游改成对象 / 数组，需要调整 `_build_activity_banners`。
+- CN home `<video>` 不带 `src`，Provider 兜底靠 `pv_list`；如果上游连 `pv_list` 都去掉，CN 端会落到空背景（`HomeBackground.video_url=None`，`image_url` 仅剩 poster）。
+- 资讯跳转 URL 走 `<newsBase>/news/<id>`，但实际新闻详情页路由可能变化（例如叠纸未来改成 `/news/detail/<id>`），需要持续验证。
+- CN 调 `/api/news` 不携带 `locale=` 参数；如果 CN 上游未来按语言分发，需要在 Provider 里加 `news_locale` 逻辑。
+- Provider 在 FastAPI 入口的 `provider_registry` 中尚未注册；`/v1/home-content` 用 `providerId=nextjs-data` 仍走 sample envelope。注册逻辑作为下一个迭代的样本扩展项。
+- MIME / MD5 / 尺寸校验未做；按 AGENTS.md 要求由 C# 端 `HttpHomeContentTransport` 拉取后的缓存层负责（待办）。
+
 ## 2026-09-15 20:45:00 +08:00
 
 - 推送人员：`Violet0923`

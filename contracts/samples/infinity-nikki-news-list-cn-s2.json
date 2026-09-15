@@ -1,0 +1,28 @@
+{
+  "data": {
+    "total": 2,
+    "data": [
+      {
+        "id": 1019,
+        "title": "《无限暖暖》2.9版本多平台创作激励计划开启！",
+        "section": 2,
+        "info": null,
+        "publish_time": "2026-08-27T04:10:00.000Z",
+        "cover": "https://webstatic.papegames.com/5af052bffce5c899/images/bg/lm3YvUIvBy6wteTt.jpg",
+        "abstract": "参与活动，赢激励奖金&游戏道具&精美周边！"
+      },
+      {
+        "id": 970,
+        "title": "《无限暖暖》2.8版本多平台创作激励计划开启！",
+        "section": 2,
+        "info": null,
+        "publish_time": "2026-07-16T04:05:00.000Z",
+        "cover": "https://webstatic.papegames.com/5af052bffce5c899/images/bg/oifbZQMAQIDKOybS.jpg",
+        "abstract": "参与活动，赢激励奖金&游戏道具&精美周边！"
+      }
+    ]
+  },
+  "ret": 0,
+  "msg": "ok",
+  "timestamp": 1789476962202
+}

@@ -382,5 +382,10 @@ docs/*
 !docs/KURO_PROVIDER.md
 !docs/HYPERGRYPH_BATCH_PROVIDER.md
 !docs/PERFECT_WORLD_HYBRID_PROVIDER.md
+!docs/NEXTJS_DATA_PROVIDER.md
 !docs/PYTHON_BACKEND_INTEGRATION.md
 !docs/PUSH_HISTORY.md
+
+# Raw sample captures live in contracts/samples/_raw_*; keep them out of the
+# committed snapshot so the canonical fixtures are the only ones tracked.
+contracts/samples/_raw_*/

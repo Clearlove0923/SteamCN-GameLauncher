@@ -1,0 +1,158 @@
+{
+  "backgroundVideoUrl": "https://assets.infoldgames.com/resources/cdn/c67e87b20ec66a30/bc3a08b841873ed2.mp4",
+  "backgroundPosterUrl": "https://assets.infoldgames.com/resources/cdn/c67e87b20ec66a30/bc3a08b841873ed2.mp4?x-oss-process=video/snapshot,t_1000,m_fast",
+  "nextData": {
+    "props": {
+      "pageProps": {
+        "_nextI18Next": {
+          "initialI18nStore": {
+            "zh-TW": {
+              "common": {
+                "nav-home": "首頁",
+                "share-btn-text": "追蹤我們",
+                "share-btn-text-h5": "追蹤我們"
+              },
+              "error": {
+                "activityEnd": "活動已經結束啦~",
+                "activityNotStart": "活動未開始。",
+                "requestTimeout": "伺服器繁忙，請稍後再試。",
+                "defaultError": "網路異常，請稍後再試。"
+              },
+              "page": {
+                "tabName": [
+                  {
+                    "name": "最新",
+                    "section": -1
+                  },
+                  {
+                    "name": "新聞",
+                    "section": 0
+                  },
+                  {
+                    "name": "公告",
+                    "section": 1
+                  },
+                  {
+                    "name": "活動",
+                    "section": 2
+                  }
+                ],
+                "newsTextSign": {
+                  "pre": "上一頁",
+                  "next": "下一頁"
+                },
+                "versionPvUrl": "https://assets.infoldgames.com/resources/cdn/f83cec7a5e844460/57017007ab974817.mp4"
+              }
+            }
+          },
+          "initialLocale": "zh-TW",
+          "ns": [
+            "common",
+            "error",
+            "page",
+            "reservation",
+            "seo"
+          ],
+          "userConfig": {
+            "i18n": {
+              "locales": [
+                "default",
+                "zh-TW",
+                "en",
+                "ja",
+                "kr"
+              ],
+              "defaultLocale": "default",
+              "localeDetection": false
+            },
+            "localePath": "./i18n/locales",
+            "default": {
+              "i18n": {
+                "locales": [
+                  "default",
+                  "zh-TW",
+                  "en",
+                  "ja",
+                  "kr"
+                ],
+                "defaultLocale": "default",
+                "localeDetection": false
+              },
+              "localePath": "./i18n/locales"
+            }
+          }
+        },
+        "pageData": {
+          "page": {
+            "buttonWhimTour": [
+              {
+                "__type": "text",
+                "label": "show",
+                "value": "false"
+              }
+            ],
+            "cookies": "https://assets.papegames.com/nikkiweb/papegame/infinitynikkitw/pageset/cookies.json",
+            "pvUrl": [
+              {
+                "__type": "text",
+                "label": "pv播放弹窗视频",
+                "value": "https://webstatic.infoldgames.com/7d325eec933f05b1/video/bg/2y6DjyVTIQXnO8kc.mp4"
+              }
+            ],
+            "storeUrl": [
+              {
+                "__type": "text",
+                "label": "下载地址",
+                "value": "https://store.epicgames.com/zh-Hant/p/infinity-nikki-71fc64?lang=zh-Hant"
+              }
+            ],
+            "iosUrl": [
+              {
+                "__type": "text",
+                "label": "下载地址",
+                "value": "https://apps.apple.com/tw/app/%E7%84%A1%E9%99%90%E6%9A%96%E6%9A%96/id6502623070"
+              }
+            ],
+            "actBannerlist": [
+              {
+                "__type": "json",
+                "label": "春节",
+                "value": "{\n  \"config\": {\n    \"width\": 132,\n    \"height\": 300\n  },\n  \"bannerimg\": \"https://assets.papegames.com/resources/cdn/20260709/0dafcf4561c505c7.png\",\n  \"link\": \"https://infinitynikki.infoldgames.com/proj/tw/cozyshroomlingshome_cTxLps.html?source_entry=Official_Website\",\n  \"starttime\": \"2026-07-12 10:00:00\",\n  \"endtime\": \"2026-08-12 10:00:00\"\n}"
+              }
+            ]
+          },
+          "banner": [],
+          "newsbanner": [
+            {
+              "id": 1,
+              "title": "事前預約開啟",
+              "address": "https://assets.infoldgames.com/nikkiweb/papegame/infinitynikkitw/material/18mcb16r/2652d6bfd0e4d89b.jpeg",
+              "address_h5": "https://assets.infoldgames.com/nikkiweb/papegame/infinitynikkitw/material/ikop-jte/2652d6bfd0e4d89b.jpeg",
+              "info": null,
+              "stime": "2024-08-20T18:24:52.000Z",
+              "etime": null,
+              "raw_data": null
+            }
+          ]
+        }
+      },
+      "__N_SSG": true
+    },
+    "page": "/home",
+    "query": {},
+    "buildId": "3DyDPxxzjn3TR_f7gCasb",
+    "assetPrefix": "https://assets.infoldgames.com/nikkiweb/infinitynikki/infinitynikkihome",
+    "isFallback": false,
+    "gsp": true,
+    "locale": "zh-TW",
+    "locales": [
+      "default",
+      "zh-TW",
+      "en",
+      "ja",
+      "kr"
+    ],
+    "defaultLocale": "default",
+    "scriptLoader": []
+  }
+}
