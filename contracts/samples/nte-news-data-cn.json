@@ -1,0 +1,96 @@
+{
+  "pc": {
+    "news": [
+      {
+        "title": "《异环》9月9日不停服更新公告",
+        "url": "/news/gamebroad/20260909/264019.html",
+        "time": "2026-09-08",
+        "channelCnName": "公告",
+        "channelName": "gamebroad"
+      },
+      {
+        "title": "《异环》9月4日不停服更新公告",
+        "url": "/news/gamebroad/20260904/263926.html",
+        "time": "2026-09-03",
+        "channelCnName": "公告",
+        "channelName": "gamebroad"
+      },
+      {
+        "title": "《异环》9月3日停服维护公告",
+        "url": "/news/gamebroad/20260902/263843.html",
+        "time": "2026-09-02",
+        "channelCnName": "公告",
+        "channelName": "gamebroad"
+      }
+    ],
+    "gamenews": [
+      {
+        "title": "《异环》1.3版本前瞻特别节目 | 情报回顾",
+        "url": "/news/gamenews/20260808/263494.html",
+        "time": "2026-08-08",
+        "channelCnName": "新闻",
+        "channelName": "gamenews"
+      },
+      {
+        "title": "《异环》1.2版本前瞻特别节目 | 情报回顾",
+        "url": "/news/gamenews/20260627/262896.html",
+        "time": "2026-06-27",
+        "channelCnName": "新闻",
+        "channelName": "gamenews"
+      },
+      {
+        "title": "《异环》公测福利活动&获取途径一览",
+        "url": "/news/gamenews/20260418/261819.html",
+        "time": "2026-04-18",
+        "channelCnName": "新闻",
+        "channelName": "gamenews"
+      }
+    ],
+    "gamebroad": [
+      {
+        "title": "《异环》9月9日不停服更新公告",
+        "url": "/news/gamebroad/20260909/264019.html",
+        "time": "2026-09-08",
+        "channelCnName": "公告",
+        "channelName": "gamebroad"
+      },
+      {
+        "title": "《异环》9月4日不停服更新公告",
+        "url": "/news/gamebroad/20260904/263926.html",
+        "time": "2026-09-03",
+        "channelCnName": "公告",
+        "channelName": "gamebroad"
+      },
+      {
+        "title": "《异环》9月3日停服维护公告",
+        "url": "/news/gamebroad/20260902/263843.html",
+        "time": "2026-09-02",
+        "channelCnName": "公告",
+        "channelName": "gamebroad"
+      }
+    ],
+    "gameevent": [
+      {
+        "title": "《异环》「伊波恩合伙人行动」现已开启",
+        "url": "/news/gameevent/20260706/263032.html",
+        "time": "2026-07-02",
+        "channelCnName": "活动",
+        "channelName": "gameevent"
+      },
+      {
+        "title": "《异环》「海特洛定居指南」预抽卡活动现已开启！",
+        "url": "/news/gameevent/20260325/261470.html",
+        "time": "2026-03-26",
+        "channelCnName": "活动",
+        "channelName": "gameevent"
+      },
+      {
+        "title": "塔吉多APP「共存测试」资格大放送！",
+        "url": "/news/gameevent/20251223/259972.html",
+        "time": "2025-12-23",
+        "channelCnName": "活动",
+        "channelName": "gameevent"
+      }
+    ]
+  }
+}

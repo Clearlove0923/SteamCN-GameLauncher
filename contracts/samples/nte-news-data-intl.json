@@ -1,0 +1,96 @@
+{
+  "en": {
+    "news": [
+      {
+        "title": "Asia & SEA Server Maintenance Notice: Sept 16",
+        "url": "/en/article/news/gamenews/20260914/264134.html",
+        "time": "2026-09-15",
+        "channelDescription": "News",
+        "channelName": "gamenews"
+      },
+      {
+        "title": "Account Action Notice: 2026-09-14 (UTC+9)",
+        "url": "/en/article/news/gamebroad/20260914/264144.html",
+        "time": "2026-09-14",
+        "channelDescription": "Notices",
+        "channelName": "gamebroad"
+      },
+      {
+        "title": "Server Maintenance Notice: 2026-09-09",
+        "url": "/en/article/news/gamenews/20260908/263947.html",
+        "time": "2026-09-08",
+        "channelDescription": "News",
+        "channelName": "gamenews"
+      }
+    ],
+    "gamenews": [
+      {
+        "title": "Asia & SEA Server Maintenance Notice: Sept 16",
+        "url": "/en/article/news/gamenews/20260914/264134.html",
+        "time": "2026-09-15",
+        "channelDescription": "News",
+        "channelName": "gamenews"
+      },
+      {
+        "title": "Server Maintenance Notice: 2026-09-09",
+        "url": "/en/article/news/gamenews/20260908/263947.html",
+        "time": "2026-09-08",
+        "channelDescription": "News",
+        "channelName": "gamenews"
+      },
+      {
+        "title": "Ver. 1.3 Rising from the Moonlit Fog Patch Notes",
+        "url": "/en/article/news/gamenews/20260817/263605.html",
+        "time": "2026-08-18",
+        "channelDescription": "News",
+        "channelName": "gamenews"
+      }
+    ],
+    "gamebroad": [
+      {
+        "title": "Account Action Notice: 2026-09-14 (UTC+9)",
+        "url": "/en/article/news/gamebroad/20260914/264144.html",
+        "time": "2026-09-14",
+        "channelDescription": "Notices",
+        "channelName": "gamebroad"
+      },
+      {
+        "title": "Account Action Notice: 2026-09-07 (UTC+9)",
+        "url": "/en/article/news/gamebroad/20260907/263938.html",
+        "time": "2026-09-07",
+        "channelDescription": "Notices",
+        "channelName": "gamebroad"
+      },
+      {
+        "title": "Account Action Notice: 2026-08-31 (UTC+8)",
+        "url": "/en/article/news/gamebroad/20260831/263816.html",
+        "time": "2026-08-31",
+        "channelDescription": "Notices",
+        "channelName": "gamebroad"
+      }
+    ],
+    "gameevent": [
+      {
+        "title": "New Mystery Box Event \"Neon Rift\" Now Live",
+        "url": "/en/article/news/gameevent/20260708/263085.html",
+        "time": "2026-07-08",
+        "channelDescription": "Events",
+        "channelName": "gameevent"
+      },
+      {
+        "title": "NTE Version 1.2 Creation Submission Event",
+        "url": "/en/article/news/gameevent/20260703/262998.html",
+        "time": "2026-07-08",
+        "channelDescription": "Events",
+        "channelName": "gameevent"
+      },
+      {
+        "title": "\"Fading Reverie\" Limited Board",
+        "url": "/en/article/news/gameevent/20260603/262503.html",
+        "time": "2026-06-03",
+        "channelDescription": "Events",
+        "channelName": "gameevent"
+      }
+    ]
+  }
+}

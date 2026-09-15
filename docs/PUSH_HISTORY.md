@@ -2,6 +2,40 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-15 20:45:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 实现真实 Provider `PerfectWorldHybridProvider`（`python/home_content/providers/perfect_world_hybrid.py`）：完美世界《异环》（Neverness to Everness）的本地启动器资源 + 远程 JS 数据混合 Provider。每次 fetch 并发拉两个端点：Global 从 `https://www.perfectworld.com/public/commonData/gamesData/gameSwiper/nte-gameSwiper.js`（横幅 swiper）和 `https://nte.perfectworld.com/include/newsData20260112.js`（资讯）；国服从 `https://static.games.wanmei.com/public/commonData/gamesData/gameSwiper/yh-gameSwiper.js` 和 `https://yh.wanmei.com/include/newsData20260112.js`。两个端点返回 `var NAME = {...};` 形式的 JS 对象字面量，`extract_js_payload` 剥包装、压双逗号、去除尾部逗号后用 `json.loads` 解析。
+- 背景优先用 `providerOptions.backgroundVideoPath` / `backgroundImagePath`（本地启动器 `bg.mp4` / `bg.jpg`），其次 `backgroundVideoUrl` / `backgroundImageUrl`（CDN 兜底，allow-list 校验），最次走 `DEFAULT_BG_VIDEO_OS`（`ntevmg.perfectworld.com/webops/nte/nte_bgvideo_20260418.mp4`）/ `DEFAULT_BG_VIDEO_CN`（`yhvmg.wmupd.com/webops/yh/yh_bgvideo_20260418.mp4`），从启动器主页 HTML 提取并固化。
+- 横幅来自 `lb1_<lang>`（OS，按语言取 `lb1_en` / `lb1_cn` / `lb1_jp` …）或 `lb1`（CN，无语言门控），缺失时按 `lb1` 兜底。资讯按 `pc.*`（CN，无语言门控）或 `<short_lang>.*`（OS）选 bucket，每个 bucket 内按 `news → gamebroad → gameevent → gamenews` 顺序产出；OS 的 `channelDescription` 经 `TAB_NAME_MAP` 映射到中文分类（`Notices/Mitteilungen/...` → 公告，`News/Nachrichten/...` → 资讯，`Events/Événements/...` → 活动），CN 直接用 `channelCnName`。
+- 资讯 URL 是相对路径（OS `/en/article/news/...` / CN `/news/...`），`_absoluize_url` 按区域加 host：OS → `https://nte.perfectworld.com{url}`、CN → `https://yh.wanmei.com{url}`。跳转 URL 非 https 或 host 不在 allow-list 时置空（不抛错）。
+- `ALLOWED_HOST_SUFFIXES` 仅接受 `.perfectworld.com` / `.wanmei.com` / `.wmupd.com` / `.games.wanmei.com` / `.static.pwsdk.com`；scheme 必须 http(s)；白名单外的 host 视为无效并丢弃。`start_ts` / `time`（`YYYY-MM-DD`）转 UTC `datetime`；`JSONDecodeError` / `ValueError` 在 Provider 层包装为 `ValueError`，与 Kuro / HoYo 行为一致；网络端点 503 时不抛错，返回空 banner/news 并交给 Worker 写 `envelope.errors`。
+- 默认常量 `DEFAULT_APP_CODE=YDUTE5gscDZ229CW`、`DEFAULT_LANGUAGE=en-us`、`DEFAULT_REGION=os`；`providerOptions` 支持覆盖 `region` / `language` / `installDir` / `backgroundVideoPath` / `backgroundImagePath` / `backgroundVideoUrl` / `backgroundImageUrl` / `bannerSwiperUrl` / `newsDataUrl`。
+- 新增脱敏样本 `contracts/samples/nte-{game-swiper-intl,game-swiper-cn,news-data-intl,news-data-cn}.json`：基于 2026-09-14 真实 JS 端点响应，经 `_extract_js_payload` 同款清洗逻辑后保存，URL 保留真实域名以便 allow-list 校验路径与生产一致；md5 缩短、列表裁剪到 2/3 条。
+- 新增 Provider 文档 `docs/PERFECT_WORLD_HYBRID_PROVIDER.md`：验证日期、采样游戏 / 语言、4 个端点 URL 与响应示例、字段映射、tab 名称映射、默认常量、白名单、本地启动器资源入口、回退方案与已知限制（`appCode` 反编译来源 / JS 端点私有格式 / CN 不按语言分发 / 资讯 URL 相对路径 / MIME MD5 校验在 C# 端）。
+- 新增 `python/tests/test_perfect_world_hybrid_provider.py`：41 项 pytest，覆盖 JS 提取（var 包装 / 裸对象 / 双逗号 / 尾逗号）、allow-list、白名单过滤、tab 映射、本地 vs 网络背景、相对 URL URL 绝对化、providerOptions 覆盖、HTTP 5xx / 非 JSON 响应不抛错、本地 backgroundVideoPath 优先于网络 URL。Provider 支持 `httpx.AsyncClient` 注入，测试用 `MockTransport` 喂入脱敏样本，不访问真实网络。
+- `.gitignore` 在 `docs/` 白名单里追加 `PERFECT_WORLD_HYBRID_PROVIDER.md`。
+
+### 验证结果
+
+- `pytest python/tests/test_perfect_world_hybrid_provider.py`：41 项全部通过，耗时 0.30s。
+- `pytest python/tests/`：HoYoPlayProvider 10 项 + KuroLauncherProvider 13 项 + HypergryphBatchProvider 23 项 + PerfectWorldHybridProvider 41 项共 87 项全部通过，耗时 0.32s。
+- 直接 probe 真实端点（Global `nte-gameSwiper.js` + `newsData20260112.js`、CN `yh-gameSwiper.js` + `newsData20260112.js`）确认 4 个 URL 都返回 JS 包装的 JSON；Global `nte_bgvideo_20260418.mp4` 与 CN `yh_bgvideo_20260418.mp4` 都是 200 OK 的 MP4；`nte.perfectworld.com/cn/main.html` 内嵌 `<video src=...>` 与 `newsData20260112.js` 一致。
+
+### 当前限制
+
+- `appCode` / 启动器常量与 JS 端点 URL 都来自对 NTE 启动器资源与官网 HTML 的反向分析，不公开。完美世界改版或启动器升级后端点路径可能漂移，需要重新采样。
+- JS 端点用的是私有 JS 对象字面量（带尾逗号、双逗号、空行分隔），`extract_js_payload` 已处理这些。如果未来版式换了（用了别的写法），需要更新正则。
+- 横幅 swiper 的 `bigpic` / `link` / `mlink` 域名都在 allow-list，但实际 launcher 还会下发 `discord.gg` / `x.com` / `youtube.com` / `pwgam.es` 等第三方跳转域名（`mlink` 或 `link` 直接指向），Provider 自动剔除这些跳转。
+- CN 端 `pc.*` 不分语言；OS 端 `lang.*` 在目标语言无响应时按 `cn` → `en` 兜底，避免空 news。
+- Provider 在 FastAPI 入口的 `provider_registry` 中尚未注册；`/v1/home-content` 用 `providerId=perfect-world-hybrid` 仍走 sample envelope。注册逻辑作为下一个迭代的样本扩展项。
+- 启动器本地资源（`bg.mp4` / `bg.jpg`）没有自动 `installDir` 探测，由 C# 侧先 `LocalLauncherAssetProvider` 探测路径再喂给本 Provider。
+- MIME / MD5 / 尺寸校验未做；按 AGENTS.md 要求由 C# 端 `HttpHomeContentTransport` 拉取后的缓存层负责（待办）。
+
 ## 2026-09-14 23:20:00 +08:00
 
 - 推送人员：`Violet0923`
