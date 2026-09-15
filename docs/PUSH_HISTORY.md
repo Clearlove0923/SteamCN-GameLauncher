@@ -2,6 +2,45 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-15 21:45:00 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 实现真实 Provider `LocalLauncherAssetProvider`（`python/home_content/providers/local_launcher_asset.py`）：本地启动器资源探测。**完全本地、零网络请求**——`fetch()` 只读 `providerOptions.installDir` 下的 `bg.mp4` / `bg.webm` / `bg.jpg` / `bg.png` / `config.json` 等文件。`video_url` 输出 `file://` URI（Windows 用 `as_uri()` 自动处理 `C:/` 与空格转义），同时 `local_path` 给绝对路径；`config.json` 中 `version` / `title` / `summary` / `downloadUrl` / `publishedAt` 顺手填到 `HomeUpdateInfo`。`banners` 和 `news` 永远为空（启动器本地不带 Banner / 资讯流，那部分是网络 Provider 的活）。
+- 探测顺序：`videoFileNames` 默认 `["bg.mp4", "bg.webm"]`、`imageFileNames` 默认 `["bg.jpg", "bg.png", "background.jpg", "background.png"]`、`configFileName` 默认 `"config.json"`。默认 `maxDepth=2` 会看 `assets/` / `video/` / `media/` 子目录（Linux launcher 常用），不会扫 `.git/` / `logs/` 这类目录。三个 file name 列表都可以用 `providerOptions` 覆盖，也接受逗号分隔字符串。`_candidate_paths` 用 `Path.resolve()` 兼容 Windows / POSIX 路径。
+- `_path_to_file_url` 处理 `Path("C:/Program Files/...").resolve()` 在 Windows 上需要 percent-encode 空格的情况。如果 `as_uri()` 因含 `#` 等字符抛 `ValueError`，回退到手动 `file:///<encoded>` 拼接，启动器如果装在带 `#` 的目录也不会让 Worker 崩。
+- 完全本地不依赖 `httpx`。构造器支持 `file_reader` / `exists_checker` 注入钩子，pytest 用 `FakeFS` 模拟文件系统的 3 种布局（Windows / macOS `.app` bundle / Linux `assets/`），不读真实文件。
+- `providerOptions` 支持：
+  - `installDir`（必需，绝对路径）—C# 侧探测 Steam 库 / 注册表 / `/Applications` 后传入
+  - `videoFileNames` / `imageFileNames`（list 或逗号字符串）
+  - `configFileName`（设 `""` 关闭）
+  - `maxDepth`（限制搜索深度）
+- `FakeFS._normalise` 在 Windows 上自动把 POSIX 路径归一化为 `C:/...`，并对查询路径也走 `Path.resolve()`，保证 add / lookup 一致。`_winpath()` 测试 helper 把 `file:///opt/...` 在 Windows 上前缀 `C:/`，让 URL 期望值跨平台统一。
+- 新增脱敏样本 `contracts/samples/launcher-local-config-{win,mac,linux}.json`：模拟三种 launcher 布局，每个 fixture 包含 `installDir` + `files`（含 `bg.mp4` / `config.json` 等） + 共享的 config.json 内容（含 `version=2.9.0`、`publishedAt=2026-09-10T03:00:00+08:00` 等）。
+- 新增 Provider 文档 `docs/LOCAL_LAUNCHER_ASSET_PROVIDER.md`：验证日期、3 种布局的资源映射、`file://` URI 在 Windows / POSIX 上的差异、候选文件顺序、`maxDepth` 默认 2 的依据、`providerOptions` 全表、跨平台路径归一化、限制（不自己探测 installDir、banners/news 为空、config.json 字段白名单、maxDepth=2）。
+- 在 `README.md` 新增「**启动器资源探测**」段落：解释首页内容的两层数据源（网络 Provider + 本地启动器资源），列出 6 个网络 Provider 文档链接，加 `LocalLauncherAssetProvider` C# 端配合示例（先拉网络版，再用本地 launcher 资源覆盖背景视频）。
+- 新增 `python/tests/test_local_launcher_asset_provider.py`：28 项 pytest，覆盖默认值 / `_coerce_str_list` 各种输入 / `_path_to_file_url` POSIX + Windows + 空格 / `_build_background`（video 优先 / 仅图兜底 / 全空 / 子目录 / 自定义 file names）/ `_build_update_info`（解析 / 缺失 / 无效 JSON / 关闭）/ 端到端 fetch（Windows / macOS / Linux / 缺 installDir / override video+image / override configFileName / 关闭 config / maxDepth=1 不扫子目录）。Provider 通过 `file_reader` / `exists_checker` 注入，测试用 `FakeFS` 模拟，**完全不入网、不读真实文件**。
+- `.gitignore` 在 `docs/` 白名单里追加 `LOCAL_LAUNCHER_ASSET_PROVIDER.md`。
+
+### 验证结果
+
+- `pytest python/tests/test_local_launcher_asset_provider.py`：27 项通过 + 1 项 POSIX-only 跳过，耗时 0.25s。
+- `pytest python/tests/`：HoYoPlayProvider 10 + KuroLauncherProvider 13 + HypergryphBatchProvider 23 + PerfectWorldHybridProvider 41 + NextJsDataProvider 39 + NetEaseStaticCmsProvider 29 + LocalLauncherAssetProvider 27(+1 skip) = **182 passed, 1 skipped** 在 0.40s 内完成。
+
+### 当前限制
+
+- Provider 不自己探测 installDir——registry / Steam 库 / `~/Applications` 的探测逻辑在 C# 侧完成。这避免 Python 端做平台特定的 shell 调用，但意味着任何使用 `LocalLauncherAssetProvider` 的 C# 流程必须先有 launcher 路径发现代码（已存在 / 计划实现）。
+- `banners` / `news` 永远为空。启动器本地几乎不带 Banner / 资讯流，这两个字段是网络 Provider 的活。如果某个 launcher 把营销资源打进安装目录，可以扩展 `_candidate_paths` 把 banner/news 也覆盖，但目前默认不支持。
+- `config.json` 解析只读 `version` / `title` / `summary` / `downloadUrl` / `publishedAt` 五个字段；`publishedAt` 兼容 `Z` 与 `+HH:MM` 后缀，缺字段时整个 `update_info` 退化为 None。增加字段要同步改 Provider DTO（C# 端）+ 文档 + fixture。
+- `maxDepth=2` 默认足够覆盖 `assets/` / `video/` / `media/` 子目录，不会扫 `.git/` / `logs/` / `cache/`。启动器如果资源在更深位置（例如嵌套 `assets/video/`），要传 `maxDepth>=3`。
+- 探测白名单子目录只包含 `assets` / `video` / `media`。如果某个 launcher 把资源放进 `data/` / `resource/` / `bg/` 等其他目录，需要在 C# 端用 `providerOptions` 传 `videoFileNames` 直接命中文件，而不是依赖子目录猜测。
+- `_path_to_file_url` 在 `Path.as_uri()` 因路径含 `#` 等抛 `ValueError` 时回退到手动拼接，**不会**抛错。但 percent-encoding 规则与 `as_uri()` 不完全一致——带特殊字符的安装目录可能产生 URL 解析差异（极少见）。
+- Provider 在 FastAPI 入口的 `provider_registry` 中尚未注册；`/v1/home-content` 用 `providerId=local-launcher-asset` 仍走 sample envelope。注册逻辑作为下一个迭代的样本扩展项。
+- MIME / MD5 / 尺寸校验未做；按 AGENTS.md 要求由 C# 端 `HttpHomeContentTransport` 拉取后的缓存层负责（待办）。本地资源 C# 端直接读文件 + 自己校验即可。
+
 ## 2026-09-15 21:25:00 +08:00
 
 - 推送人员：`Violet0923`

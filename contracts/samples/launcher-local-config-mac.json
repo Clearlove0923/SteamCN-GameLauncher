@@ -1,0 +1,22 @@
+{
+  "layoutKind": "mac",
+  "installDir": "/Applications/Where Winds Meet.app/Contents/Resources",
+  "files": [
+    {
+      "path": "/Applications/Where Winds Meet.app/Contents/Resources/bg.mp4",
+      "kind": "video",
+      "size": 18743210
+    },
+    {
+      "path": "/Applications/Where Winds Meet.app/Contents/Resources/config.json",
+      "kind": "config",
+      "content": {
+        "version": "2.9.0",
+        "title": "燕云十六声 v2.9.0",
+        "summary": "「芳草意留人」版本更新",
+        "downloadUrl": "https://www.yysls.cn/download/",
+        "publishedAt": "2026-09-10T03:00:00+08:00"
+      }
+    }
+  ]
+}

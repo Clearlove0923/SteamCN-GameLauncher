@@ -24,6 +24,28 @@
 
 扩展设计、边界和验收说明见 [AppID 自动填充需求](APPID_AUTO_FILL_REQUIREMENTS.md)。开发验证方式见 [回归检查说明](Tests/SteamAppInfo.Tests/README.md)。
 
+## 启动器资源探测
+
+首页内容（背景视频 / 背景图 / Banner / 资讯）按数据源分为两层：
+
+- **网络 Provider**：拉取各游戏官方营销站点的 `__NEXT_DATA__`、JS 数据端点、`/api/news` 等。具体矩阵见 [docs/HOMEPAGE_CONTENT_ARCHITECTURE.md](docs/HOMEPAGE_CONTENT_ARCHITECTURE.md) 与各 Provider 文档（[HOYOPLAY](docs/HOYOPLAY_PROVIDER.md) / [KURO](docs/KURO_PROVIDER.md) / [HYPERGRYPH](docs/HYPERGRYPH_BATCH_PROVIDER.md) / [PERFECT_WORLD](docs/PERFECT_WORLD_HYBRID_PROVIDER.md) / [NEXTJS_DATA](docs/NEXTJS_DATA_PROVIDER.md) / [NETEASE_STATIC_CMS](docs/NETEASE_STATIC_CMS_PROVIDER.md)）。
+- **本地启动器资源**（`LocalLauncherAssetProvider`，`provider_id="local-launcher-asset"`）：当网络 Provider 返回的背景不够清晰或与启动器内置视频不一致时，由 C# 侧探测 launcher 安装目录，把绝对路径传入 `providerOptions.installDir`，Python 端按 `bg.mp4` / `bg.webm` / `bg.jpg` / `bg.png` / `config.json` 顺序查找并以 `file://` URI 回填。`config.json` 中的 `version` / `downloadUrl` 会顺手填到 `update_info`，UI 端可以据此弹出"新版本可用"提示。
+
+配合示例（C# 端）：先用一个网络 Provider 拿到首屏，再用本地启动器资源覆盖背景视频，二者字段合并后再下发到 XAML 控件。
+
+```csharp
+var request = new HomeContentRequest {
+    ProviderId = "local-launcher-asset",
+    ProviderOptions = new Dictionary<string, object> {
+        ["installDir"] = launcherInstallDir.Value,
+        ["videoFileNames"] = new[] { "bg.mp4", "bg.webm" },
+        ["configFileName"] = "config.json",
+    },
+};
+```
+
+详细字段映射、跨平台路径处理与限制见 [docs/LOCAL_LAUNCHER_ASSET_PROVIDER.md](docs/LOCAL_LAUNCHER_ASSET_PROVIDER.md)。
+
 ## 系统要求
 - Windows 操作系统（Windows 10/11）基于x64
 - 官方安装包包含 .NET 和 Windows App SDK 运行库
