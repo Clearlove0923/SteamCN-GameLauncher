@@ -23,6 +23,7 @@ public sealed partial class CustomManifestPage : Page
     private bool _formLoaded;
     private bool _deleted;
     private bool _switchingPreset;
+    private string _selectedHomeLaunchModeId = HomeLaunchModeIds.SteamCn;
 
     public string PresetId { get; private set; } = "";
 
@@ -99,6 +100,10 @@ public sealed partial class CustomManifestPage : Page
             txtExecutableFileName.Text = preset.ExecutableFileName;
             txtBuildId.Text = preset.BuildId;
             txtManifest.Text = preset.Manifest;
+            _selectedHomeLaunchModeId = HomeLaunchModeIds.IsSupported(preset.HomeLaunchModeId)
+                ? preset.HomeLaunchModeId
+                : HomeLaunchModeIds.SteamCn;
+            ApplyLaunchModeUi();
 
             var langTag = string.IsNullOrEmpty(preset.Language) ? "schinese" : preset.Language;
             foreach (var item in cmbLanguageCode.Items.OfType<ComboBoxItem>())
@@ -123,7 +128,7 @@ public sealed partial class CustomManifestPage : Page
         var missing = string.IsNullOrWhiteSpace(_settings.SteamInstallPath)
                    || string.IsNullOrWhiteSpace(_settings.SteamLibraryPath)
                    || string.IsNullOrWhiteSpace(_settings.SteamId);
-        globalConfigInfoBar.IsOpen = missing;
+        globalConfigInfoBar.IsOpen = RequiresSteamRuntime && missing;
     }
 
     /// <summary>从表单构造当前自定义配置。</summary>
@@ -148,12 +153,66 @@ public sealed partial class CustomManifestPage : Page
             ExecutableFileName = txtExecutableFileName.Text.Trim(),
             Language = langTag,
             HomeLayoutProfileId = current?.HomeLayoutProfileId ?? HomeLayoutProfileCatalog.DefaultProfileId,
+            HomeLaunchModeId = _selectedHomeLaunchModeId,
         };
     }
 
     private CustomManifestPreset? GetSelectedPreset()
     {
         return _preset;
+    }
+
+    private bool RequiresSteamRuntime =>
+        _selectedHomeLaunchModeId != HomeLaunchModeIds.DirectCn;
+
+    private bool UsesGeneratedSteamConfiguration =>
+        _selectedHomeLaunchModeId == HomeLaunchModeIds.SteamCn;
+
+    private void ConfigLaunchModeMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedHomeLaunchModeId = ReferenceEquals(sender, ConfigDirectCnLaunchModeItem)
+            ? HomeLaunchModeIds.DirectCn
+            : ReferenceEquals(sender, ConfigSteamInternationalLaunchModeItem)
+                ? HomeLaunchModeIds.SteamInternational
+                : HomeLaunchModeIds.SteamCn;
+
+        if (!UsesGeneratedSteamConfiguration)
+            ResetGameInfoLookup();
+        ApplyLaunchModeUi();
+    }
+
+    private void ApplyLaunchModeUi()
+    {
+        var direct = _selectedHomeLaunchModeId == HomeLaunchModeIds.DirectCn;
+        var international = _selectedHomeLaunchModeId == HomeLaunchModeIds.SteamInternational;
+        var generatedSteamConfiguration = !direct && !international;
+
+        ConfigSteamCnLaunchModeItem.IsChecked = !direct && !international;
+        ConfigDirectCnLaunchModeItem.IsChecked = direct;
+        ConfigSteamInternationalLaunchModeItem.IsChecked = international;
+        btnLaunchMode.Content = direct
+            ? "启动方式：国服"
+            : international
+                ? "启动方式：Steam 玩国际服"
+                : "启动方式：Steam 玩国服";
+
+        SteamConfigCard.Visibility = generatedSteamConfiguration ? Visibility.Visible : Visibility.Collapsed;
+        txtExecutableFileName.IsEnabled = generatedSteamConfiguration;
+        cmbExecutableCandidates.IsEnabled = generatedSteamConfiguration;
+        SteamPlaceholderPanel.Opacity = generatedSteamConfiguration ? 1 : 0.45;
+        SteamPlaceholderHint.Opacity = generatedSteamConfiguration ? 1 : 0.45;
+        btnGenerate.IsEnabled = generatedSteamConfiguration;
+        btnOneClickUpdate.IsEnabled = generatedSteamConfiguration;
+
+        ClientExecutableHint.Text = international
+            ? "提示：当前为 Steam 国际服模式，请选择国际服游戏的真实可执行文件。"
+            : direct
+                ? "提示：请选择国服游戏的真实可执行文件；首页将使用其所在目录直接启动，不经过 Steam。"
+                : "提示：请选择国服游戏的真实可执行文件；该路径用于生成 Steam 启动命令。";
+        LaunchArgumentsHint.Text = direct
+            ? "提示：参数会直接传递给国服真实 EXE，并随当前游戏配置保存。"
+            : "提示：参数会插入真实 EXE 与 %command% 之间，并随当前游戏配置保存。";
+        UpdateGlobalConfigInfoBar();
     }
 
     // ── 自定义页面管理 ──────────────────────────────────────────────────────────
@@ -465,7 +524,7 @@ public sealed partial class CustomManifestPage : Page
         }
         finally
         {
-            btnGenerate.IsEnabled = true;
+            btnGenerate.IsEnabled = UsesGeneratedSteamConfiguration;
         }
     }
 
@@ -603,6 +662,7 @@ public sealed partial class CustomManifestPage : Page
         && string.Equals(left.InstallDir, right.InstallDir, StringComparison.Ordinal)
         && string.Equals(left.ClientExePath, right.ClientExePath, StringComparison.Ordinal)
         && string.Equals(left.LaunchArguments, right.LaunchArguments, StringComparison.Ordinal)
+        && string.Equals(left.HomeLaunchModeId, right.HomeLaunchModeId, StringComparison.Ordinal)
         && string.Equals(left.LauncherExePath, right.LauncherExePath, StringComparison.Ordinal)
         && string.Equals(left.ExecutableFileName, right.ExecutableFileName, StringComparison.Ordinal)
         && string.Equals(left.Language, right.Language, StringComparison.Ordinal)

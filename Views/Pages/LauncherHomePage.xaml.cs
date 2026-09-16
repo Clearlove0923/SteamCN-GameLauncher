@@ -2,6 +2,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.Media.Core;
+using Windows.Media.Playback;
+using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Models.Home;
 using SteamCNGameLauncher.Services;
 using SteamCNGameLauncher.Services.Home;
@@ -14,17 +17,48 @@ public sealed partial class LauncherHomePage : Page
     private readonly IHomeContentService _homeContentService = new PreviewHomeContentService();
     private readonly SettingsService _settingsService = new();
     private readonly SteamLaunchService _steamLaunchService = new();
+    private readonly DirectGameLaunchService _directGameLaunchService = new();
+    private readonly AppearanceService _appearanceService = AppearanceService.Instance;
     private readonly LogService _logService = LogService.Instance;
+    private readonly MediaPlayer _backgroundPlayer = new() { IsLoopingEnabled = true, AutoPlay = true };
     private string? _activeLayoutProfileId;
     private CancellationTokenSource? _homeContentCancellation;
     private Models.CustomManifestPreset? _currentGame;
+    private HomeContent? _currentHomeContent;
+    private string? _activeVideoSource;
 
     public LauncherHomePage()
     {
         InitializeComponent();
-        Loaded += (_, _) => ApplyLayoutProfile(_activeLayoutProfileId);
+        HomeBackgroundVideo.SetMediaPlayer(_backgroundPlayer);
+        _backgroundPlayer.MediaFailed += BackgroundPlayer_MediaFailed;
+        Loaded += LauncherHomePage_Loaded;
+        Unloaded += LauncherHomePage_Unloaded;
         // 窗口跨显示器或缩放率变化时，保持资讯栏的截图实际像素尺寸不变。
         SizeChanged += (_, _) => ApplyLayoutProfile(_activeLayoutProfileId);
+    }
+
+    private void LauncherHomePage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        _appearanceService.Changed -= ApplyHomeAppearance;
+        _appearanceService.Changed += ApplyHomeAppearance;
+        ApplyLayoutProfile(_activeLayoutProfileId);
+        ApplyHomeAppearance();
+    }
+
+    private void LauncherHomePage_Unloaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        _appearanceService.Changed -= ApplyHomeAppearance;
+        StopHomeAnimation();
+    }
+
+    private void ApplyHomeAppearance()
+    {
+        var profile = _appearanceService.Settings.GetEffective(AppearancePageIds.Home);
+        NewsPanel.Visibility = profile.ShowHomeNews ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+        ShowHomeAnimationItem.IsChecked = profile.ShowHomeAnimation;
+        ShowHomeNewsItem.IsChecked = profile.ShowHomeNews;
+        ApplyHomeAnimation(profile.ShowHomeAnimation ? _currentHomeContent?.Background : null);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -49,6 +83,7 @@ public sealed partial class LauncherHomePage : Page
     private async Task ShowGameAsync(Models.CustomManifestPreset game)
     {
         _currentGame = game;
+        ApplyLaunchMode(game.HomeLaunchModeId);
         StartGameButton.IsEnabled = true;
         ApplyLayoutProfile(game.HomeLayoutProfileId);
         GameTitle.Text = game.Name;
@@ -66,12 +101,80 @@ public sealed partial class LauncherHomePage : Page
                 ProviderId = PreviewHomeContentService.ProviderId,
                 Locale = "zh-CN"
             }, _homeContentCancellation.Token);
+            _currentHomeContent = result.Content;
             HomeContentPanel.SetContent(result.Content);
+            ApplyHomeAppearance();
         }
         catch (OperationCanceledException)
         {
             // 快速切换游戏时忽略上一请求的取消结果，避免旧内容覆盖当前游戏。
         }
+    }
+
+    private void HomeDisplayMenuItem_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        var profile = _appearanceService.Settings.GetEffective(AppearancePageIds.Home);
+        profile.ShowHomeAnimation = ShowHomeAnimationItem.IsChecked;
+        profile.ShowHomeNews = ShowHomeNewsItem.IsChecked;
+        _appearanceService.Preview();
+        if (!_appearanceService.Save())
+            _logService.AddLog("[首页显示] 设置保存失败，本次运行仍使用当前选择");
+    }
+
+    private void ApplyHomeAnimation(HomeBackground? background)
+    {
+        var source = ResolveVideoSource(background?.VideoUrl);
+        if (source is null)
+        {
+            StopHomeAnimation();
+            return;
+        }
+
+        var key = source.AbsoluteUri;
+        if (_activeVideoSource == key)
+        {
+            HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+            _backgroundPlayer.Play();
+            return;
+        }
+
+        try
+        {
+            _backgroundPlayer.Source = MediaSource.CreateFromUri(source);
+            _activeVideoSource = key;
+            HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            StopHomeAnimation();
+            _logService.AddLog($"[首页背景] 动画无法播放，已回退到背景图片：{ex.Message}");
+        }
+    }
+
+    private static Uri? ResolveVideoSource(string? source)
+    {
+        if (!Uri.TryCreate(source, UriKind.Absolute, out var uri))
+            return null;
+        if (uri.IsFile)
+            return File.Exists(uri.LocalPath) ? uri : null;
+        return uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ? uri : null;
+    }
+
+    private void BackgroundPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            StopHomeAnimation();
+            _logService.AddLog($"[首页背景] 动画播放失败，已回退到背景图片：{args.ErrorMessage}");
+        });
+    }
+
+    private void StopHomeAnimation()
+    {
+        _backgroundPlayer.Pause();
+        _backgroundPlayer.Source = null;
+        _activeVideoSource = null;
+        HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
     }
 
     private void ApplyLayoutProfile(string? profileId)
@@ -112,10 +215,28 @@ public sealed partial class LauncherHomePage : Page
 
     private void LaunchModeMenuItem_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        // 先完成菜单交互结构；后续启动服务接入时只需读取当前选中项。
-        SteamLaunchModeItem.IsChecked = ReferenceEquals(sender, SteamLaunchModeItem);
-        DirectLaunchModeItem.IsChecked = ReferenceEquals(sender, DirectLaunchModeItem);
-        LauncherLaunchModeItem.IsChecked = ReferenceEquals(sender, LauncherLaunchModeItem);
+        var mode = ReferenceEquals(sender, DirectCnLaunchModeItem)
+            ? HomeLaunchModeIds.DirectCn
+            : ReferenceEquals(sender, SteamInternationalLaunchModeItem)
+                ? HomeLaunchModeIds.SteamInternational
+                : HomeLaunchModeIds.SteamCn;
+        ApplyLaunchMode(mode);
+
+        if (_currentGame is not { } game)
+            return;
+
+        var updated = game.Clone();
+        updated.HomeLaunchModeId = mode;
+        if (CustomManifestService.Instance.Update(updated))
+        {
+            _currentGame = updated;
+            _logService.AddLog($"[首页启动] 已保存启动方式：{GetLaunchModeName(mode)}");
+        }
+        else
+        {
+            _logService.AddLog("[首页启动] 启动方式保存失败，本次页面内仍使用当前选择");
+            game.HomeLaunchModeId = mode;
+        }
     }
 
     private async void StartGameButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -128,8 +249,13 @@ public sealed partial class LauncherHomePage : Page
         StartGameText.Text = "正在启动";
         try
         {
-            // 当前首页仅实现 Steam 模式，由 SteamLaunchService 统一检查 AppID、Steam、ACF 与真实 EXE。
-            var result = _steamLaunchService.Launch(_settingsService.Load(), game);
+            var result = game.HomeLaunchModeId switch
+            {
+                HomeLaunchModeIds.DirectCn => _directGameLaunchService.Launch(game),
+                HomeLaunchModeIds.SteamInternational =>
+                    _steamLaunchService.LaunchInternational(_settingsService.Load(), game),
+                _ => _steamLaunchService.Launch(_settingsService.Load(), game),
+            };
             _logService.AddLog($"[首页启动] {result.Message}");
             if (!result.IsSuccess)
                 await ShowInfoAsync(result.Message);
@@ -140,6 +266,21 @@ public sealed partial class LauncherHomePage : Page
             StartGameButton.IsEnabled = _currentGame is not null;
         }
     }
+
+    private void ApplyLaunchMode(string? mode)
+    {
+        var normalized = HomeLaunchModeIds.IsSupported(mode) ? mode! : HomeLaunchModeIds.SteamCn;
+        SteamCnLaunchModeItem.IsChecked = normalized == HomeLaunchModeIds.SteamCn;
+        DirectCnLaunchModeItem.IsChecked = normalized == HomeLaunchModeIds.DirectCn;
+        SteamInternationalLaunchModeItem.IsChecked = normalized == HomeLaunchModeIds.SteamInternational;
+    }
+
+    private static string GetLaunchModeName(string mode) => mode switch
+    {
+        HomeLaunchModeIds.DirectCn => "国服",
+        HomeLaunchModeIds.SteamInternational => "Steam 玩国际服",
+        _ => "Steam 玩国服",
+    };
 
     private void LaunchButtonGroup_PointerEntered(object sender, PointerRoutedEventArgs e)
     {

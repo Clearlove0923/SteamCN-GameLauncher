@@ -4,6 +4,9 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:controls="using:SteamCNGameLauncher.Views.Controls">
     <Grid Background="{StaticResource AppearancePageBackground}">
+        <MediaPlayerElement x:Name="HomeBackgroundVideo" IsHitTestVisible="False"
+                            AreTransportControlsEnabled="False" Stretch="UniformToFill"
+                            Visibility="Collapsed"/>
         <!-- 首页内容覆盖在全窗口背景上，位置按 1920×1080 米哈游启动器参考布局设置。 -->
         <Border Background="#14000000" IsHitTestVisible="False"/>
 
@@ -60,12 +63,18 @@
                     <Button.Flyout>
                         <MenuFlyout Placement="TopEdgeAlignedRight">
                             <MenuFlyoutSubItem Text="游戏启动方式">
-                                <ToggleMenuFlyoutItem x:Name="SteamLaunchModeItem" Text="通过 Steam 启动"
+                                <ToggleMenuFlyoutItem x:Name="DirectCnLaunchModeItem" Text="国服"
+                                                      Click="LaunchModeMenuItem_Click"/>
+                                <ToggleMenuFlyoutItem x:Name="SteamCnLaunchModeItem" Text="Steam 玩国服"
                                                       IsChecked="True" Click="LaunchModeMenuItem_Click"/>
-                                <ToggleMenuFlyoutItem x:Name="DirectLaunchModeItem" Text="直接启动游戏（后续）"
-                                                      IsEnabled="False"/>
-                                <ToggleMenuFlyoutItem x:Name="LauncherLaunchModeItem" Text="打开游戏启动器（后续）"
-                                                      IsEnabled="False"/>
+                                <ToggleMenuFlyoutItem x:Name="SteamInternationalLaunchModeItem" Text="Steam 玩国际服"
+                                                      Click="LaunchModeMenuItem_Click"/>
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutSubItem Text="首页显示">
+                                <ToggleMenuFlyoutItem x:Name="ShowHomeAnimationItem" Text="显示动画"
+                                                      IsChecked="True" Click="HomeDisplayMenuItem_Click"/>
+                                <ToggleMenuFlyoutItem x:Name="ShowHomeNewsItem" Text="显示资讯栏"
+                                                      IsChecked="True" Click="HomeDisplayMenuItem_Click"/>
                             </MenuFlyoutSubItem>
                         </MenuFlyout>
                     </Button.Flyout>

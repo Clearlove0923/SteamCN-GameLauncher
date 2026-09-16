@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace SteamCNGameLauncher.Models;
 
 /// <summary>
-/// 远程 version.json 的反序列化模型。
+/// Debug 模式本地 version.json 的反序列化模型。
 /// </summary>
 public sealed class VersionInfo
 {

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Models/GitHubReleaseInfo.cs" Link="Models/GitHubReleaseInfo.cs" />
+    <Compile Include="../../Services/GitHubReleaseSelector.cs" Link="Services/GitHubReleaseSelector.cs" />
+    <Compile Include="../../Services/ReleaseVersionComparer.cs" Link="Services/ReleaseVersionComparer.cs" />
+  </ItemGroup>
+</Project>

@@ -11,17 +11,25 @@ public sealed class AppearanceService
     public static AppearanceService Instance { get; } = new();
     public string ImageDirectory { get; } = Path.Combine(AppContext.BaseDirectory, "Backgrounds");
     public AppearanceSettings Settings { get; }
+    public string ActivePageId { get; private set; } = AppearancePageIds.Home;
+    public AppearanceProfile CurrentProfile => Settings.GetEffective(ActivePageId);
     public event Action? Changed;
     private readonly SettingsService _settingsService = new();
 
     private AppearanceService()
     {
         Settings = _settingsService.Load().Appearance ?? new();
-        Settings.SelectedImage ??= "";
-        Settings.Images ??= new();
+        Settings.Normalize();
     }
 
     public void Preview() => Changed?.Invoke();
+    public void SetActivePage(string pageId)
+    {
+        var normalized = AppearancePageIds.Normalize(pageId);
+        if (ActivePageId == normalized) return;
+        ActivePageId = normalized;
+        Preview();
+    }
     public bool Save() => _settingsService.Update(s => s.Appearance = Settings);
 
     public string GetImagePath(string name)
@@ -122,17 +130,26 @@ public sealed class AppearanceService
     public void Delete(string name)
     {
         File.Delete(GetImagePath(name));
-        Settings.Images.TryGetValue(name, out var deleted);
-        Settings.Images.Remove(name);
-        if (!string.IsNullOrEmpty(deleted?.SourceImage) && !Settings.Images.Values.Any(o => o?.SourceImage == deleted.SourceImage))
+        var profiles = Settings.EnumerateProfiles().ToList();
+        var sourceImages = profiles
+            .Select(profile => profile.Images.TryGetValue(name, out var options) ? options?.SourceImage : null)
+            .Where(source => !string.IsNullOrEmpty(source)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        foreach (var profile in profiles)
         {
-            try { File.Delete(GetOriginalPath(deleted.SourceImage)); }
-            catch (Exception ex) { LogService.Instance.AddLog($"背景已删除，但原图副本清理失败：{ex.Message}"); }
+            profile.Images.Remove(name);
+            if (profile.SelectedImage == name)
+            {
+                profile.SelectedImage = "";
+                profile.Enabled = false;
+            }
         }
-        if (Settings.SelectedImage == name)
+        foreach (var sourceImage in sourceImages)
         {
-            Settings.SelectedImage = "";
-            Settings.Enabled = false;
+            if (profiles.Any(profile => profile.Images.Values.Any(options =>
+                    string.Equals(options?.SourceImage, sourceImage, StringComparison.OrdinalIgnoreCase))))
+                continue;
+            try { File.Delete(GetOriginalPath(sourceImage!)); }
+            catch (Exception ex) { LogService.Instance.AddLog($"背景已删除，但原图副本清理失败：{ex.Message}"); }
         }
         Preview();
     }
@@ -144,7 +161,7 @@ public sealed class AppearanceService
     }
 
     public async Task<string> SaveCropAsync(StorageFile source, BackgroundCropImage image,
-        double scale, double x, double y, BackgroundOptions? previous = null)
+        double scale, double x, double y, AppearanceProfile profile, BackgroundOptions? previous = null)
     {
         // 像素合成放到后台，避免确认裁切时阻塞窗口；写入完成前不发布图库条目。
         var pixels = await Task.Run(() => BackgroundCropRenderer.Render(image.Pixels, image.Width, image.Height, scale, x, y));
@@ -169,7 +186,7 @@ public sealed class AppearanceService
                 await encoder.FlushAsync();
             }
             File.Move(temporary, outputPath);
-            Settings.Images[name] = new BackgroundOptions
+            profile.Images[name] = new BackgroundOptions
             {
                 SourceImage = originalName,
                 CropWidth = BackgroundCropRenderer.Width,
