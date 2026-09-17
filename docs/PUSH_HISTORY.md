@@ -2,6 +2,32 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-17 22:05:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview`
+- 推送提交：5 个 commit（`6bcd848` / `fd6c172` / `ed62cde` / `744aa28` + 本次 PUSH_HISTORY 更新本身）
+
+### 实现内容
+
+- **merge `6bcd848`**：把 `Refactored_Version` 的 `9081e95`（`feat: expand launch appearance and update options`）合并进 `python_preview`，冲突落在 `docs/PUSH_HISTORY.md` 上 —— 用独立 Python 脚本按时间戳去重 + 倒序 + 在顶部前置 merge 记录，保证 13 条旧推送记录全部保留。同步进 `python_preview` 的 C# 改动包括外观/启动设置扩展、Release 包装与 Settings UI 配套。
+- **commit `fd6c172`**：补齐 `provider_registry` 与 server 的集成测试。新建 `python/tests/test_provider_registry.py`（9 项，覆盖注册表不变式：7 个稳定 ID ↔ Provider 类的双向映射、未知 ID 抛 `ValueError`、空字符串拒绝、大小写不匹配拒绝），新建 `python/tests/test_server_app.py`（13 项，用 `httpx.ASGITransport` in-process 跑 FastAPI，monkeypatch `create_provider` 注入 fake Provider）。修复 `python/home_content/server/app.py` 第 124 行硬编码的 `"HoYoPlay"` provider 名字为通用 `f"{request.provider_id} provider failed without message."`。Python 总测试数 182 → 204。
+- **commit `ed62cde`**：修复 `LauncherHomePage` 白屏 —— 当 `ApplyHomeAnimation` 拿到 `null` source 时不再走无声 `StopHomeAnimation()`，改为回退显示当前 appearance profile 的静态背景图。XAML 在 `MediaPlayerElement` 同级新增 `<Image x:Name="HomeBackgroundImage" IsHitTestVisible="False" Stretch="UniformToFill" Visibility="Collapsed"/>`，code-behind 新增 `ShowStaticBackground()` 读 `_appearanceService.CurrentProfile.Current.SourceImage` + `_appearanceService.GetImagePath(...)` → `new BitmapImage(new Uri(path))`。三路分支：source null → 静态图；video play / new key → 隐藏 Image；stop / failed → 同时清空 Image。根因是 `AppearancePageBackground = Transparent` 叠加 WinUI 默认白窗口 = 纯白屏。
+- **commit `744aa28`**：C# 端接通 Python Provider 链路。新建 `Services/Home/FastApiHomeContentService.cs`（envelope → result 转换，`HomeContentTransportException` 统一降级为 `transport_<ExceptionClass>` code，unwrap inner `JsonException` / `HttpRequestException`，`OperationCanceledException` 在 token 已 cancel 时 rethrow）。`Models/AppSettings.cs` 加 `HomeContentWorkerBaseUrl`（默认 `http://127.0.0.1:8765`）+ `HomeContentWorkerTimeoutSeconds`（默认 10），`CustomManifestPreset` 加 `HomeContentProviderId` 字段。`LauncherHomePage.xaml.cs` 用 `CreateHomeContentService(settings)` 工厂取代硬编码 `PreviewHomeContentService`，新增 `ResolveProviderId(game)` helper。`CustomManifestPage.xaml(.cs)` 在 BuildID/Manifest 输入框下方新增 `cmbHomeContentProvider` ComboBox，列 7 个 Provider ID + 空项。同步新建 `Tests/FastApiHomeContentService.Tests/`（24 项断言全过，自带 `FakeHomeContentTransport` 测试夹具）。
+
+### 验证结果
+
+- **Python pytest**：`204 passed + 1 skipped`（前一轮 182 passed + 1 skipped；新增 registry 9 + server 13 = 22 项）。所有 7 个 Provider 在 fixture 下端到端解析通过。
+- **C# FastApiHomeContentService.Tests**：`24` 项断言全部通过（构造器 null / GetAsync null / Happy 透传 / IsStale 默认 false / Errors 双向 / TransportException 三种 inner / Cancellation 不吞 / request 字段透传）。
+- **沙盒端到端**：本地起 uvicorn worker（`python -m home_content.server.main` PID 55124，监听 `127.0.0.1:8765`），`POST /v1/home-content` 用 `{"requestId":"e2e-1","providerId":"kuro-launcher","gameId":"00d604afe7c248f498b9682b3bf16f8c","locale":"zh-CN"}` 返回 200，5 个 banner（3.7 前瞻预告、景映角色 PV、景映实机视频、3.6 PV、kuro 充值中心）+ 4 条 news + 背景视频 URL `https://hw-pcdownload-qcloud.aki-game.net/launcher/clientUpload/0nr2n8wkbta7l7flfl.mp4`。把 `CustomManifestPresets[1]`（鸣潮）的 `HomeContentProviderId` 临时改为 `kuro-launcher`，启动 `SteamCN-GameLauncher.exe`，主页背景出现真实的 Kuro first-frame webp（蓝发女角原画，月亮 + 白花场景），标题"当前游戏 · 鸣潮"正确显示（截图 `launcher_e2e_kuro_clean.png`，验证后还原 settings + kill launcher/worker）。
+
+### 当前限制
+
+- **Python worker 进程启动尚未内嵌到 C# 启动流程**：`LauncherHomePage` 构造 service 时读 `settings.HomeContentWorkerBaseUrl`，但当前进程没有任何代码去 spawn uvicorn 子进程。`HomeContentE2E.Tests` 已经验证 `Process.Start` + `WaitForPort()` 的全链路，需要把那段 worker 启动代码挪进主进程（一次性 + 设置项控制）才算真正"零配置可用"。
+- **Provider ID 与游戏元数据没有自动绑定**：当前 7 个 Provider 在 Python 端通过 `provider_id` 区分，C# 端 `CustomManifestPreset.HomeContentProviderId` 是自由文本 + ComboBox 提供 7 个选项；用户得自己知道"鸣潮对应 `kuro-launcher`"。后续可在 `CustomManifestService` 加 lookup 表（按 Steam AppID → Provider 推荐）。
+- **未做 request 级内存缓存**：`FastApiHomeContentService.GetAsync` 每次 `ShowGameAsync` 都发新请求，切换游戏时浪费一次往返；Python worker 已覆盖远端缓存，但 C# 端没做"同一 game 30s 内复用上次 envelope"的内存层。
+- **`HomeContentProviderId` 与 `HomeLaunchModeId` 正交但无联动校验**：运行时不会崩，但 UI 应该提示"该 Provider 主要适合 Steam 启动模式"之类的不匹配组合。
+
 ## 2026-09-17 22:00:00 +08:00
 
 - 推送人员：`wonderful-oss`
