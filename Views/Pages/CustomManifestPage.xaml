@@ -150,6 +150,21 @@
                         </StackPanel>
                     </Grid>
 
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="首页内容 Provider（可选）" FontWeight="Medium"/>
+                        <ComboBox x:Name="cmbHomeContentProvider" HorizontalAlignment="Stretch"
+                                  ToolTipService.ToolTip="Python Provider 稳定 ID；空 = 用 preview 示例数据">
+                            <ComboBoxItem Content="（空，使用 preview 示例数据）" Tag=""/>
+                            <ComboBoxItem Content="hoyoplay-json — 米哈游（崩坏3 / 绝区零 / 原神）" Tag="hoyoplay-json"/>
+                            <ComboBoxItem Content="kuro-launcher — 库洛（鸣潮）" Tag="kuro-launcher"/>
+                            <ComboBoxItem Content="hypergryph-batch — 鹰角（终末地）" Tag="hypergryph-batch"/>
+                            <ComboBoxItem Content="perfect-world-hybrid — 完美世界（异环）" Tag="perfect-world-hybrid"/>
+                            <ComboBoxItem Content="nextjs-data — 叠纸（无限暖暖）" Tag="nextjs-data"/>
+                            <ComboBoxItem Content="netease-static-cms — 网易（燕云十六声等）" Tag="netease-static-cms"/>
+                            <ComboBoxItem Content="local-launcher-asset — 本地启动器资源" Tag="local-launcher-asset"/>
+                        </ComboBox>
+                    </StackPanel>
+
                     <InfoBar x:Name="gameInfoStatus" IsOpen="False" IsClosable="False"/>
                     <ComboBox x:Name="cmbDepotCandidates" Header="选择 Depot"
                               PlaceholderText="请选择 Depot，也可手动填写 DepotID"

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -15,13 +16,13 @@ namespace SteamCNGameLauncher.Views.Pages;
 public sealed partial class LauncherHomePage : Page
 {
     private readonly HomeLayoutProfileCatalog _layoutProfiles = new();
-    private readonly IHomeContentService _homeContentService = new PreviewHomeContentService();
     private readonly SettingsService _settingsService = new();
     private readonly SteamLaunchService _steamLaunchService = new();
     private readonly DirectGameLaunchService _directGameLaunchService = new();
     private readonly AppearanceService _appearanceService = AppearanceService.Instance;
     private readonly LogService _logService = LogService.Instance;
     private readonly MediaPlayer _backgroundPlayer = new() { IsLoopingEnabled = true, AutoPlay = true };
+    private readonly IHomeContentService _homeContentService;
     private string? _activeLayoutProfileId;
     private CancellationTokenSource? _homeContentCancellation;
     private Models.CustomManifestPreset? _currentGame;
@@ -37,6 +38,40 @@ public sealed partial class LauncherHomePage : Page
         Unloaded += LauncherHomePage_Unloaded;
         // 窗口跨显示器或缩放率变化时，保持资讯栏的截图实际像素尺寸不变。
         SizeChanged += (_, _) => ApplyLayoutProfile(_activeLayoutProfileId);
+
+        var settings = _settingsService.Load();
+        _homeContentService = CreateHomeContentService(settings);
+    }
+
+    /// <summary>
+    /// Pick the home-content service to use for this session.
+    ///
+    /// When <see cref="AppSettings.HomeContentWorkerBaseUrl"/> is set and not the
+    /// built-in default placeholder, talk to the Python Worker over HTTP via
+    /// <see cref="FastApiHomeContentService"/>. Otherwise fall back to
+    /// <see cref="PreviewHomeContentService"/> so the page renders something
+    /// even before the worker is launched.
+    /// </summary>
+    private static IHomeContentService CreateHomeContentService(AppSettings settings)
+    {
+        var baseUrl = settings.HomeContentWorkerBaseUrl?.Trim();
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            return new PreviewHomeContentService();
+        }
+
+        try
+        {
+            var endpoint = new Uri(new Uri(baseUrl), "/v1/home-content");
+            var transport = new HttpHomeContentTransport(
+                new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(1, settings.HomeContentWorkerTimeoutSeconds)) },
+                endpoint);
+            return new FastApiHomeContentService(transport);
+        }
+        catch (UriFormatException)
+        {
+            return new PreviewHomeContentService();
+        }
     }
 
     private void LauncherHomePage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -99,7 +134,7 @@ public sealed partial class LauncherHomePage : Page
             var result = await _homeContentService.GetAsync(new HomeContentRequest
             {
                 GameId = game.Id,
-                ProviderId = PreviewHomeContentService.ProviderId,
+                ProviderId = ResolveProviderId(game),
                 Locale = "zh-CN"
             }, _homeContentCancellation.Token);
             _currentHomeContent = result.Content;
@@ -110,6 +145,20 @@ public sealed partial class LauncherHomePage : Page
         {
             // 快速切换游戏时忽略上一请求的取消结果，避免旧内容覆盖当前游戏。
         }
+    }
+
+    /// <summary>
+    /// Pick the ProviderId for the request. Custom manifest may declare a
+    /// stable Python Provider ID (e.g. "kuro-launcher", "hoyoplay-json");
+    /// when empty we fall back to the preview service so the page still
+    /// renders something before the worker is wired up.
+    /// </summary>
+    private static string ResolveProviderId(Models.CustomManifestPreset game)
+    {
+        var declared = game.HomeContentProviderId?.Trim();
+        return string.IsNullOrEmpty(declared)
+            ? PreviewHomeContentService.ProviderId
+            : declared!;
     }
 
     private void HomeDisplayMenuItem_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

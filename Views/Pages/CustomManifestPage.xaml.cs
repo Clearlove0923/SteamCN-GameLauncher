@@ -100,6 +100,7 @@ public sealed partial class CustomManifestPage : Page
             txtExecutableFileName.Text = preset.ExecutableFileName;
             txtBuildId.Text = preset.BuildId;
             txtManifest.Text = preset.Manifest;
+            SelectComboBoxItemByTag(cmbHomeContentProvider, preset.HomeContentProviderId);
             _selectedHomeLaunchModeId = HomeLaunchModeIds.IsSupported(preset.HomeLaunchModeId)
                 ? preset.HomeLaunchModeId
                 : HomeLaunchModeIds.SteamCn;
@@ -154,6 +155,7 @@ public sealed partial class CustomManifestPage : Page
             Language = langTag,
             HomeLayoutProfileId = current?.HomeLayoutProfileId ?? HomeLayoutProfileCatalog.DefaultProfileId,
             HomeLaunchModeId = _selectedHomeLaunchModeId,
+            HomeContentProviderId = GetComboBoxItemTag(cmbHomeContentProvider) ?? "",
         };
     }
 
@@ -816,4 +818,37 @@ public sealed partial class CustomManifestPage : Page
         };
         await dialog.ShowAsync();
     }
+
+    /// <summary>
+    /// Pick the <see cref="ComboBoxItem"/> whose <c>Tag</c> equals the given
+    /// value; falls back to the first item when no match is found so the
+    /// combo always has a valid <c>SelectedItem</c>.
+    /// </summary>
+    private static void SelectComboBoxItemByTag(ComboBox combo, string? tag)
+    {
+        if (combo.Items.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag as string, tag, StringComparison.OrdinalIgnoreCase))
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+
+        // Unknown / legacy value — fall back to the first entry (the empty
+        // preview option) so the form is never left without a selection.
+        combo.SelectedItem = combo.Items[0];
+    }
+
+    /// <summary>
+    /// Read the <c>Tag</c> of the currently selected <see cref="ComboBoxItem"/>
+    /// as a plain string; returns null when nothing is selected.
+    /// </summary>
+    private static string? GetComboBoxItemTag(ComboBox combo) =>
+        (combo.SelectedItem as ComboBoxItem)?.Tag as string;
 }

@@ -38,6 +38,11 @@ public class AppSettings
     public bool BetaChannel { get; set; } = false;
     public string Language { get; set; } = "zh-CN";
 
+    // ===== 首页内容 Python Worker（v2.7.0 起接入；空字符串 = 用下方默认值）=====
+    // 端口默认 8765，与 Tests/HomeContentE2E.Tests 端到端测试约定一致。
+    public string HomeContentWorkerBaseUrl { get; set; } = "http://127.0.0.1:8765";
+    public int HomeContentWorkerTimeoutSeconds { get; set; } = 10;
+
     /// <summary>
     /// 幂等地确保 <see cref="CustomManifestPresets"/> 至少有一个预设（v2.3.0 迁移逻辑）。
     /// 旧 v2.2.0 settings.json 无预设列表时：若 CurrentCustomManifest 含任一非默认字段，
@@ -171,6 +176,7 @@ public class CustomManifestPreset
     public string Language { get; set; } = "schinese";
     public string HomeLayoutProfileId { get; set; } = HomeLayoutProfile.MihoyoLauncherId;
     public string HomeLaunchModeId { get; set; } = HomeLaunchModeIds.SteamCn;
+    public string HomeContentProviderId { get; set; } = ""; // v2.7.0 新增：Python Provider 稳定 ID；空 = 用 preview fallback
 
     public CustomManifestPreset Clone() => new()
     {
@@ -190,5 +196,6 @@ public class CustomManifestPreset
         Language = Language,
         HomeLayoutProfileId = HomeLayoutProfileId,
         HomeLaunchModeId = HomeLaunchModeId,
+        HomeContentProviderId = HomeContentProviderId,
     };
 }

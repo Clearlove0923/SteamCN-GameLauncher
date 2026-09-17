@@ -2,6 +2,33 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-17 22:00:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 新建 `Services/Home/FastApiHomeContentService.cs`：包装 `HttpHomeContentTransport`（已实现），把 `HomeContentEnvelope` 转成 `IHomeContentService.GetAsync` 契约的 `HomeContentResult`。Happy path 透传 `envelope.Content`（无 clone，引用相等），`envelope.Errors` 非空时透传为 `HomeContentResult.Errors`，空时保持 null（不浪费内存）。`HomeContentTransportException` 异常统一降级为"空 `HomeContent` + 一个 `transport_<ExceptionClass>` code 的 `HomeContentError`（`Recoverable=true`）"，unwrap inner 异常类型（`JsonException`、`HttpRequestException`）让 code 更可识别。`OperationCanceledException` 在 token 已 cancel 时**不吞**，rethrow 让 UI 取消语义生效。构造器 `null transport` 抛 `ArgumentNullException`，`GetAsync(null request)` 同样抛 `ArgumentNullException`。
+- 改 `Models/AppSettings.cs`：新增 `HomeContentWorkerBaseUrl`（默认 `"http://127.0.0.1:8765"` 与 `HomeContentE2E.Tests` 约定一致）、`HomeContentWorkerTimeoutSeconds`（默认 10）。`CustomManifestPreset` 新增 `HomeContentProviderId` 字段（默认 `""` 表示走 preview fallback），同步 `Clone()`。
+- 改 `Views/Pages/LauncherHomePage.xaml.cs`：`_homeContentService` 从硬编码 `new PreviewHomeContentService()` 改为 `CreateHomeContentService(settings)` 工厂方法 —— 当 `HomeContentWorkerBaseUrl` 非空时构造 `FastApiHomeContentService(new HttpHomeContentTransport(...))`，否则 fallback `PreviewHomeContentService`。`ShowGameAsync` 的 `HomeContentRequest.ProviderId` 从 `_currentGame?.HomeContentProviderId`（空时 fallback `"preview"`）取，不再硬编码。新增私有 `ResolveProviderId(game)` 帮助方法处理 trim + 空判断。
+- 改 `Views/Pages/CustomManifestPage.xaml` + `.xaml.cs`：在 BuildID/Manifest 输入框下方新增"首页内容 Provider（可选）" `ComboBox` `cmbHomeContentProvider`，列出 7 个 Provider ID + "（空，使用 preview 示例数据）" 选项；新增私有 helper `SelectComboBoxItemByTag(combo, tag)`（未知/legacy 值 fallback 首项）和 `GetComboBoxItemTag(combo)`；`ApplyPresetToUI` 同步填充 ComboBox，`BuildPresetFromUI` 读取 `Tag` 写回 `HomeContentProviderId`。
+- 新建 `Tests/FastApiHomeContentService.Tests/` 项目（独立 csproj，`OutDir=bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\FastApiHomeContentService.Tests\`，符合 AGENTS.md "测试项目必须显式设置 OutDir 到统一目录" 规则）：`Compile Include` 链接 `Models/Home/HomeContentContracts.cs` + `Models/Home/GameScreenshotPathContracts.cs` + `Services/Home/{IHomeContentService,IHomeContentTransport,HomeContentJson,HttpHomeContentTransport,FastApiHomeContentService}.cs`，自带 `FakeHomeContentTransport : IHomeContentTransport` 测试夹具。覆盖 24 项检查：构造器 null / GetAsync null / Happy path Content 透传 / IsStale 默认 false / Errors 空时 null / Errors 非空时透传 / TransportException 无 inner + JsonException inner + HttpRequestException inner 三种 code / message 包含原始异常 / Cancellation token 两种场景不吞 OCE / request 字段 GameId/ProviderId/Locale 透传。
+
+### 验证结果
+
+- `pytest python/tests`：204 passed + 1 skipped（无变化，前次基线）。
+- `dotnet build Tests/FastApiHomeContentService.Tests/FastApiHomeContentService.Tests.csproj -c Debug`：0 错误 0 警告，1.01s。
+- `bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\FastApiHomeContentService.Tests\FastApiHomeContentService.Tests.exe`：`All 24 checks passed.`
+- `dotnet build SteamCN-GameLauncher.sln --configuration Debug -p:Platform=x64`：0 错误 0 警告，2.19s 增量编译。
+
+### 当前限制
+
+- **Python worker 进程启动尚未实现**：`LauncherHomePage` 构造 service 时读 `settings.HomeContentWorkerBaseUrl`，但当前进程没有任何代码去 spawn uvicorn 子进程。沙盒里 Python venv 已装 uvicorn 0.39.0，但未启动监听 8765，所以 `FastApiHomeContentService` 实际从未被调到 —— 启动器启动后 `OnNavigatedTo -> ShowGameAsync` 的请求仍然走 fallback 的 `PreviewHomeContentService`。`HomeContentE2E.Tests` 已经验证 transport + Python worker 全链路（用 `Process.Start` + `WaitForPort()`），可直接挪到主进程。
+- **Provider ID 与游戏元数据没有绑定**：当前 7 个 Provider 在 Python 端通过 `provider_id` 区分，但 C# 端 `CustomManifestPreset.HomeContentProviderId` 是自由文本，UI ComboBox 只列了 7 个选项；用户得自己知道"鸣潮对应 `kuro-launcher`"这种映射。如果后续要支持"根据 AppID 自动推荐 Provider"，需要在 `CustomManifestService` 加 lookup 表。
+- **未做 request 级缓存**：`FastApiHomeContentService.GetAsync` 每次 `ShowGameAsync` 都发新请求，切换游戏时会浪费一次往返；Python worker 已经覆盖了网络侧缓存，但 C# 端没做"同一 game 30 秒内复用上次 envelope"的内存缓存。
+- **HomeContentProviderId 与 LaunchMode 独立**：`HomeLaunchModeId`（steam-cn / direct-cn / steam-international）和 `HomeContentProviderId`（kuro-launcher / hoyoplay-json 等）正交，但 UI 上没有联动校验 —— 用户可能给"国服直接启动"的游戏配上 `steam-launcher` 这种语义不匹配的 Provider。运行时不会崩，但 UI 应该提示"该 Provider 主要适合 Steam 启动模式"。
+
 ## 2026-09-17 21:42:00 +08:00
 
 - 推送人员：`wonderful-oss`

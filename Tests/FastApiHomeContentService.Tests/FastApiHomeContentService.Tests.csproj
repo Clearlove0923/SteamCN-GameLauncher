@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!--
+      单测项目，无需 WinAppSDK 运行时；与主项目保持 TFM 对齐。
+      当前会话只装 .NET 10 SDK，先用 net10.0；装了 .NET 8 后改 net8.0。
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!--
+      测试项目产物统一落到主项目 bin 目录的 Tests\FastApiHomeContentService.Tests\ 子目录，
+      符合 AGENTS.md "Debug 测试产物统一目录" 规则。
+    -->
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\FastApiHomeContentService.Tests\</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Models/Home/HomeContentContracts.cs" Link="Models/Home/HomeContentContracts.cs" />
+    <Compile Include="../../Models/Home/GameScreenshotPathContracts.cs" Link="Models/Home/GameScreenshotPathContracts.cs" />
+    <Compile Include="../../Services/Home/IHomeContentService.cs" Link="Services/Home/IHomeContentService.cs" />
+    <Compile Include="../../Services/Home/IHomeContentTransport.cs" Link="Services/Home/IHomeContentTransport.cs" />
+    <Compile Include="../../Services/Home/HomeContentJson.cs" Link="Services/Home/HomeContentJson.cs" />
+    <Compile Include="../../Services/Home/HttpHomeContentTransport.cs" Link="Services/Home/HttpHomeContentTransport.cs" />
+    <Compile Include="../../Services/Home/FastApiHomeContentService.cs" Link="Services/Home/FastApiHomeContentService.cs" />
+  </ItemGroup>
+</Project>
