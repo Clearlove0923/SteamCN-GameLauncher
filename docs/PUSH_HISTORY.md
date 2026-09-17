@@ -2,6 +2,29 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-17 21:32:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 补齐 `python/home_content/provider_registry.py` 的回归覆盖：`python/tests/test_provider_registry.py` 新增 9 项 pytest，固定 7 个 Provider 的注册表（`hoyoplay-json` / `kuro-launcher` / `hypergryph-batch` / `perfect-world-hybrid` / `nextjs-data` / `netease-static-cms` / `local-launcher-asset`），覆盖：ID 与类的映射、Provider ID 全局唯一且非空非空白、未知 ID / 空字符串 / 大小写错误都抛 `ValueError`、`create_provider` 返回类型匹配、所有注册类都继承自 `HomeContentProvider` 基类。
+- 补齐 `python/home_content/server/app.py` 的整链路集成测试：`python/tests/test_server_app.py` 新增 13 项 pytest，用 `httpx.ASGITransport(app=server_app.app)` 在进程内驱动 FastAPI（不绑端口、不依赖 uvicorn），覆盖：`/healthz` GET 返 `{"status":"ok"}`、`/v1/home-content` 命中真实 Provider 时 `requestId` / `providerId` 透传至 envelope 且 `errors=[]`、未知 providerId 返 HTTP 400、空 providerId 同样 400、Provider 抛 `NotImplementedError` 时回退到 `sample_provider.build_sample_envelope`、Provider 抛 `httpx.HTTPError` / `httpx.HTTPStatusError` / `ValueError` / `pydantic.ValidationError` 时返 HTTP 200 + envelope 中 `content.background=null`、`errors[0]` 带 `provider_<ExceptionClass>` code 且 `recoverable=true`、`create_app()` 每次调用都返回新实例、`requestId` 缺失时 pydantic 校验返 422。
+- 修 `python/home_content/server/app.py` 的 Provider 失败默认错误消息：原先硬编码 `"HoYoPlay Provider failed without message."`，generic 化为 `f"{request.provider_id} provider failed without message."`，避免 Kuro / Hypergryph / NetEase / PerfectWorld 等 Provider 失败时报错信息误导。同步新增的 `test_home_content_surfaces_provider_failures_as_structured_errors` 用断言 `"HoYoPlay" not in error["message"]` 锁定。
+
+### 验证结果
+
+- `pytest python/tests/test_provider_registry.py python/tests/test_server_app.py -v`：22 项全部通过，耗时 0.37s。
+- `pytest python/tests`：204 passed + 1 skipped（之前为 182 passed + 1 skipped，新增 22 项；LocalLauncherAssetProvider 的 POSIX-only 跳过未变）。
+- `pytest python/tests` 整次运行 0.78s，无 deprecation warning、无 collection error。
+
+### 当前限制
+
+- 真实 Provider 仍未接入 C# 端 `LauncherHomePage`：`PreviewHomeContentService` 仍是硬编码默认，`HttpHomeContentTransport` 仍无人调用，UI 点击"鸣潮"等仍走示例数据，背景动画不会跑。后续需要 C# 端用 `HttpHomeContentTransport` 包一层 `IHomeContentService` 替掉 `PreviewHomeContentService`，并给 `CustomManifestPreset` 加 `ProviderId` 字段。
+- 本次只新增了 server / registry 测试，未启动实际 uvicorn 进程拉真实厂商数据验证端到端；`HomeContentE2E.Tests`（C# 端 12 项）按 AGENTS.md 规则需迁至 `E:\AI\steamhelper\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\HomeContentE2E.Tests\`，本沙盒缺 E: 盘未执行该步骤。
+- `app.py` 的 Provider 派发已基于 `request.provider_id` 工作，但没有任何 Provider 默认 fallback 策略：当 Provider 抛错时返回空 `HomeContent` + structured error，UI 端是否需要"自动尝试下一个 Provider"未知尚未与 C# 端约定。
+
 ## 2026-09-17 21:16:00 +08:00
 
 - 推送人员：`Violet0923`

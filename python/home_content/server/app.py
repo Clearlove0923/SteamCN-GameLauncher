@@ -121,7 +121,8 @@ def create_app() -> FastAPI:
                 errors=[
                     HomeContentError(
                         code=f"provider_{type(error).__name__}",
-                        message=str(error) or "HoYoPlay Provider failed without message.",
+                        message=str(error)
+                        or f"{request.provider_id} provider failed without message.",
                         recoverable=True,
                     )
                 ],
