@@ -2,6 +2,29 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-17 22:08:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`Refactored_Version`
+- 推送提交：把 `python_preview` HEAD `1a106e6` 通过 fast-forward 推到 `origin/Refactored_Version`（同步 5 个新 commit：`6bcd848` / `fd6c172` / `ed62cde` / `744aa28` / `1a106e6`）
+
+### 实现内容
+
+- 把刚才推到 `origin/python_preview` 的全部内容同步回 `Refactored_Version`，让两条分支重新对齐。本地 `Refactored_Version` 从 `9081e95`（合并点）直接 fast-forward 到 `1a106e6`（`python_preview` HEAD），不引入新 merge commit。
+- 同步过去的 5 个 commit 内容详见上一个 22:05 条目（`python_preview` 那次推送的记录），本次仅为分支对齐操作、无独立代码改动。
+- 动机：`Refactored_Version` 是 C# UI / Settings / Release 主干分支，`python_preview` 长期并行演进；保持 `Refactored_Version` ≥ `python_preview` 可避免后续反向 merge 时落入"主分支缺 Provider 代码、首页回退到 preview fallback"的脆弱状态。
+
+### 验证结果
+
+- `git merge-base origin/Refactored_Version python_preview == 9081e95`，且 `python_preview` 历史中已包含 `9081e95`（通过 merge `6bcd848`），满足 fast-forward 条件。
+- `git rev-list --left-right --count origin/Refactored_Version...python_preview` 在合并前为 `0	13`（Refactored_Version 落后 13 个 commit，其中 1 个是 9081e95 本身，12 个是后续工作）。
+- Fast-forward 后 `git log --oneline origin/Refactored_Version -5` 显示 `1a106e6 / 744aa28 / ed62cde / fd6c172 / 6bcd848`，与 `python_preview` HEAD 完全一致；`git rev-list --left-right --count` 转为 `0	0`，两分支零偏差。
+
+### 当前限制
+
+- 当前是单向同步（`python_preview → Refactored_Version`）。`Refactored_Version` 上若有未上 `python_preview` 的独立提交（例如纯 C# UI 改动），下次反向同步时需要走真正的 merge commit 路径，会产生新的合并节点。
+- 长期更稳的方案是约定"`Refactored_Version` 是被合并的目标、`python_preview` 是合并的来源"角色，或者把 `python_preview` 改成只读归档、所有 C# 工作回到 `Refactored_Version`。当前两条分支是平行的，选哪条当主线由你拍板。
+
 ## 2026-09-17 22:05:00 +08:00
 
 - 推送人员：`wonderful-oss`
