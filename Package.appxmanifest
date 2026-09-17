@@ -15,7 +15,7 @@
   <mp:PhoneIdentity PhoneProductId="9924fe31-80bb-4ab9-aee0-9655b06a27a8" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Steam国服游戏启动助手</DisplayName>
+    <DisplayName>Steam国服游戏启动器</DisplayName>
     <PublisherDisplayName>Violet0923</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -34,7 +34,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Steam国服游戏启动助手"
+        DisplayName="Steam国服游戏启动器"
         Description="在 Steam 库中添加和管理国服游戏的启动配置"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"

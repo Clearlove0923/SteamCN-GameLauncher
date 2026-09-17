@@ -19,7 +19,7 @@ public static class AppInfo
     public const string WindowTitle = $"{AppName} {FullVersion}";
 
     /// <summary>应用名称</summary>
-    public const string AppName = "Steam国服游戏启动助手";
+    public const string AppName = "Steam国服游戏启动器";
 
     /// <summary>版权信息</summary>
     public const string Copyright = "© 2026 Violet0923";

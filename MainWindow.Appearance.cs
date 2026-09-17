@@ -30,7 +30,7 @@ public sealed partial class MainWindow
     {
         // 解码可能晚于下一次切图完成，仅允许最后一次请求更新背景。
         var request = ++_backgroundRequest;
-        var settings = _appearance.Settings;
+        var settings = _appearance.CurrentProfile;
         var cardBrush = (SolidColorBrush)Application.Current.Resources["AppearanceCardBackground"];
         var cardColor = ((SolidColorBrush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"]).Color;
         if (settings.CardOpacity is double opacity && double.IsFinite(opacity))

@@ -5,7 +5,7 @@
 #ifndef SourceDir
   #error SourceDir must be supplied by the release script
 #endif
-#define MyAppName "Steam国服游戏启动助手"
+#define MyAppName "Steam国服游戏启动器"
 #define MyAppIdName "SteamCN-GameLauncher"
 #define MyAppExeName MyAppIdName + ".exe"
 #define MyAppURL "https://github.com/Violet0923/SteamCN-GameLauncher"
@@ -25,7 +25,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
-OutputBaseFilename={#MyAppIdName}-v{#MyAppVersion}-win-x64-setup
+OutputBaseFilename={#MyAppName}-v{#MyAppVersion}-win-x64-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern windows11

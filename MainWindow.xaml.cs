@@ -235,24 +235,30 @@ public sealed partial class MainWindow : Window
         switch (tag)
         {
             case "Home":
+                AppearanceService.Instance.SetActivePage(AppearancePageIds.Home);
                 var gameId = _pendingHomeGameId ?? _customManifestService.GetInitialSidebarId();
                 _pendingHomeGameId = null;
                 if (string.IsNullOrWhiteSpace(gameId)) ShowEmptyGameLibrary();
                 else NavigateToHome(gameId);
                 break;
             case "SteamConfiguration":
+                AppearanceService.Instance.SetActivePage(AppearancePageIds.GameConfiguration);
                 NavigateToSteamConfiguration();
                 break;
             case "Screenshots":
+                AppearanceService.Instance.SetActivePage(AppearancePageIds.Screenshots);
                 ContentFrame.Navigate(typeof(Views.Pages.ScreenshotGalleryPage), _customManifestService.GetInitialSidebarId());
                 break;
             case "GameLaunchTest":
+                AppearanceService.Instance.SetActivePage(AppearancePageIds.GameConfiguration);
                 ContentFrame.Navigate(typeof(Views.Pages.GameLaunchTestPage));
                 break;
             case "Settings":
+                AppearanceService.Instance.SetActivePage(AppearancePageIds.Settings);
                 ContentFrame.Navigate(typeof(Views.Pages.SettingsPage));
                 break;
             case "AppearanceSettings":
+                AppearanceService.Instance.SetActivePage(AppearancePageIds.Appearance);
                 ContentFrame.Navigate(typeof(Views.Pages.AppearanceSettingsPage));
                 break;
         }
@@ -271,6 +277,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowEmptyGameLibrary()
     {
+        AppearanceService.Instance.SetActivePage(AppearancePageIds.Home);
         if (ContentFrame.Content is Views.Pages.EmptyGameLibraryPage) return;
         ContentFrame.Navigate(typeof(Views.Pages.EmptyGameLibraryPage));
         if (ContentFrame.Content is Views.Pages.EmptyGameLibraryPage page)
@@ -279,6 +286,7 @@ public sealed partial class MainWindow : Window
 
     private void NavigateToCustom(string id)
     {
+        AppearanceService.Instance.SetActivePage(AppearancePageIds.GameConfiguration);
         if (ContentFrame.Content is Views.Pages.CustomManifestPage current
             && string.Equals(current.PresetId, id, StringComparison.OrdinalIgnoreCase))
         {
@@ -293,6 +301,7 @@ public sealed partial class MainWindow : Window
 
     private void NavigateToHome(string? id)
     {
+        AppearanceService.Instance.SetActivePage(AppearancePageIds.Home);
         if (!string.IsNullOrWhiteSpace(id)) _customManifestService.Select(id);
         ContentFrame.Navigate(typeof(Views.Pages.LauncherHomePage), id);
     }

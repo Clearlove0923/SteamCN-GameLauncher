@@ -4,6 +4,15 @@ using SteamCNGameLauncher.Models.Home;
 
 namespace SteamCNGameLauncher.Models;
 
+public static class HomeLaunchModeIds
+{
+    public const string SteamCn = "steam-cn";
+    public const string DirectCn = "direct-cn";
+    public const string SteamInternational = "steam-international";
+
+    public static bool IsSupported(string? value) => value is SteamCn or DirectCn or SteamInternational;
+}
+
 public class AppSettings
 {
     public AppearanceSettings Appearance { get; set; } = new();
@@ -78,6 +87,12 @@ public class AppSettings
             if (string.IsNullOrWhiteSpace(preset.Name))
             {
                 preset.Name = "未命名自定义";
+                changed = true;
+            }
+
+            if (!HomeLaunchModeIds.IsSupported(preset.HomeLaunchModeId))
+            {
+                preset.HomeLaunchModeId = HomeLaunchModeIds.SteamCn;
                 changed = true;
             }
         }
@@ -155,6 +170,7 @@ public class CustomManifestPreset
     public string ExecutableFileName { get; set; } = "";   // v2.3.0 新增：Steam 占位 exe 文件名
     public string Language { get; set; } = "schinese";
     public string HomeLayoutProfileId { get; set; } = HomeLayoutProfile.MihoyoLauncherId;
+    public string HomeLaunchModeId { get; set; } = HomeLaunchModeIds.SteamCn;
 
     public CustomManifestPreset Clone() => new()
     {
@@ -173,5 +189,6 @@ public class CustomManifestPreset
         ExecutableFileName = ExecutableFileName,
         Language = Language,
         HomeLayoutProfileId = HomeLayoutProfileId,
+        HomeLaunchModeId = HomeLaunchModeId,
     };
 }

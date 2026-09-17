@@ -7,17 +7,57 @@
             <TextBlock Text="外观设置" FontSize="28" FontWeight="SemiBold"/>
             <InfoBar x:Name="Status" IsOpen="False" IsClosable="True"/>
             <Border Background="{StaticResource AppearanceCardBackground}" CornerRadius="8" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="背景应用范围" FontSize="18" FontWeight="SemiBold"/>
+                    <ComboBox x:Name="BackgroundScope" Header="背景模式" HorizontalAlignment="Stretch"
+                              SelectionChanged="BackgroundScope_SelectionChanged">
+                        <ComboBoxItem Content="所有界面使用统一设置" Tag="uniform"/>
+                        <ComboBoxItem Content="每个界面分别设置" Tag="per-page"/>
+                    </ComboBox>
+                    <StackPanel x:Name="PageSelectorPanel" Spacing="8" Visibility="Collapsed">
+                        <ComboBox x:Name="TargetPage" Header="正在设置的界面" HorizontalAlignment="Stretch"
+                                  SelectionChanged="TargetPage_SelectionChanged">
+                            <ComboBoxItem Content="首页" Tag="home"/>
+                            <ComboBoxItem Content="游戏配置" Tag="game-configuration"/>
+                            <ComboBoxItem Content="截图" Tag="screenshots"/>
+                            <ComboBoxItem Content="外观" Tag="appearance"/>
+                            <ComboBoxItem Content="设置" Tag="settings"/>
+                        </ComboBox>
+                        <TextBlock Text="首次启用独立模式时，各界面会复制当前统一设置；之后可分别选择图片并调节参数。"
+                                   TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <Border Background="{StaticResource AppearanceCardBackground}" CornerRadius="8" Padding="20">
                 <StackPanel Spacing="10">
-                    <TextBlock Text="界面透明度" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="InterfaceAdjustmentTitle" Text="界面调节" FontSize="18" FontWeight="SemiBold"/>
                     <TextBlock x:Name="CardOpacityLabel" Text="内容卡片不透明度"/>
                     <Slider x:Name="CardOpacity" Minimum="0" Maximum="100" StepFrequency="1"
                             AutomationProperties.Name="内容卡片不透明度" ValueChanged="CardOpacityChanged"/>
-                    <TextBlock Text="调节各页面内容面板的底色。0% 完全透明，100% 不透明；文字、按钮和输入框保持清晰。设置对所有背景通用。"
+                    <TextBlock x:Name="OpacityLabel" Text="图片不透明度"/>
+                    <Slider x:Name="ImageOpacity" Minimum="0" Maximum="100" StepFrequency="1"
+                            AutomationProperties.Name="图片不透明度" ValueChanged="SliderChanged"/>
+                    <TextBlock x:Name="OverlayLabel" Text="遮罩强度"/>
+                    <Slider x:Name="OverlayOpacity" Minimum="0" Maximum="100" StepFrequency="1"
+                            AutomationProperties.Name="遮罩强度" ValueChanged="SliderChanged"/>
+                    <TextBlock Text="卡片不透明度不会影响文字和控件；图片不透明度与遮罩强度按每张背景图片分别保存。"
+                               TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+            <Border x:Name="HomeContentCard" Background="{StaticResource AppearanceCardBackground}" CornerRadius="8" Padding="20">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="首页内容" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="ShowHomeAnimation" Header="显示首页动画"
+                                  OnContent="显示" OffContent="使用背景图片" Toggled="ShowHomeAnimation_Toggled"/>
+                    <ToggleSwitch x:Name="ShowHomeNews" Header="显示首页资讯栏"
+                                  OnContent="显示" OffContent="隐藏" Toggled="ShowHomeNews_Toggled"/>
+                    <TextBlock Text="关闭动画或动画不可用时显示当前背景图片；关闭资讯栏不会影响游戏标题和启动按钮。"
                                TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
             </Border>
             <Border Background="{StaticResource AppearanceCardBackground}" CornerRadius="8" Padding="20">
                 <StackPanel Spacing="12">
+                    <TextBlock x:Name="BackgroundImageTitle" Text="背景图片" FontSize="18" FontWeight="SemiBold"/>
                     <ToggleSwitch x:Name="BackgroundEnabled" Header="自定义背景" OnContent="已开启" OffContent="已关闭" Toggled="OptionsChanged"/>
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <Button x:Name="ImportButton" Content="导入图片" Click="Import_Click" Style="{StaticResource AccentButtonStyle}"/>
@@ -41,17 +81,6 @@
                             </DataTemplate>
                         </GridView.ItemTemplate>
                     </GridView>
-                </StackPanel>
-            </Border>
-            <Border Background="{StaticResource AppearanceCardBackground}" CornerRadius="8" Padding="20">
-                <StackPanel x:Name="ImageOptions" Spacing="10">
-                    <TextBlock Text="背景效果" FontSize="18" FontWeight="SemiBold"/>
-                    <TextBlock Text="调整即时预览，每张图片分别记住设置。" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    <TextBlock x:Name="OpacityLabel" Text="图片不透明度"/>
-                    <Slider x:Name="ImageOpacity" Minimum="0" Maximum="100" StepFrequency="1" ValueChanged="SliderChanged"/>
-                    <TextBlock x:Name="OverlayLabel" Text="遮罩强度"/>
-                    <Slider x:Name="OverlayOpacity" Minimum="0" Maximum="100" StepFrequency="1" ValueChanged="SliderChanged"/>
-                    <TextBlock Text="遮罩随系统主题变为浅色或深色，用于提高文字可读性。" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <ComboBox x:Name="StretchMode" Header="显示方式" SelectionChanged="StretchChanged" HorizontalAlignment="Stretch">
                         <ComboBoxItem Content="等比铺满（裁剪边缘）" Tag="UniformToFill"/>
                         <ComboBoxItem Content="完整显示（保留空白）" Tag="Uniform"/>

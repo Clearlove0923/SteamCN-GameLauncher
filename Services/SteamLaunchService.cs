@@ -34,12 +34,19 @@ public sealed class SteamLaunchService
     }
 
     public SteamLaunchResult CheckReady(AppSettings settings, CustomManifestPreset preset)
+        => CheckReadyCore(settings, preset, requireCnExecutable: true);
+
+    public SteamLaunchResult CheckReadyInternational(AppSettings settings, CustomManifestPreset preset)
+        => CheckReadyCore(settings, preset, requireCnExecutable: false);
+
+    private SteamLaunchResult CheckReadyCore(
+        AppSettings settings, CustomManifestPreset preset, bool requireCnExecutable)
     {
         if (!uint.TryParse(preset.AppId?.Trim(), out var appId) || appId == 0)
             return new(SteamLaunchStatus.InvalidAppId, "当前游戏没有有效的 AppID，请先完善游戏配置。");
 
         var gameExe = preset.ClientExePath?.Trim();
-        if (string.IsNullOrWhiteSpace(gameExe) || !File.Exists(gameExe))
+        if (requireCnExecutable && (string.IsNullOrWhiteSpace(gameExe) || !File.Exists(gameExe)))
             return new(SteamLaunchStatus.GameExecutableMissing,
                 "未找到真实游戏 EXE，请先在游戏配置页选择正确的游戏可执行文件。");
 
@@ -59,8 +66,17 @@ public sealed class SteamLaunchService
     }
 
     public SteamLaunchResult Launch(AppSettings settings, CustomManifestPreset preset)
+        => LaunchCore(settings, preset, international: false);
+
+    public SteamLaunchResult LaunchInternational(AppSettings settings, CustomManifestPreset preset)
+        => LaunchCore(settings, preset, international: true);
+
+    private SteamLaunchResult LaunchCore(
+        AppSettings settings, CustomManifestPreset preset, bool international)
     {
-        var ready = CheckReady(settings, preset);
+        var ready = international
+            ? CheckReadyInternational(settings, preset)
+            : CheckReady(settings, preset);
         if (!ready.IsSuccess) return ready;
 
         var appId = uint.Parse(preset.AppId.Trim());
@@ -75,7 +91,9 @@ public sealed class SteamLaunchService
                 UseShellExecute = true,
             });
             return new(SteamLaunchStatus.Started,
-                $"已请求 Steam 启动 {preset.Name}（AppID {appId}）。");
+                international
+                    ? $"已请求 Steam 启动 {preset.Name} 国际服（AppID {appId}）。请确保 Steam 启动选项未重定向到国服。"
+                    : $"已请求 Steam 启动 {preset.Name} 国服（AppID {appId}）。");
         }
         catch (Exception ex)
         {

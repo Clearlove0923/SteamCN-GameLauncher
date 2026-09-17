@@ -191,7 +191,7 @@ public sealed partial class CustomManifestPage
                 _gameInfoRequest = null;
                 btnFetchGameInfo.IsEnabled = true;
             }
-            btnOneClickUpdate.IsEnabled = true;
+            btnOneClickUpdate.IsEnabled = UsesGeneratedSteamConfiguration;
             btnOneClickUpdate.Content = "一键更新";
             request.Dispose();
         }

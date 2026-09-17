@@ -41,10 +41,26 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Button x:Name="btnNewPreset" Content="新建" Click="NewPreset_Click"/>
                         <Button Grid.Column="1" x:Name="btnRenamePreset" Content="重命名" Click="RenamePreset_Click"/>
                         <Button Grid.Column="2" x:Name="btnDeletePreset" Content="删除" Click="DeletePreset_Click"/>
+                        <Button Grid.Column="3" x:Name="btnLaunchMode" Content="启动方式：Steam 玩国服">
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <ToggleMenuFlyoutItem x:Name="ConfigDirectCnLaunchModeItem"
+                                                          Text="国服"
+                                                          Click="ConfigLaunchModeMenuItem_Click"/>
+                                    <ToggleMenuFlyoutItem x:Name="ConfigSteamCnLaunchModeItem"
+                                                          Text="Steam 玩国服" IsChecked="True"
+                                                          Click="ConfigLaunchModeMenuItem_Click"/>
+                                    <ToggleMenuFlyoutItem x:Name="ConfigSteamInternationalLaunchModeItem"
+                                                          Text="Steam 玩国际服"
+                                                          Click="ConfigLaunchModeMenuItem_Click"/>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
                     </Grid>
                     <!-- 常用配置操作并排放置，避免用户在页面上下寻找保存入口。 -->
                     <Grid ColumnSpacing="8">
@@ -66,7 +82,7 @@
             </Border>
 
             <!-- Steam 启动配置：集中维护 App、Depot、Build 和 Manifest 标识。 -->
-            <Border Background="{StaticResource AppearanceCardBackground}"
+            <Border x:Name="SteamConfigCard" Background="{StaticResource AppearanceCardBackground}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="8" Padding="16">
                 <StackPanel Spacing="12">
@@ -171,7 +187,8 @@
                         <Button Grid.Column="1" Content="浏览" Click="BrowseClientExe_Click"/>
                         <Button Grid.Column="2" Content="清除" Click="ClearClientExe_Click"/>
                     </Grid>
-                    <TextBlock Text="提示：该路径用于「复制启动命令」功能，会拼接为 &quot;&lt;exe&gt;&quot; %command% 写入剪贴板。"
+                    <TextBlock x:Name="ClientExecutableHint"
+                               Text="提示：请选择国服游戏的真实可执行文件；该路径用于生成启动命令和直接启动国服。"
                                TextWrapping="Wrap"
                                FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
@@ -193,7 +210,7 @@
                                TextWrapping="Wrap"
                                FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
-                    <StackPanel Spacing="6">
+                    <StackPanel x:Name="SteamPlaceholderPanel" Spacing="6">
                         <TextBlock Text="Steam 占位文件名" FontWeight="Medium"/>
                         <TextBox x:Name="txtExecutableFileName"
                                  PlaceholderText="留空则用 &lt;显示名&gt;.exe"/>
@@ -202,7 +219,8 @@
                                   ItemTemplate="{StaticResource GameInfoCandidateTemplate}" HorizontalAlignment="Stretch"
                                   Visibility="Collapsed" SelectionChanged="ExecutableCandidate_SelectionChanged"/>
                     </StackPanel>
-                    <TextBlock Text="提示：该文件名须等于 Steam appinfo 登记的可执行文件名，否则 Steam 无法启动；它与上方的真实 EXE 路径是两个不同概念。"
+                    <TextBlock x:Name="SteamPlaceholderHint"
+                               Text="提示：该文件名须等于 Steam appinfo 登记的可执行文件名，否则 Steam 无法启动；它与上方的真实 EXE 路径是两个不同概念。"
                                TextWrapping="Wrap"
                                FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
@@ -217,7 +235,8 @@
                     <TextBox x:Name="txtLaunchArguments"
                              Header="启动参数（可选）"
                              PlaceholderText="例如 -dx11；无需填写 %command%"/>
-                    <TextBlock Text="提示：参数会插入真实 EXE 与 %command% 之间，并随当前游戏配置保存。"
+                    <TextBlock x:Name="LaunchArgumentsHint"
+                               Text="提示：参数会插入真实 EXE 与 %command% 之间，并随当前游戏配置保存。"
                                TextWrapping="Wrap" FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>

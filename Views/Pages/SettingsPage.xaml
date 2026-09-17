@@ -181,7 +181,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <TextBlock Text="接收测试版更新" FontSize="14" FontWeight="Medium"/>
-                            <TextBlock Text="启用后将从测试分支获取更新，可能包含不稳定功能"
+                            <TextBlock Text="启用后将检查包含预发布版本的 GitHub Releases，可能包含不稳定功能"
                                        FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
                         <ToggleSwitch x:Name="tglBetaChannel"
