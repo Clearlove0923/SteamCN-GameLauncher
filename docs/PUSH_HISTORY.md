@@ -2,6 +2,34 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-17 21:42:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview`
+
+### 实现内容
+
+- 修复 `LauncherHomePage` 视频不可用时显示白屏的问题：Python Provider 还未接入 C# 端时，`_currentHomeContent?.Background` 为 null，`ResolveVideoSource` 返回 null，原本 `ApplyHomeAnimation` 直接 `StopHomeAnimation()` 返回，UI 仅剩 `AppearancePageBackground = Transparent`，叠加 WinUI 默认窗口白底，用户看到的就是纯白。
+- 新增 `Views/Pages/LauncherHomePage.xaml` 控件 `<Image x:Name="HomeBackgroundImage" IsHitTestVisible="False" Stretch="UniformToFill" Visibility="Collapsed"/>`，放在 `MediaPlayerElement` 同一 Grid 层、用 Visibility 互斥切换；Image 与视频不同时显示。
+- 新增 `Views/Pages/LauncherHomePage.xaml.cs` 方法 `ShowStaticBackground()`：从 `_appearanceService.CurrentProfile.Current.SourceImage` 读取用户当前选中的背景图片名（来源 `BackgroundOptions.SourceImage`，路径前缀为 `ImageDirectory = Path.Combine(AppContext.BaseDirectory, "Backgrounds")`），调用 `_appearanceService.GetImagePath(SourceImage)` 拿到绝对路径，构造 `BitmapImage(new Uri(path, UriKind.Absolute))`，设置 `HomeBackgroundImage.Source` 并 Visibility=Visible。`SourceImage` 为空时直接 Collapse Image（保持原"白屏"行为但至少不再假装能播）；`GetImagePath` 抛 `IOException`（如文件名无效、文件不存在）或 `Uri` 构造失败时也 Collapse + 写一条 log，绝不让 UI 崩。
+- `ApplyHomeAnimation` 三个分支同步改造：
+  - `source is null`：从 `StopHomeAnimation()` 改为 `ShowStaticBackground()`。
+  - `key 相同跳过重设 Source` 的分支：显示视频前先 `HomeBackgroundImage.Visibility = Collapsed`、`Source = null`（避免残留 Image 覆盖视频首帧）。
+  - `try` 块新设 Source：同样先清 Image 再显示视频，保证"视频 OR 静态图"二选一。
+- `StopHomeAnimation()` 增加两行：把 `HomeBackgroundImage` 也 Collapse 并清空 Source，确保视频切回 / 切走时 Image 不残留。
+- 文件顶部新增 `using Microsoft.UI.Xaml.Media.Imaging;`（用 `BitmapImage`）。
+
+### 验证结果
+
+- `dotnet build SteamCN-GameLauncher.sln --configuration Debug -p:Platform=x64`：0 错误 0 警告，增量编译 3.06s（之前 15.51s 全量）。
+- 修复编译过程中遇到旧测试启动的 `SteamCN-GameLauncher.exe`（PID 35016）锁住输出文件问题，已用 `Stop-Process -Force` 终止后重编。
+
+### 当前限制
+
+- 此改动只解决"视频不可用时显示白屏"，不解决"视频可用时白屏"——后者需要 C# 端真正接入 Python Provider（把 `HttpHomeContentTransport` 包成 `IHomeContentService`、给 `CustomManifestPreset` 加 `ProviderId` 字段、`LauncherHomePage._homeContentService` 替换硬编码的 `PreviewHomeContentService`）。
+- 当前 `SourceImage` 仅支持本地 Backgrounds 目录中的图片名；不接受 HTTPS / 网络 URL（与视频策略相反）。如未来需要把"应用内默认背景"也纳入兜底（比如新装没选背景图时显示 logo），需要单独的"默认 fallback 资源"通道。
+- `ShowStaticBackground()` 没有应用 `BackgroundOptions.Opacity` / `CropX` / `CropY` / `CropScale` 等裁切参数——目前是"原图直接拉伸到 UniformToFill"。AGENTS.md 设计是 `BackgroundCropRenderer` 在 `SaveCropAsync` 时已经裁好图，所以运行时不需要再裁；但如果 `SourceImage` 是导入未裁切的原图（如直接走 `ImportAsync` 跳过裁切），可能会有视觉问题。本次保持简单，未引入运行时裁切。
+
 ## 2026-09-17 21:32:00 +08:00
 
 - 推送人员：`wonderful-oss`

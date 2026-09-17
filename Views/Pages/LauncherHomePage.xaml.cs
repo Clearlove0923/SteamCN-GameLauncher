@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
@@ -126,13 +127,15 @@ public sealed partial class LauncherHomePage : Page
         var source = ResolveVideoSource(background?.VideoUrl);
         if (source is null)
         {
-            StopHomeAnimation();
+            ShowStaticBackground();
             return;
         }
 
         var key = source.AbsoluteUri;
         if (_activeVideoSource == key)
         {
+            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            HomeBackgroundImage.Source = null;
             HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
             _backgroundPlayer.Play();
             return;
@@ -142,12 +145,38 @@ public sealed partial class LauncherHomePage : Page
         {
             _backgroundPlayer.Source = MediaSource.CreateFromUri(source);
             _activeVideoSource = key;
+            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            HomeBackgroundImage.Source = null;
             HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         }
         catch (Exception ex)
         {
             StopHomeAnimation();
             _logService.AddLog($"[首页背景] 动画无法播放，已回退到背景图片：{ex.Message}");
+        }
+    }
+
+    private void ShowStaticBackground()
+    {
+        var options = _appearanceService.CurrentProfile.Current;
+        if (string.IsNullOrWhiteSpace(options.SourceImage))
+        {
+            HomeBackgroundImage.Source = null;
+            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            return;
+        }
+
+        try
+        {
+            var path = _appearanceService.GetImagePath(options.SourceImage);
+            HomeBackgroundImage.Source = new BitmapImage(new Uri(path, UriKind.Absolute));
+            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            HomeBackgroundImage.Source = null;
+            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            _logService.AddLog($"[首页背景] 静态背景图加载失败：{ex.Message}");
         }
     }
 
@@ -175,6 +204,8 @@ public sealed partial class LauncherHomePage : Page
         _backgroundPlayer.Source = null;
         _activeVideoSource = null;
         HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        HomeBackgroundImage.Source = null;
     }
 
     private void ApplyLayoutProfile(string? profileId)

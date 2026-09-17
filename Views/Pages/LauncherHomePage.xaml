@@ -7,6 +7,8 @@
         <MediaPlayerElement x:Name="HomeBackgroundVideo" IsHitTestVisible="False"
                             AreTransportControlsEnabled="False" Stretch="UniformToFill"
                             Visibility="Collapsed"/>
+        <Image x:Name="HomeBackgroundImage" IsHitTestVisible="False"
+               Stretch="UniformToFill" Visibility="Collapsed"/>
         <!-- 首页内容覆盖在全窗口背景上，位置按 1920×1080 米哈游启动器参考布局设置。 -->
         <Border Background="#14000000" IsHitTestVisible="False"/>
 
