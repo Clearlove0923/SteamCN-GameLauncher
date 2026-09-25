@@ -13,8 +13,10 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- 参照 Starward：Banner 独占上半区，轮播按钮隐藏，悬停时显示页码并暂停。 -->
+            <!-- 参照 Starward：Banner 独占上半区，轮播按钮隐藏，悬停时显示页码并暂停。
+                 IsHitTestVisible="False" 防止 Banner 子树的 hit area 跨界抢占下半区 News 区域的 click 事件。 -->
             <Grid x:Name="BannerContainer"
+                  IsHitTestVisible="False"
                   PointerEntered="BannerContainer_PointerEntered"
                   PointerExited="BannerContainer_PointerExited">
                 <Border Background="#FF1767A8" CornerRadius="14,14,0,0">
@@ -106,7 +108,8 @@
                     </ItemsRepeater>
                 </ScrollViewer>
 
-                <!-- 资讯行高固定为 34，当前尺寸可完整显示三条；更多内容通过滚轮查看。 -->
+                <!-- 资讯行高固定为 34，当前尺寸可完整显示三条；更多内容通过滚轮查看。
+                     用 Border+Tapped 替代 Button+Click 绕开 Button 在 Transparent 背景 + 高 DPI 下的 hit-test 异常。 -->
                 <Grid Grid.Row="1" Margin="20,0,12,10">
                     <ScrollViewer HorizontalScrollMode="Disabled"
                                   HorizontalScrollBarVisibility="Disabled"
@@ -119,11 +122,11 @@
                             </ItemsRepeater.Layout>
                             <ItemsRepeater.ItemTemplate>
                                 <DataTemplate x:DataType="local:HomeNewsDisplayItem">
-                                    <Button Height="34" Padding="4,2"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
-                                            Background="Transparent" BorderThickness="0"
-                                            Click="NewsItem_Click">
+                                    <Border Height="34" Padding="4,2"
+                                            Background="#00000000"
+                                            IsHitTestVisible="True"
+                                            Tag="{x:Bind}"
+                                            Tapped="NewsItem_Click">
                                         <Grid ColumnSpacing="16">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
@@ -136,7 +139,7 @@
                                                        FontSize="14" VerticalAlignment="Center"
                                                        Foreground="#FFB8B8B8"/>
                                         </Grid>
-                                    </Button>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsRepeater.ItemTemplate>
                         </ItemsRepeater>

@@ -266,6 +266,7 @@ public sealed partial class LauncherHomePage : Page
         NewsPanel.Height = profile.NewsHeight / rasterizationScale;
         NewsPanel.Margin = new Microsoft.UI.Xaml.Thickness(
             profile.NewsLeft / rasterizationScale, 0, 0, profile.NewsBottom / rasterizationScale);
+        LogService.Instance.AddLog($"[dbg-news] ApplyLayoutProfile: rasterizationScale={rasterizationScale} profile={profile.Id} panel W={NewsPanel.Width} H={NewsPanel.Height} M={NewsPanel.Margin}");
         // 控件内部使用截图实际像素排版，再由 Viewbox 整体适配逻辑像素外框。
         HomeContentPanel.LayoutWidth = profile.NewsWidth;
         HomeContentPanel.LayoutHeight = profile.NewsHeight;
