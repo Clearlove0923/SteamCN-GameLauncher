@@ -2,6 +2,43 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 00:30:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview` + `Refactored_Version`
+- 推送提交：`c3a8004` fix(home-content): 资讯项点击改 Border+Tapped 绕开 Button hit-test 异常，加 IsHitTestVisible=False 防 Banner hit area 跨界
+
+### 实现内容
+
+修复 issue #14 描述的"资讯轮播图下面的活动 / 公告 / 资讯条目点击无响应"问题，配合三个改动：
+
+1. `Views/Controls/HomeBannerAndNews.xaml`：`<Grid x:Name="BannerContainer">` 加 `IsHitTestVisible="False"` —— Banner 上半区（FlipView + 5 张 banner 图）的 hit area 之前在某些条件下会跨界抢占下半区 News 区域的 click，禁用 BannerContainer 的 hit test 让 hit-test 路由正常下沉到 News 区域
+2. `Views/Controls/HomeBannerAndNews.xaml` + `.cs`：news `<Button Click="NewsItem_Click">` 改成 `<Border Tag="{x:Bind}" Tapped="NewsItem_click">` —— Button 在 `Background="Transparent" BorderThickness="0"` + 高 DPI + ItemsRepeater 模板组合下，Click 事件路由不通；Border 的 Tapped 走的是冒泡路由事件，没这个坑
+3. `NewsItem_Click` handler 改读 `fe?.Tag as HomeNewsDisplayItem`（替代原来的 `fe is { DataContext: ... }` pattern）—— ItemsRepeater + x:Bind 模板不自动设 DataContext，所以用 Tag 把数据塞进去
+
+调试日志保留为 `[dbg-news]` 前缀（`LogService.Instance.AddLog` 写 `bin\x64\Debug\net8.0-windows10.0.19041.0\logs/*.log`），方便后续排查；正式发版前再移除。
+
+`LauncherHomePage.xaml.cs` 的 `ApplyLayoutProfile` 临时加了 `[dbg-news]` 日志打印 rasterizationScale + NewsPanel 计算后尺寸位置，作为定位根因的辅助信息，会和 debug 日志一起在发布前清理掉。
+
+### 验证结果
+
+- worker PID 11068 真实跑 Kuro CN 端点（`prod-cn-alicdn-gamestarter.kurogame.com/launcher/10003_.../G152/information/zh-Hans.json`），`HomeContentProviderId=kuro-launcher`，`locale=zh-CN`
+- UI Automation 找到 news item 1 在 `(507, 1636)`、item 2 在 `(507, 1672)`（物理坐标，窗口右下侧）
+- 模拟点击 → log：
+  ```
+  [dbg-news] Click fired sender=Border tag=HomeNewsDisplayItem dc=
+  [dbg-news] resolved url=https://www.kurobbs.com/mc/post/1539644111837351936
+  ```
+- URL 跳转到 kurobbs 国服论坛帖子 ✓ —— 与 Kuro CN 端点 `information/zh-Hans.json` 里 `"jumpUrl": "https://www.kurobbs.com/mc/post/1539644111837351936"` 完全一致
+- Banner_Tapped 同样正常工作（之前就 OK，这次没受影响）
+
+### 当前限制
+
+- 调试日志 `[dbg-news]` / `[dbg-banner]` / `[dbg-news] ApplyLayoutProfile` 临时加在 `HomeBannerAndNews.xaml.cs` 和 `LauncherHomePage.xaml.cs`，正式发版前需要清掉
+- 沙盒端到端验证用 UI Automation + SendInput，**实际用户用鼠标点击需要确认是否同样工作**（理论上应该没问题，因为 Border+Tapped 走标准冒泡路由，但用户实际环境 DPI / 缩放率可能不同）
+- Banner 区域仍走 `Tapped` 路由事件（Grid 内），同样在某些极端 DPI 下可能也有 hit area 跨界问题；本次 fix 仅针对 news 区域
+- ItemRepeater 内 Banner 子项的点击事件原本用 `Grid Tapped="Banner_Tapped"`，没改成 Border+Tapped —— 如果未来 Banner 也出现 hit-test 异常，可以套用同样模式
+
 ## 2026-09-25 23:08:00 +08:00
 
 - 推送人员：`wonderful-oss`
