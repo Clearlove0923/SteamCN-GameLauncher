@@ -2,6 +2,33 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-25 23:08:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview` + `Refactored_Version`
+- 推送提交：`KuroLauncherProvider` 接入 CN 国服端点 + locale→language fallback + 时间解析 + 白名单扩展
+
+### 实现内容
+
+- **`python/home_content/providers/kuro_launcher.py` 重写**：新增 `region` 选择机制，默认 `cn`（贴合启动器目标用户群）。`DEFAULT_CN_*` 常量（appId=`10003`、appKey=`Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5`、gameId=`G152`、CDN=`prod-cn-alicdn-gamestarter.kurogame.com`）来自 `blog.sunmkt.uk` 列出的 `KRApp.conf` 解码结果 + 2026-09-25 实测验证。`ALLOWED_HOST_SUFFIXES` 扩成 OS + CN 双套域（增加 `.aki-game.com` / `.kurobbs.com` / `.mc.kurogames.com`）。`_language_candidates(region, request)` 按 locale 前缀 / `providerOptions['language']` 显式覆盖 / region 默认 三级优先级返回候选语言列表；`_fetch_region_content` 用 `asyncio.gather(return_exceptions=True)` 并行抓 wallpaper + news，单端点 4xx 不阻断另一个端点的数据。`_parse_mmdd` 把 Kuro 资讯里的 `"MM-DD"` 时间补全当前年填到 `HomeNewsItem.published_at`。`providerOptions['appId'|'appKey'|'gameId']` 覆盖仍生效——显式提供则偏离 region 默认，否则用 region 默认。
+- **`python/tests/test_kuro_launcher_provider.py` 28 项测试**：13 项原有 OS 测试 + 15 项新增 CN / locale / 时间 / fallback 测试。新增覆盖：CN fixtures 加载、`_resolve_region` 默认值 + 大小写 + 未知值降级、`_language_candidates` 在 cn/os/各 locale 下的优先级、`providerOptions['language']` 显式覆盖、CN banner 字幕中文校验（`景燃pv` 等 5 个）、CN news 中文标题 + `published_at` 解析、完整 CN fetch 路径（zh-Hans.json 命中 + huoshan CDN 命中 + `10003_.../G152` 路径）、`zh-Hans` 404 自动 fallback 到 en、单端点 4xx 部分数据可用、所有语言都 4xx 抛 `HTTPStatusError`、`_parse_mmdd` 边界（None / 空串 / `13-40` / ISO 时间）。
+- **3 个 CN 脱敏样本**（`contracts/samples/kuro-cn-{launcher-config,bg-zh-Hans,info-zh-Hans}.json`）：2026-09-25 实测 CN 端点（`bg_hash` 替换为 `HASH32_CN` 占位）。info 样本保留真实中文内容（《鸣潮》3.6 版本创作激励计划 / [身赴三途]角色活动唤取 / 景燃 pv 等），bg 样本保留 `pcdownload-huoshan.aki-game.com` 真实 URL 用于白名单校验，banner 轮播图保留 `prod-alicdn-community.kurobbs.com` / `bilibili.com` 跳转链接。
+- **`docs/KURO_PROVIDER.md` 全量重写**：补 region 表格、`_language_candidates` 三级优先级、CN 域名出处表、`envelope.errors.code` 错误码说明、`time` 字段映射、测试结构（28 项拆分）。"已知限制"段把"启动器只发 en.json" + "国服 CN 未独立验证"两条删掉，换成"CN `en.json` 内容为空" + "OS 不下发中文"两条更准确的边界描述。
+
+### 验证结果
+
+- **pytest 全套**：`219 passed + 1 skipped`（前一轮 204 + 1；新增 15 项 CN 测试）。所有 13 个原有 OS 测试零回归，新 15 项全过。
+- **C# 端配置无需改动**：`CustomManifestPreset.HomeContentProviderId="kuro-launcher"` + `request.locale="zh-CN"`（`LauncherHomePage.xaml.cs:138` 已硬编码）即可让 C# 端拿到中文内容，`providerOptions['region']` 默认 `cn` 自动选择国服端点。
+- **沙盒端到端未跑**（沙盒里 `%TEMP%\home-content-env` venv 的依赖丢失、httpx 包不见了），需要在新 venv 起来再验证 `POST /v1/home-content` 拿到中文 envelope。
+
+### 当前限制
+
+- **C# 端没有 region 选项 UI**：默认 `cn` 已经满足国服 launcher 场景；若用户手动选 OS (`providerOptions['region']='os'`)，需要去 `CustomManifestPage` 增加 region 下拉（当前 7 个 Provider ID 的 ComboBox 之外）。
+- **Provider 不做语言/区域自动协商**：当前用 region + locale 决定语言候选；如果未来 Kuro 增加 `en.json` 中文内容或 CN 增加 `en.json` 数据（目前 CN 的 `en.json` 确实下发但内容为空），需要更新 `_language_candidates` 让 fallback 顺序更智能（例如按 contents 数量选最丰富的语言）。
+- **跨区域回退未实现**：当前 CN 端点完全 4xx 时不会自动切到 OS；如果 Kuro 临时把 CN 端点下线，UI 会拿到空 envelope。需要在 Provider 增加跨 region fallback。
+- **C# 端的 `preview` fallback 仍走 PreviewHomeContentService**，对真实 Provider 失败没有 fallback 链；FastApiHomeContentService 只把 envelope.errors 透传。
+- **沙盒 venv 被破坏**：本轮 pytest 在新建的 `%TEMP%\kuro-test-env` 里跑的，之前 `%TEMP%\home-content-env` 已经空了（httpx / pytest 等都消失）。需要在干净环境重新建 venv + 重新跑端到端验证才能把截图发出来。
+
 ## 2026-09-17 22:08:00 +08:00
 
 - 推送人员：`wonderful-oss`

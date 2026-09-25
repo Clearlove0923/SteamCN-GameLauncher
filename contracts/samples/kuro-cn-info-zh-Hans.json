@@ -1,0 +1,93 @@
+{
+  "guidance": {
+    "desc": "暂无内容",
+    "activity": {
+      "title": "活动",
+      "sort": 1,
+      "functionSwitch": 1,
+      "contents": [
+        {
+          "content": "《鸣潮》3.6 版本创作激励计划",
+          "jumpUrl": "https://www.kurobbs.com/mc/post/1539644111837351936",
+          "time": "08-19"
+        },
+        {
+          "content": "【有奖活动】互助帮帮团 | 3.6版本答疑互助活动启动！",
+          "jumpUrl": "https://www.kurobbs.com/mc/post/1539330527613833216",
+          "time": "08-20"
+        }
+      ]
+    },
+    "notice": {
+      "title": "公告",
+      "sort": 2,
+      "functionSwitch": 1,
+      "contents": [
+        {
+          "content": "关于客户端资源分级功能的相关说明",
+          "jumpUrl": "https://mc.kurogames.com/main/news/detail/5478",
+          "time": "09-24"
+        },
+        {
+          "content": "[身赴三途]角色活动唤取",
+          "jumpUrl": "https://www.kurobbs.com/mc/post/1546565109816549376",
+          "time": "09-09"
+        },
+        {
+          "content": "【3.6版本】[角色/武器活动唤取・第二期]",
+          "jumpUrl": "https://www.kurobbs.com/mc/post/1546583036413710336",
+          "time": "09-09"
+        }
+      ]
+    },
+    "news": {
+      "title": "新闻",
+      "sort": 3,
+      "functionSwitch": 1,
+      "contents": [
+        {
+          "content": "《寰宇人类注疏：群星交错》共鸣者展示 | 景燃",
+          "jumpUrl": "https://www.kurobbs.com/mc/post/1545447061050785792",
+          "time": "09-05"
+        },
+        {
+          "content": "档案公开 | 幽炁诀——景燃",
+          "jumpUrl": "https://www.kurobbs.com/mc/post/1545453397834305536",
+          "time": "09-06"
+        }
+      ]
+    }
+  },
+  "slideshow": [
+    {
+      "url": "https://prod-alicdn-community.kurobbs.com/window/22218b58c7514e11aa646a9d3435d29020260908.jpg",
+      "jumpUrl": "https://www.bilibili.com/video/BV1uMbg6SEnL",
+      "md5": "32ac8bd16d9b4d32d1d8491ff1f843cc",
+      "carouselNotes": "景燃pv"
+    },
+    {
+      "url": "https://prod-alicdn-community.kurobbs.com/window/d1cddeb1256740a1a51ecea256bdd78120260907.jpg",
+      "jumpUrl": "https://www.bilibili.com/video/BV1PTbL6REMT",
+      "md5": "53e54f18dbec6ac9efd516b96c54eb94",
+      "carouselNotes": "景燃战斗演示"
+    },
+    {
+      "url": "https://prod-alicdn-community.kurobbs.com/window/46ec04a6291f4e259d99c195ab740a0020260807.jpg",
+      "jumpUrl": "https://www.bilibili.com/video/BV1Jcub6BEqB",
+      "md5": "5166ef15e41e5b5fcd3ef204144f3f16",
+      "carouselNotes": "3.6版本pv"
+    },
+    {
+      "url": "https://prod-alicdn-community.kurobbs.com/forum/85839dae3de14fa29bc3f6440d5d68a920260428.jpeg",
+      "jumpUrl": "https://www.kurobbs.com/mc/post/1498752884074991616",
+      "md5": "a8fbc41a530c59ca3cac856c90cdb221",
+      "carouselNotes": "库洛充值中心"
+    },
+    {
+      "url": "https://pcdownload-huoshan.aki-game.com/launcher/news/slide-picture/kdixciz8fgk9ijgylh.jpg",
+      "jumpUrl": "https://market.m.taobao.com/app/tb-shop/shop-page-webapp/pages/custom-page/index.html?shopId=594535166&sellerId=2214606048233&pageId=470354498&pathInfo=shop/activity2&isShopDomain=true",
+      "md5": "2eacfe52f0693ec1b454cd136392ceeb",
+      "carouselNotes": "鸣潮雷蛇联名款键鼠"
+    }
+  ]
+}
