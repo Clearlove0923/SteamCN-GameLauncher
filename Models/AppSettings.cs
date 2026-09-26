@@ -44,6 +44,36 @@ public class AppSettings
     public int HomeContentWorkerTimeoutSeconds { get; set; } = 10;
 
     /// <summary>
+    /// 是否在 launcher 启动时自动拉起 Python Worker 子进程。
+    /// 默认 <c>true</c>：首次启动如果 <see cref="HomeContentWorkerBaseUrl"/> 端口未监听就 spawn，
+    /// 让 C# 端拿到真实 banner / 背景视频 / 资讯；显式置 <c>false</c> 可关闭（手工启 worker 或走 Preview 兜底）。
+    /// </summary>
+    public bool SpawnPythonWorkerOnLaunch { get; set; } = true;
+
+    /// <summary>
+    /// Python 解释器完整路径。空字符串表示按以下顺序在 PATH / 常见安装目录里探测：
+    /// <c>python.exe</c> / <c>python3.exe</c> / <c>py -3</c>；探测失败时 spawn 直接放弃并降级。
+    /// </summary>
+    public string PythonExecutablePath { get; set; } = "";
+
+    /// <summary>
+    /// 启动 Worker 时附加的 PYTHONPATH 列表。空字符串表示由 <c>PythonWorkerSpawner</c>
+    /// 用 <c>AppContext.BaseDirectory/python</c> 作为唯一入口（标准仓库布局）。
+    /// </summary>
+    public string PythonHomeContentPath { get; set; } = "";
+
+    /// <summary>
+    /// Worker 进程启动后等待端口可连的最长秒数。超时仍未监听则放弃、保留
+    /// <see cref="PreviewHomeContentService"/> 兜底。
+    /// </summary>
+    public int PythonWorkerStartupTimeoutSeconds { get; set; } = 15;
+
+    /// <summary>
+    /// launcher 退出时给 Worker 子进程 graceful shutdown 的最长秒数；超时则强杀。
+    /// </summary>
+    public int PythonWorkerShutdownTimeoutSeconds { get; set; } = 5;
+
+    /// <summary>
     /// 幂等地确保 <see cref="CustomManifestPresets"/> 至少有一个预设（v2.3.0 迁移逻辑）。
     /// 旧 v2.2.0 settings.json 无预设列表时：若 CurrentCustomManifest 含任一非默认字段，
     /// 则把它纳入列表；否则补一个空白「默认」预设。

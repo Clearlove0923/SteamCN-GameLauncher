@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!--
+      单元测试项目，无需 WinAppSDK 运行时；与主项目保持 TFM 对齐。
+      当前会话只装了 .NET 10 SDK，先用 net10.0；装 .NET 8 后改 net8.0。
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!--
+      测试产物统一目录到主项目 bin 目录的 Tests\PythonWorkerSpawner.Tests\ 子目录，
+      符合 AGENTS.md "Debug 测试产物统一目录" 规则。
+    -->
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\PythonWorkerSpawner.Tests\</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../AppInfo.cs" Link="AppInfo.cs" />
+    <Compile Include="../../Models/AppSettings.cs" Link="Models/AppSettings.cs" />
+    <Compile Include="../../Models/AppearanceSettings.cs" Link="Models/AppearanceSettings.cs" />
+    <Compile Include="../../Models/Home/HomeLayoutProfile.cs" Link="Models/Home/HomeLayoutProfile.cs" />
+    <Compile Include="../../Services/LogService.cs" Link="Services/LogService.cs" />
+    <Compile Include="../../Services/SettingsService.cs" Link="Services/SettingsService.cs" />
+    <Compile Include="../../Services/Home/PythonWorkerSpawner.cs" Link="Services/Home/PythonWorkerSpawner.cs" />
+  </ItemGroup>
+</Project>

@@ -2,6 +2,24 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 15:51:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview`
+- 推送提交：`feat(launcher): exe 启动自动拉起 Python Worker 子进程获取真实首页内容`
+- 实现内容：
+  - 新建 `Services/Home/PythonWorkerSpawner.cs`（封装 `Process.Start` + TCP 端口探测 + stdout/stderr 转发 `LogService` + 优雅 `Stop`）：`StartAsync` 先探测端口空闲 → 探测 python.exe（PATH / 常见安装目录 / `AppSettings.PythonExecutablePath`）→ spawn `-m home_content.server.main --port <port>` → 轮询 8765 listening（200ms tick，超时 `PythonWorkerStartupTimeoutSeconds` 默认 15s）→ child 退出触发 `Exited` 事件。`Stop` 先 `CloseMainWindow` → 等 `PythonWorkerShutdownTimeoutSeconds`（默认 5s）→ 强杀整棵进程树，最后统一 `Dispose`。所有失败（python 找不到 / spawn 抛 / 端口超时 / child 秒退）吞掉 log，返回 false 不阻塞 launcher。
+  - 修改 `Models/AppSettings.cs`：新增 `SpawnPythonWorkerOnLaunch`（默认 `true`）、`PythonExecutablePath`（默认空 → 自动探测）、`PythonHomeContentPath`（默认空 → `<launcher-cwd>/python`）、`PythonWorkerStartupTimeoutSeconds`（15）、`PythonWorkerShutdownTimeoutSeconds`（5）。
+  - 修改 `App.xaml.cs`：`OnLaunched` 启动 `MainWindow` 后立刻 fire-and-forget `TrySpawnWorkerAsync`，构造 `PythonWorkerSpawner`，订阅 `OutputReceived`/`Exited` 写 `LogService`，失败仅 log。`MainWindow.Closed` 触发 `OnMainWindowClosed` → `WorkerSpawner.Stop()` + `Dispose()` 优雅关闭子进程。新增公共静态 `App.WorkerSpawner` 方便测试和诊断。
+- 验证结果：
+  - 新建 `Tests/PythonWorkerSpawner.Tests/`（Exe，net10.0 → OutDir 落到 `bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\PythonWorkerSpawner.Tests\`，符合 AGENTS.md "测试项目必须显式设置 OutDir 到统一目录"）：10/10 用例通过 — `Ctor_NullSettings_Throws` / `Ctor_NullLogService_Throws` / `StartAsync_AlreadyListening_ReturnsTrue_NoSpawn`（用 `TcpListener` 起端口验证 fast-path 不 spawn，`OwnsProcess=false`） / `StartAsync_PythonNotFound_ReturnsFalse` / `StartAsync_CmdExitsImmediately_ReturnsFalse`（child 立即退出的 ANE 陷阱修复：`Exited` 事件里不 `Dispose` proc，留给 `Stop`/`Dispose` 统一释放，端口轮询的 `proc.HasExited` 不再抛 InvalidOperationException） / `Stop_NullProcess_DoesNotThrow` / `StartAsync_DisabledByFlag_ReturnsFalseQuickly` / `StartAsync_ExtractsPortFromBaseUrl` / `OutputReceived_FiresForStdout` / `Exited_FiresWhenChildExits`。
+  - 端到端：杀掉 sandbox 的外部 worker，停 launcher，重启 launcher。日志显示：`spawned python worker pid=24860 port=8765` → uvicorn `Uvicorn running on http://127.0.0.1:8765` → `port 8765 is listening; ready for FastApiHomeContentService` → launcher 立刻 `POST /v1/home-content` → uvicorn 返回 200 + 5 banners（景燃pv / 景燃战斗演示 / 3.6版本pv / 库洛充值中心 / 鸣潮雷蛇联名款键鼠）+ 7 news（活动 2 / 公告 3 / 资讯 2），`[dbg-banner] BannerFlipView.SelectedIndex=0 vis=Visible`，PreviewHomeContentService 兜底永远不再触发。
+- 当前限制：
+  - python.exe 探测路径不包括 Microsoft Store Python Launcher（`py.exe` 启动器），仅覆盖 PATH + uv-installer 常见路径。Store 用户的 Python 会探测失败，需要手动设置 `AppSettings.PythonExecutablePath`。
+  - launcher 启动时若 `SpawnPythonWorkerOnLaunch=false` 且外部无 worker，banner 显示 `BannerEmptyState` "等待 Python 首页内容"，但 launcher 自身不会弹出友好提示（已加 log，UI 提示待 SettingsPage 加开关 + 状态提示）。
+  - 没有 worker 子进程崩溃自动重启机制 — child 退出后 launcher 降级到 `PreviewHomeContentService` 兜底直到重启 launcher。
+  - Worker 启动慢（首次 uvicorn 加载约 1.5s）→ launcher 首页前 ~2 秒 banner 显示空状态。后续可考虑预先加载或加 skeleton placeholder。
+
 ## 2026-09-26 14:28:00 +08:00
 
 - 推送人员：`wonderful-oss`

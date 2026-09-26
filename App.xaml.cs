@@ -1,13 +1,16 @@
 using Microsoft.UI.Xaml;
 using System.Runtime.InteropServices;
 using System.Text;
+using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
+using SteamCNGameLauncher.Services.Home;
 
 namespace SteamCNGameLauncher;
 
 public partial class App : Application
 {
     public static Window MainWindow { get; private set; } = null!;
+    public static PythonWorkerSpawner? WorkerSpawner { get; private set; }
     private static readonly string CrashLogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SteamCN-GameLauncher",
@@ -31,7 +34,11 @@ public partial class App : Application
         try
         {
             MainWindow = new MainWindow();
+            MainWindow.Closed += (sender, e) => OnMainWindowClosed();
             MainWindow.Activate();
+
+            // 后台静默拉起 Python Worker 子进程；失败仅记 log，不影响主流程。
+            _ = TrySpawnWorkerAsync();
 
             // 后台静默检查更新，不阻塞启动
             _ = Task.Run(async () =>
@@ -51,6 +58,49 @@ public partial class App : Application
             WriteCrashLog("OnLaunched", ex);
             throw;
         }
+    }
+
+    private async Task TrySpawnWorkerAsync()
+    {
+        try
+        {
+            var settingsService = new SettingsService();
+            var settings = settingsService.Load();
+            if (!settings.SpawnPythonWorkerOnLaunch)
+            {
+                LogService.Instance.AddLog("[worker] SpawnPythonWorkerOnLaunch=false; skip auto-spawn");
+                return;
+            }
+
+            var spawner = new PythonWorkerSpawner(settings, LogService.Instance);
+            spawner.OutputReceived += line => LogService.Instance.AddLog($"[worker] {line}");
+            spawner.Exited += code => LogService.Instance.AddLog($"[worker] exited with code {code}");
+            WorkerSpawner = spawner;
+
+            var ok = await spawner.StartAsync().ConfigureAwait(false);
+            if (!ok)
+            {
+                LogService.Instance.AddLog("[worker] StartAsync returned false; FastApiHomeContentService will fall back to PreviewHomeContentService");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.AddLog($"[worker] spawn pipeline crashed: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    private static void OnMainWindowClosed()
+    {
+        try
+        {
+            WorkerSpawner?.Stop();
+            WorkerSpawner?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.AddLog($"[worker] shutdown error: {ex.GetType().Name}: {ex.Message}");
+        }
+        WorkerSpawner = null;
     }
 
     private void RegisterGlobalExceptionHandlers()
