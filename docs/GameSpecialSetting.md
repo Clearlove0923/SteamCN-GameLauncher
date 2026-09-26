@@ -75,7 +75,7 @@
 ### 跳过启动器界面
 基础命令：
 ```text
-"<启动器根目录>\<当前版本>\xstarter.exe" -skiplauncher
+-skiplauncher
 ```
 ### 实现原理
 Windows 版《无限暖暖》不是单一 EXE 启动。当前观察到的官方启动链为：
