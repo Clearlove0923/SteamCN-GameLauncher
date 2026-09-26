@@ -2,6 +2,33 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 14:28:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`Refactored_Version`（后续同步到 `python_preview`）
+- 推送提交：`feat(home-page): 默认背景改纯黑 + AppId 不在适配清单时强制走默认背景`
+
+### 实现内容
+
+修复启动器在未验证 AppId 上误显示测试水印图 / 残留主题底色的问题，配合四个改动：
+
+1. **新增 `Models/Home/SupportedGameRegistry.cs`** —— 已通过端到端验证的 Steam AppId 白名单（鸣潮 3513350、绝区零 4162040、崩坏3 1671200、燕云十六声 3564740、无限暖暖 3164330、异环 4508340/4706890、终末地 4732690），提供 `IsSupported(appId)` 静态查询方法。每接入一个新游戏的真实首页内容并端到端验证通过后再追加，不要预填未验证 ID。
+2. **`Views/Pages/LauncherHomePage.xaml`** —— 在 `MediaPlayerElement` 同级最底层新增 `<Border x:Name="DefaultBlackBackground" Background="Black" Grid.RowSpan="2" IsHitTestVisible="False" Visibility="Collapsed"/>`，作为未适配 AppId 时的纯黑兜底层。
+3. **`Views/Pages/LauncherHomePage.xaml.cs`** —— `ShowGameAsync(game)` 在发 worker 请求前先查 `SupportedGameRegistry.IsSupported(game.AppId)`；不在清单里直接 `ResetBackgroundToDefaultBlack()` + return（不发请求、不渲染 SourceImage 兜底），新增 `ResetBackgroundToDefaultBlack()` 清空 MediaPlayerElement 和 Image 同时显示 DefaultBlackBackground；`ApplyHomeAppearance` 真实背景进入时先把 `DefaultBlackBackground` 设为 Collapsed 让视频/静态图透出来。
+4. **新增 `bin\Backgrounds/default-black.png` (1920×1080 纯黑 RGB) + `SteamCN-GameLauncher.csproj` 加 CopyToOutputDirectory** —— 让 SourceImage 兜底在"已适配但 worker 没拉到数据"的情况下也走纯黑，而不是用户手动配置的测试图；同步删除 `Backgrounds\sandbox-test-bg.png`（带 SANDBOX TEST BG 水印的旧测试图，已回收站）。
+
+### 验证结果
+
+- **3513350（鸣潮，在清单）** —— 显示 worker 拉到的真实 PV 背景 + Banner + 真实中文新闻，行为不变。
+- **99999999（未支持，临时改 manifest AppId 验证）** —— 强制纯黑背景，跳过 worker 请求，不渲染标题 / Banner / 新闻区，只有左侧导航栏。
+- 用户 sandbox settings.json 的 `SelectedImage` 和 `Images` 已切到 `default-black.png`，备份在 `settings.json.bak.default-black`。
+- `dotnet build SteamCN-GameLauncher.sln --configuration Debug -p:Platform=x64` 通过（2 个 `SetContent(null)` nullable warning，非阻塞）。
+
+### 当前限制
+
+- `SupportedGameRegistry` 是硬编码白名单，新游戏接入 Provider 验证后需要手动追加 AppId；如果用户加了新游戏但 AppId 没在清单里，会强制显示纯黑（按当前需求设计如此，不算 bug 但要写明）。
+- 调试日志 `[dbg-banner]` / `[dbg-news]` / `ApplyLayoutProfile` 仍保留在 `HomeBannerAndNews.xaml.cs` + `LauncherHomePage.xaml.cs`，TODO 正式发版前移除。
+
 ## 2026-09-26 00:30:00 +08:00
 
 - 推送人员：`wonderful-oss`

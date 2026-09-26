@@ -4,6 +4,10 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:controls="using:SteamCNGameLauncher.Views.Controls">
     <Grid Background="{StaticResource AppearancePageBackground}">
+        <!-- 最底层纯黑兜底：AppId 不在 SupportedGameRegistry 时强制显示，
+             让未适配游戏的窗口不会出现测试图或残留主题色。 -->
+        <Border x:Name="DefaultBlackBackground" Background="Black"
+                Grid.RowSpan="2" IsHitTestVisible="False" Visibility="Collapsed"/>
         <MediaPlayerElement x:Name="HomeBackgroundVideo" IsHitTestVisible="False"
                             AreTransportControlsEnabled="False" Stretch="UniformToFill"
                             Visibility="Collapsed"/>

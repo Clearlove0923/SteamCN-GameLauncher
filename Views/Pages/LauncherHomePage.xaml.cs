@@ -94,6 +94,8 @@ public sealed partial class LauncherHomePage : Page
         NewsPanel.Visibility = profile.ShowHomeNews ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
         ShowHomeAnimationItem.IsChecked = profile.ShowHomeAnimation;
         ShowHomeNewsItem.IsChecked = profile.ShowHomeNews;
+        // 真实背景进入时先收起纯黑兜底，否则 DefaultBlackBackground 会遮住视频/静态图。
+        DefaultBlackBackground.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         ApplyHomeAnimation(profile.ShowHomeAnimation ? _currentHomeContent?.Background : null);
     }
 
@@ -124,8 +126,21 @@ public sealed partial class LauncherHomePage : Page
         ApplyLayoutProfile(game.HomeLayoutProfileId);
         GameTitle.Text = game.Name;
         GameSubtitle.Text = string.IsNullOrWhiteSpace(game.GameDisplayName)
-            ? "启动方式、背景和资讯入口将在后续版本接入。"
+            ? string.Empty
             : game.GameDisplayName;
+        GameSubtitle.Visibility = string.IsNullOrWhiteSpace(GameSubtitle.Text)
+            ? Microsoft.UI.Xaml.Visibility.Collapsed
+            : Microsoft.UI.Xaml.Visibility.Visible;
+
+        // AppId 不在已适配清单 → 强制显示纯黑默认背景，跳过真实背景渲染，
+        // 也忽略外观设置里的 SourceImage，避免测试图/残留主题色泄漏到未验证游戏。
+        if (!SupportedGameRegistry.IsSupported(game.AppId))
+        {
+            _currentHomeContent = null;
+            HomeContentPanel.SetContent(null);
+            ResetBackgroundToDefaultBlack();
+            return;
+        }
 
         _homeContentCancellation?.Cancel();
         _homeContentCancellation = new CancellationTokenSource();
@@ -145,6 +160,16 @@ public sealed partial class LauncherHomePage : Page
         {
             // 快速切换游戏时忽略上一请求的取消结果，避免旧内容覆盖当前游戏。
         }
+    }
+
+    private void ResetBackgroundToDefaultBlack()
+    {
+        _activeVideoSource = null;
+        try { _backgroundPlayer.Source = null; } catch { /* ignore */ }
+        HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        HomeBackgroundImage.Source = null;
+        HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        DefaultBlackBackground.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
     }
 
     /// <summary>
