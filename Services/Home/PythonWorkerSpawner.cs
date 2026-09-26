@@ -283,10 +283,25 @@ public sealed class PythonWorkerSpawner : IDisposable
 
     private string? ResolvePythonExecutable()
     {
+        // 1) 用户显式覆盖。
         if (!string.IsNullOrWhiteSpace(_settings.PythonExecutablePath) &&
             File.Exists(_settings.PythonExecutablePath))
         {
             return _settings.PythonExecutablePath;
+        }
+
+        // 2) Embedded Python（launcher 自带的 python-build-standalone 解压目录）。
+        //    这是零依赖路径：用户拷走 launcher 包就走，不需要装 Python。
+        //    embedded 标记 = AppContext.BaseDirectory\python-runtime\python.exe 存在；
+        //    由 csproj 的 <_EmbeddedPython> 私有 item group + CopyEmbeddedPython /
+        //    CopyEmbeddedPythonToPublish target 在 Build/Publish 完成后复制到 OutDir。
+        //    （WinUI3 下 <Content Include="python-runtime/**/*"> 会被 PRI 生成器当成语言限定符处理，
+        //    触发几百条 PRI249 warning；<None Include> 默认不复制，所以走自定义 Target 最稳。）
+        var embedded = Path.Combine(AppContext.BaseDirectory, "python-runtime", "python.exe");
+        if (File.Exists(embedded))
+        {
+            _logService.AddLog($"[worker] using embedded python at {embedded}");
+            return embedded;
         }
 
         var pathVar = Environment.GetEnvironmentVariable("PATH") ?? "";
@@ -309,14 +324,14 @@ public sealed class PythonWorkerSpawner : IDisposable
             return null;
         }
 
-        // PATH 上常见的 python 名称（Windows 不区分大小写，但显式列几个最常见的）。
+        // 3) PATH 上常见的 python 名称（Windows 不区分大小写，但显式列几个最常见的）。
         foreach (var name in new[] { "python.exe", "python3.exe", "python", "python3" })
         {
             var hit = ResolveOnPath(name);
             if (hit is not null) return hit;
         }
 
-        // 常见安装目录（uv-installer / python.org installer / Microsoft Store）。
+        // 4) 常见安装目录（uv-installer / python.org installer / Microsoft Store）。
         var localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         var candidates = new[]

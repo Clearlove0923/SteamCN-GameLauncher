@@ -72,6 +72,56 @@
   </ItemGroup>
 
   <!--
+    Embedded Python distribution (python-build-standalone 3.10.21 win-x64)。
+    解压自 cpython-3.10.21+20260924-x86_64-pc-windows-msvc-install_only.tar.gz，
+    落到 bin\python-runtime\。launcher 启动时 PythonWorkerSpawner 优先用本目录
+    的 python.exe，让用户拷走整个 bin 就能跑（零外部 Python 依赖）。
+    ~118 MB / 3932 文件，可压缩到 ~50 MB publish zip。
+  -->
+  <ItemGroup>
+    <_EmbeddedPython Include="bin\python-runtime\**\*" />
+  </ItemGroup>
+
+  <!--
+    Embedded Python distribution (python-build-standalone 3.10.21 win-x64) —
+    解压自 cpython-3.10.21+20260924-x86_64-pc-windows-msvc-install_only.tar.gz，
+    落到 bin\python-runtime\。launcher 启动时 PythonWorkerSpawner 优先用本目录
+    的 python.exe，让用户拷走整个 bin 就能跑（零外部 Python 依赖）。
+    ~118 MB / 3932 文件，可压缩到 ~50 MB publish zip。
+
+    用 <_EmbeddedPython> + 自定义 <Target> 而不是 <Content>/<None>：
+    WinUI3 SDK 的 PRI 生成器把 <Content> 当成语言限定符处理，<None> 默认不复制，
+    二者都不稳；用 Copy task 在 Build 完成后显式复制最可控。
+  -->
+  <Target Name="CopyEmbeddedPython" AfterTargets="Build">
+    <PropertyGroup>
+      <_EmbeddedPythonOutDir>$(OutDir)</_EmbeddedPythonOutDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_EmbeddedPythonOutDir)python-runtime" Condition="!Exists('$(_EmbeddedPythonOutDir)python-runtime')" />
+    <Copy SourceFiles="@(_EmbeddedPython)"
+          DestinationFiles="@(_EmbeddedPython->'$(_EmbeddedPythonOutDir)python-runtime\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Retries="3" />
+  </Target>
+
+  <!--
+    publish 输出目录与 OutDir 不同（$(PublishDir) vs $(OutDir)），
+    单独挂一个 Target 让 CopyEmbeddedPython 在 publish 完成后也跑一次，
+    把 python-runtime 复制到最终的 publish 输出目录。
+  -->
+  <Target Name="CopyEmbeddedPythonToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <_EmbeddedPythonPublishDir Condition="'$(PublishDir)' != ''">$(PublishDir)</_EmbeddedPythonPublishDir>
+      <_EmbeddedPythonPublishDir Condition="'$(PublishDir)' == ''">$(OutDir)</_EmbeddedPythonPublishDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_EmbeddedPythonPublishDir)python-runtime" Condition="!Exists('$(_EmbeddedPythonPublishDir)python-runtime')" />
+    <Copy SourceFiles="@(_EmbeddedPython)"
+          DestinationFiles="@(_EmbeddedPython->'$(_EmbeddedPythonPublishDir)python-runtime\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Retries="3" />
+  </Target>
+
+  <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if
     the Windows App SDK Nuget package has not yet been restored.

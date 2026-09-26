@@ -2,6 +2,27 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 19:09:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview`
+- 推送提交：`feat(launcher): 内嵌 Python 3.10.21 解释器与依赖，零外部 Python 依赖`
+- 实现内容：
+  - 下载 `cpython-3.10.21+20260924-x86_64-pc-windows-msvc-install_only.tar.gz`（39.5 MB）→ 解压到 `bin/python-runtime/`（118.6 MB / 3932 文件，包含 stdlib + DLLs + Scripts + tcl）。
+  - `SteamCN-GameLauncher.csproj` 加私有 item group `<_EmbeddedPython Include="bin\python-runtime\**\*" />` + 双 `<Target>`（`CopyEmbeddedPython` AfterTargets="Build" + `CopyEmbeddedPythonToPublish` AfterTargets="Publish"）用 `<Copy>` 任务把 3932 个文件复制到 `$(OutDir)` 和 `$(PublishDir)`。故意不用 `<Content Include="python-runtime/**/*">`：WinUI3 SDK 的 PRI 生成器把每个 `<Content>` 都当语言限定符处理，触发 796+ PRI249 warning；`<None Include>` 默认不复制，二者都不稳；自定义 `<Target>` + `<Copy>` 任务最可控（`SkipUnchangedFiles=true Retries=3`，debug 增量编译秒过）。
+  - `Services/Home/PythonWorkerSpawner.cs` 的 `ResolvePythonExecutable()` 在 priority 2 嵌入分支（显式 `PythonExecutablePath` → embedded `AppContext.BaseDirectory\python-runtime\python.exe` → PATH → 常见安装目录），把用户拷走整个 launcher 包就走、零外部 Python 依赖的路径坐实为默认行为；并更新顶部注释说明 csproj 用的是 `_EmbeddedPython` 私有 item group + 自定义 `<Target>` 而不是 `<Content>`。
+  - `bin/python-runtime/Lib/site-packages/` 用 embedded python.exe 自带的 pip 重装 22 个包（pydantic 2.13.5 + pydantic-core 2.46.5 / fastapi 0.141.1 / uvicorn[standard] 0.53.0 / httpx 0.28.1 / starlette 1.6.0 / anyio 4.15.1 / typing-inspection 0.4.4 等），全部走 cp310-cp310-win_amd64 wheel。之前用外部 venv python 装的 pydantic_core 是 cp39 wheel，3.10.21 embedded Python 导入报 `ModuleNotFoundError: No module named 'pydantic_core._pydantic_core'`；改用 embedded python 自己的 pip 后正常。
+- 验证结果：
+  - Debug 构建：`dotnet build --configuration Debug -p:Platform=x64` → 0 错误 / 2 警告（旧 CS8625 null 警告，与本次无关）；`bin\python-runtime\` 完整复制（5134 文件 / 138.1 MB，含 .pdb 调试符号）。
+  - Release self-contained：`dotnet publish --runtime win-x64 --self-contained true -p:WindowsAppSDKSelfContained=true -p:PublishReadyToRun=true -p:PublishTrimmed=false` → publish 目录 767.7 MB / 10098 文件，`python-runtime/` 138.1 MB / 5134 文件，`SteamCN-GameLauncher.exe` 落地。
+  - 端到端：kill 所有 python.exe + port 8765 监听者 + 重启 launcher → log 显示 `[worker] using embedded python at C:\...\python-runtime\python.exe` + `[worker] spawned python worker pid=25528 port=8765 cwd=C:\code\SteamCN-GameLauncher` + uvicorn `Uvicorn running on http://127.0.0.1:8765` + `port 8765 is listening; ready for FastApiHomeContentService` + `POST /v1/home-content HTTP/1.1 200 OK` + `banners=6 news=7`（景燃pv / 景燃战斗演示 / 3.6版本pv / 库洛充值中心 / 鸣潮雷蛇联名款键鼠 / 周边-Q版手办；资讯活动 2 / 公告 3 / 资讯 2）。`Get-Process` 确认 worker 进程路径是 `python-runtime\python.exe`，不是外部 venv 或系统 Python。
+  - 直接验证 embedded Python 自身：`python.exe -c "import pydantic, fastapi, uvicorn, httpx; print(pydantic.__version__, fastapi.__version__, uvicorn.__version__, httpx.__version__)"` → 输出 `2.13.5 0.141.1 0.53.0 0.28.1`，所有 wheel 标签都是 cp310-cp310-win_amd64。
+- 当前限制：
+  - Publish 大小 767.7 MB（含 WindowsAppSDK 自包含 + .NET runtime + 3932 个 Python 文件 + .pdb 调试符号），用户拿到的 zip 约 380 MB；后续可加 `PublishDebugSymbols=false` 去 pdb 减约 50 MB；Python `Lib/site-packages/` 还可以裁剪（httpx + anyio 在 FastAPI server 里其实只用到 starlette 间接引用）。
+  - 首次 spawn 仍要等 1.5-2 秒（uvicorn 加载），启动时 banner 短暂空白。
+  - 嵌入 Python 不参与 MSBuild restore，每次 Python 小版本升级需要手动重新下载 + 重新 `pip install`。
+  - `[dbg-banner]` / `[dbg-news]` / `ApplyLayoutProfile` log scaffolding 仍未清理（commit `c3a8004` / `66bf828` / `b5a4ee4` 引入），下次稳定版本前需要清理。
+
 ## 2026-09-26 15:51:00 +08:00
 
 - 推送人员：`wonderful-oss`
