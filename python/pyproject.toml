@@ -1,8 +1,13 @@
 [project]
 name = "steamcn-home-content"
 version = "0.1.0"
-requires-python = ">=3.11"
-dependencies = ["pydantic>=2.8,<3"]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.8,<3",
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "httpx[http2]>=0.27,<1",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

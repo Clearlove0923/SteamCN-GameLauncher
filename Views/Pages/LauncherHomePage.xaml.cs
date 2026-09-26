@@ -185,17 +185,21 @@ public sealed partial class LauncherHomePage : Page
     }
 
     /// <summary>
-    /// Pick the ProviderId for the request. Custom manifest may declare a
-    /// stable Python Provider ID (e.g. "kuro-launcher", "hoyoplay-json");
-    /// when empty we fall back to the preview service so the page still
-    /// renders something before the worker is wired up.
+    /// Pick the ProviderId for the request. A value explicitly stored in the
+    /// preset wins. Older presets without that field use the verified AppId
+    /// registry, so upgrading the launcher does not require editing every game.
     /// </summary>
     private static string ResolveProviderId(Models.CustomManifestPreset game)
     {
         var declared = game.HomeContentProviderId?.Trim();
-        return string.IsNullOrEmpty(declared)
-            ? PreviewHomeContentService.ProviderId
-            : declared!;
+        if (!string.IsNullOrEmpty(declared))
+        {
+            return declared;
+        }
+
+        return SupportedGameRegistry.TryGetProviderId(game.AppId, out var providerId)
+            ? providerId
+            : PreviewHomeContentService.ProviderId;
     }
 
     private void HomeDisplayMenuItem_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

@@ -4,11 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\CustomNavigation.Tests\</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Models/AppSettings.cs" Link="Models/AppSettings.cs" />
     <Compile Include="../../Models/AppearanceSettings.cs" Link="Models/AppearanceSettings.cs" />
     <Compile Include="../../Models/Home/HomeLayoutProfile.cs" Link="Models/Home/HomeLayoutProfile.cs" />
+    <Compile Include="../../Models/Home/SupportedGameRegistry.cs" Link="Models/Home/SupportedGameRegistry.cs" />
     <Compile Include="../../Services/SettingsService.cs" Link="Services/SettingsService.cs" />
     <Compile Include="../../Services/CustomManifestService.cs" Link="Services/CustomManifestService.cs" />
   </ItemGroup>

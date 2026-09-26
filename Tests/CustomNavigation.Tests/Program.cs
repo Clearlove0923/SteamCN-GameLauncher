@@ -1,4 +1,5 @@
 using SteamCNGameLauncher.Models;
+using SteamCNGameLauncher.Models.Home;
 using SteamCNGameLauncher.Services;
 
 // All mutations use a uniquely named test file; never load the user's actual settings.
@@ -12,6 +13,12 @@ void Check(bool condition, string message)
 }
 try
 {
+    Check(SupportedGameRegistry.TryGetProviderId("3513350", out var kuroProvider)
+        && kuroProvider == "kuro-launcher", "Wuthering Waves AppId resolves to Kuro provider");
+    Check(SupportedGameRegistry.TryGetProviderId(" 4162040 ", out var hoyoProvider)
+        && hoyoProvider == "hoyoplay-json", "provider lookup trims AppId and resolves HoYoPlay");
+    Check(!SupportedGameRegistry.TryGetProviderId("not-supported", out var unknownProvider)
+        && unknownProvider.Length == 0, "unknown AppId has no implicit provider");
     var store = new SettingsService(settingsPath);
     var service = new CustomManifestService(store);
     Check(service.GetInitialSidebarId() == null && service.GetSidebarItems().Count == 0,

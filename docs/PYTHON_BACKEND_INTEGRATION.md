@@ -5,10 +5,9 @@
 ## 当前状态
 
 - C# DTO、服务接口、传输接口和 JSON 解析入口已经建立。
-- Python Pydantic 模型、Provider 基类、七个 Provider 类和注册表已经建立。
-- Provider 类目前是接口骨架，尚未实现厂商请求与解析。
-- 首页资讯栏已通过 `HomeBannerAndNews` 消费统一 DTO，并由 `IHomeContentService` 提供数据。当前使用
-  `PreviewHomeContentService` 显示接入前的占位内容；接入 Python 后替换服务实现即可，无需修改页面控件。
+- Python Pydantic 模型、Provider 基类、七个 Provider 类和注册表已经建立，已接入的 Provider 使用固定样本测试其请求与解析逻辑。
+- 首页资讯栏已通过 `HomeBannerAndNews` 消费统一 DTO，并由 `IHomeContentService` 提供数据。客户端通过
+  `FastApiHomeContentService` 请求本机 Worker；没有明确配置 Provider 时，会按已验证的 AppID 映射选择 Provider。
 - 截图目录使用独立接口，不属于 `HomeContent`。
 
 ## 固定首页模型
@@ -60,6 +59,23 @@ public interface IHomeContentTransport
 ```
 
 后续可以分别实现 HTTP 聚合服务传输和本机 Python Worker 传输。Python 执行方式、地址和超时不能写进页面 code-behind。
+
+## 内置 Python 运行时
+
+Debug 与发布产物自带 Python，不依赖用户另外安装。运行时来源、版本和 SHA256 固定在
+`scripts/Prepare-PythonRuntime.ps1`，本地缓存位于被 Git 忽略的 `.build/python-runtime`。
+主项目构建会先调用该脚本检查运行时及 `fastapi`、`httpx`、`pydantic`、`uvicorn`；缺失时下载
+`python-build-standalone` 归档、校验摘要，并依据 `python/pyproject.toml` 安装 Worker 及依赖。
+构建完成后，运行时复制到产物的 `python-runtime` 子目录。
+
+手动准备或修复运行时：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\Prepare-PythonRuntime.ps1
+```
+
+`PythonWorkerSpawner` 的解析顺序为：用户显式路径、产物内置运行时、PATH、常见安装目录。
+0 字节文件及 WindowsApps 的 Microsoft Store 执行别名会被拒绝，避免 Worker 以 9009 退出。
 
 ## Provider 结构
 

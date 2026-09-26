@@ -285,7 +285,7 @@ public sealed class PythonWorkerSpawner : IDisposable
     {
         // 1) 用户显式覆盖。
         if (!string.IsNullOrWhiteSpace(_settings.PythonExecutablePath) &&
-            File.Exists(_settings.PythonExecutablePath))
+            IsUsablePythonExecutable(_settings.PythonExecutablePath))
         {
             return _settings.PythonExecutablePath;
         }
@@ -298,7 +298,7 @@ public sealed class PythonWorkerSpawner : IDisposable
         //    （WinUI3 下 <Content Include="python-runtime/**/*"> 会被 PRI 生成器当成语言限定符处理，
         //    触发几百条 PRI249 warning；<None Include> 默认不复制，所以走自定义 Target 最稳。）
         var embedded = Path.Combine(AppContext.BaseDirectory, "python-runtime", "python.exe");
-        if (File.Exists(embedded))
+        if (IsUsablePythonExecutable(embedded))
         {
             _logService.AddLog($"[worker] using embedded python at {embedded}");
             return embedded;
@@ -314,7 +314,7 @@ public sealed class PythonWorkerSpawner : IDisposable
                 try
                 {
                     var full = Path.Combine(dir, fileName);
-                    if (File.Exists(full)) return full;
+                    if (IsUsablePythonExecutable(full)) return full;
                 }
                 catch
                 {
@@ -353,7 +353,7 @@ public sealed class PythonWorkerSpawner : IDisposable
         {
             try
             {
-                if (File.Exists(c)) return c;
+                if (IsUsablePythonExecutable(c)) return c;
             }
             catch
             {
@@ -361,6 +361,31 @@ public sealed class PythonWorkerSpawner : IDisposable
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Windows may put zero-byte python.exe aliases in WindowsApps even when no
+    /// Python runtime is installed. Process.Start then exits with code 9009.
+    /// Reject those aliases and empty/corrupt files before spawning the Worker.
+    /// </summary>
+    private static bool IsUsablePythonExecutable(string path)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (fullPath.Contains(
+                    $"{Path.DirectorySeparatorChar}Microsoft{Path.DirectorySeparatorChar}WindowsApps{Path.DirectorySeparatorChar}",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return File.Exists(fullPath) && new FileInfo(fullPath).Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

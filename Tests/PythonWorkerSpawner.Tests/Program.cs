@@ -20,6 +20,7 @@ public class Program
         await Run("Ctor_NullLogService_Throws", () => Task.FromResult(Ctor_NullLogService_Throws()));
         await Run("StartAsync_AlreadyListening_ReturnsTrue_NoSpawn", StartAsync_AlreadyListening_ReturnsTrue_NoSpawn);
         await Run("StartAsync_PythonNotFound_ReturnsFalse", StartAsync_PythonNotFound_ReturnsFalse);
+        await Run("StartAsync_ZeroBytePythonAlias_ReturnsFalse", StartAsync_ZeroBytePythonAlias_ReturnsFalse);
         await Run("StartAsync_CmdExitsImmediately_ReturnsFalse", StartAsync_CmdExitsImmediately_ReturnsFalse);
         await Run("Stop_NullProcess_DoesNotThrow", () => Task.FromResult(Stop_NullProcess_DoesNotThrow()));
         await Run("StartAsync_DisabledByFlag_ReturnsFalseQuickly", StartAsync_DisabledByFlag_ReturnsFalseQuickly);
@@ -125,6 +126,30 @@ public class Program
         var ok = await spawner.StartAsync();
         if (ok) throw new Exception("StartAsync should return false when python.exe missing");
         if (spawner.OwnsProcess) throw new Exception("OwnsProcess should be false");
+    }
+
+    // WindowsApps 会在未安装 Python 时留下 0 字节 python.exe；不得把它当成可用运行时。
+    private static async Task StartAsync_ZeroBytePythonAlias_ReturnsFalse()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"python-alias-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        var alias = Path.Combine(tempRoot, "python.exe");
+        await File.WriteAllBytesAsync(alias, Array.Empty<byte>());
+        try
+        {
+            var settings = MakeSettings(18796);
+            settings.PythonExecutablePath = alias;
+            settings.PythonWorkerStartupTimeoutSeconds = 1;
+            using var spawner = new PythonWorkerSpawner(settings, LogService.Instance);
+            var ok = await spawner.StartAsync();
+            if (ok) throw new Exception("StartAsync should reject a zero-byte python.exe alias");
+            if (spawner.OwnsProcess) throw new Exception("OwnsProcess should remain false");
+        }
+        finally
+        {
+            File.Delete(alias);
+            Directory.Delete(tempRoot);
+        }
     }
 
     // ===== 5. StartAsync 进程秒退 → 返回 false =====

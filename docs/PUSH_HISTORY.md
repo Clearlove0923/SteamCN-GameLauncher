@@ -2,6 +2,25 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 20:25:18 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`Refactored_Version`
+- 推送提交：`fix(home): 修复 Python Worker 启动与旧配置 Provider 解析`
+- 实现内容：
+  - 新增 `scripts/Prepare-PythonRuntime.ps1`，固定下载并校验 python-build-standalone 3.10.21 的 SHA256，在 `.build/python-runtime` 准备独立运行时，并依据 `python/pyproject.toml` 安装 Worker 所需的 FastAPI、HTTPX、Pydantic 和 Uvicorn；主项目 Build/Publish 自动检查运行时后再复制到产物，避免依赖 Git 忽略的 `bin/python-runtime` 手工目录。
+  - `PythonWorkerSpawner` 拒绝 0 字节文件和 WindowsApps 的 Microsoft Store Python 执行别名，避免未安装系统 Python 时错误启动占位程序并以 9009 退出。
+  - `SupportedGameRegistry` 同时维护已验证 AppID 与稳定 Provider ID；旧游戏配置没有 `HomeContentProviderId` 时，首页按 AppID 自动选择 Provider，用户显式配置仍具有最高优先级。
+  - 补齐 `python/pyproject.toml` 的实际运行依赖；清理 pip 构建产生的源码目录；更新 Python 接入文档；把 Worker 测试目标框架修正为 .NET 8，并增加执行别名与 Provider 映射回归测试。
+- 验证结果：
+  - 远程刷新后，本地基线 `dd74038af68fb474f2f9b962fbaee1bff5140dbf` 与 `origin/Refactored_Version` 完全一致（ahead/behind `0/0`）；修复后的 Debug 产物由该最新基线和本条变更构建。
+  - `dotnet build SteamCN-GameLauncher.sln --configuration Debug -p:Platform=x64` 成功，0 错误、6 个既有 CS8625 警告，产物位于规定的 `bin/x64/Debug/net8.0-windows10.0.19041.0`。
+  - `PythonWorkerSpawner.Tests` 11/11 通过；`CustomNavigation.Tests` 23/23 通过。
+  - 真实 Worker `/healthz` 返回 `ok`；鸣潮 `kuro-launcher` 返回背景视频、背景图、6 个 Banner、7 条资讯且 0 错误；燕云十六声 `netease-static-cms` 返回背景图、4 个 Banner、16 条资讯且 0 错误。
+  - 启动新 Debug EXE 后，日志确认使用产物内 `python-runtime/python.exe`，Worker 监听 8765，旧鸣潮配置自动解析为 `kuro-launcher` 并在 UI 收到 `banners=6 news=7`。
+- 当前限制：
+  - 首次构建需要联网下载约 39.5 MB 的固定 Python 归档及 Python wheels；之后复用 `.build` 缓存。HoYoPlay Provider 当前只提供背景，Banner 与资讯仍待接入其对应内容接口。
+
 ## 2026-09-26 19:28:00 +08:00
 
 - 推送人员：`wonderful-oss`
