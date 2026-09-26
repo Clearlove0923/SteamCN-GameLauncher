@@ -92,44 +92,46 @@ if ($runtimeReady -and $installedFingerprint -eq $sourceFingerprint) {
     exit 0
 }
 
-New-Item -ItemType Directory -Path $downloadRoot -Force | Out-Null
-if (Test-Path -LiteralPath $archivePath) {
+if (-not $runtimeReady) {
+    New-Item -ItemType Directory -Path $downloadRoot -Force | Out-Null
+    if (Test-Path -LiteralPath $archivePath) {
+        $actualHash = Get-Sha256 $archivePath
+        if ($actualHash -ne $archiveSha256) {
+            Remove-Item -LiteralPath $archivePath -Force
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $archivePath)) {
+        Write-Output "Downloading embedded Python $archiveName ..."
+        Invoke-WebRequest -Uri $archiveUrl -OutFile $archivePath -UseBasicParsing
+    }
+
     $actualHash = Get-Sha256 $archivePath
     if ($actualHash -ne $archiveSha256) {
-        Remove-Item -LiteralPath $archivePath -Force
+        throw "Embedded Python SHA256 mismatch. Expected $archiveSha256, got $actualHash."
     }
-}
 
-if (-not (Test-Path -LiteralPath $archivePath)) {
-    Write-Output "Downloading embedded Python $archiveName ..."
-    Invoke-WebRequest -Uri $archiveUrl -OutFile $archivePath -UseBasicParsing
-}
+    $stagingRoot = Join-Path $buildRoot ('python-runtime-staging-' + [Guid]::NewGuid().ToString('N'))
+    Assert-ChildPath $stagingRoot $buildRoot
+    Assert-ChildPath $runtimeRoot $buildRoot
+    try {
+        New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
+        & tar.exe -xzf $archivePath -C $stagingRoot
+        if ($LASTEXITCODE -ne 0) { throw "tar.exe failed with exit code $LASTEXITCODE" }
 
-$actualHash = Get-Sha256 $archivePath
-if ($actualHash -ne $archiveSha256) {
-    throw "Embedded Python SHA256 mismatch. Expected $archiveSha256, got $actualHash."
-}
+        $extractedPython = Get-ChildItem -LiteralPath $stagingRoot -Recurse -Filter python.exe -File |
+            Select-Object -First 1
+        if (-not $extractedPython) { throw 'The embedded Python archive does not contain python.exe.' }
 
-$stagingRoot = Join-Path $buildRoot ('python-runtime-staging-' + [Guid]::NewGuid().ToString('N'))
-Assert-ChildPath $stagingRoot $buildRoot
-Assert-ChildPath $runtimeRoot $buildRoot
-try {
-    New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
-    & tar.exe -xzf $archivePath -C $stagingRoot
-    if ($LASTEXITCODE -ne 0) { throw "tar.exe failed with exit code $LASTEXITCODE" }
-
-    $extractedPython = Get-ChildItem -LiteralPath $stagingRoot -Recurse -Filter python.exe -File |
-        Select-Object -First 1
-    if (-not $extractedPython) { throw 'The embedded Python archive does not contain python.exe.' }
-
-    if (Test-Path -LiteralPath $runtimeRoot) {
-        Remove-Item -LiteralPath $runtimeRoot -Recurse -Force
+        if (Test-Path -LiteralPath $runtimeRoot) {
+            Remove-Item -LiteralPath $runtimeRoot -Recurse -Force
+        }
+        Move-Item -LiteralPath $extractedPython.Directory.FullName -Destination $runtimeRoot
     }
-    Move-Item -LiteralPath $extractedPython.Directory.FullName -Destination $runtimeRoot
-}
-finally {
-    if (Test-Path -LiteralPath $stagingRoot) {
-        Remove-Item -LiteralPath $stagingRoot -Recurse -Force
+    finally {
+        if (Test-Path -LiteralPath $stagingRoot) {
+            Remove-Item -LiteralPath $stagingRoot -Recurse -Force
+        }
     }
 }
 

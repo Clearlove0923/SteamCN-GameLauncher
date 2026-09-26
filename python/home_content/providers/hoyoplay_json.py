@@ -42,11 +42,20 @@ fall back to its static background.
 from __future__ import annotations
 
 import logging
+import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 
 import httpx
 
-from ..models import HomeBackground, HomeContent, HomeContentError, HomeContentRequest
+from ..models import (
+    HomeBackground,
+    HomeBanner,
+    HomeContent,
+    HomeContentError,
+    HomeContentRequest,
+    HomeNewsItem,
+)
 from .base import HomeContentProvider
 
 logger = logging.getLogger("home_content.providers.hoyoplay_json")
@@ -110,6 +119,7 @@ class HoYoPlayJsonProvider(HomeContentProvider):
             logger.warning("hoyoplay primary fetch failed: %s", error)
             raise
 
+        game_entry = _pick_game_entry(payload, game_biz)
         background = _pick_background(payload, game_biz)
         if background is None:
             errors.append(HomeContentError(
@@ -118,14 +128,43 @@ class HoYoPlayJsonProvider(HomeContentProvider):
                 recoverable=True,
             ))
 
-        # The primary endpoint exposes backgrounds only; banner and news
-        # come from the legacy content API and are intentionally not
-        # wired here yet. Future work: switch to the per-game legacy
-        # endpoint when banners are required.
-        return HomeContent(background=background, banners=[], news=[], update_info=None)
+        banners: list[HomeBanner] = []
+        news: list[HomeNewsItem] = []
+        upstream_game_id = str((game_entry or {}).get("game", {}).get("id", "")).strip()
+        if upstream_game_id:
+            try:
+                content_payload = await self._fetch_json(
+                    f"{base}/getGameContent",
+                    launcher_id=launcher_id,
+                    language=language,
+                    extra_params={"game_id": upstream_game_id},
+                )
+                content = content_payload.get("data", {}).get("content", {})
+                if isinstance(content, dict):
+                    banners = _build_banners(content)
+                    news = _build_news_items(content)
+            except (httpx.HTTPError, ValueError) as error:
+                # Background and content are independent upstream surfaces. Keep the
+                # working background when the secondary content endpoint is unavailable.
+                logger.warning("hoyoplay content fetch failed: %s", error)
 
-    async def _fetch_json(self, url: str, *, launcher_id: str, language: str) -> dict[str, Any]:
+        return HomeContent(
+            background=background,
+            banners=banners,
+            news=news,
+            update_info=None,
+        )
+
+    async def _fetch_json(
+        self,
+        url: str,
+        *,
+        launcher_id: str,
+        language: str,
+        extra_params: Optional[dict[str, str]] = None,
+    ) -> dict[str, Any]:
         params = {"launcher_id": launcher_id, "language": language}
+        params.update(extra_params or {})
         if self._client_factory is not None:
             response = await self._client_factory.get(url, params=params)
         else:
@@ -143,11 +182,10 @@ class HoYoPlayJsonProvider(HomeContentProvider):
         return data
 
 
-def _pick_background(payload: dict[str, Any], game_biz: str) -> Optional[HomeBackground]:
+def _pick_game_entry(payload: dict[str, Any], game_biz: str) -> Optional[dict[str, Any]]:
     games: Iterable[dict[str, Any]] = (
         payload.get("data", {}).get("game_info_list", []) or []
     )
-
     entry = next(
         (g for g in games if str(g.get("game", {}).get("biz", "")).lower() == game_biz.lower()),
         None,
@@ -156,6 +194,11 @@ def _pick_background(payload: dict[str, Any], game_biz: str) -> Optional[HomeBac
         # Caller did not pin a game (no game_id -> no biz mapping); use
         # the first available entry so the client still shows something.
         entry = games[0]
+    return entry
+
+
+def _pick_background(payload: dict[str, Any], game_biz: str) -> Optional[HomeBackground]:
+    entry = _pick_game_entry(payload, game_biz)
     if entry is None:
         return None
 
@@ -190,6 +233,64 @@ def _pick_background(payload: dict[str, Any], game_biz: str) -> Optional[HomeBac
     )
 
 
+def _build_banners(content: dict[str, Any]) -> list[HomeBanner]:
+    result: list[HomeBanner] = []
+    for index, row in enumerate(content.get("banners") or []):
+        if not isinstance(row, dict):
+            continue
+        image = row.get("image") or {}
+        image_url = image.get("url") if isinstance(image, dict) else None
+        if not _allowed(image_url):
+            continue
+        target_url = image.get("link") if isinstance(image, dict) else None
+        result.append(HomeBanner(
+            id=f"hoyo-banner-{row.get('id') or index}",
+            title=str(row.get("title") or "") or None,
+            image_url=image_url,
+            target_url=target_url if _allowed(target_url) else None,
+        ))
+    return result
+
+
+def _build_news_items(content: dict[str, Any]) -> list[HomeNewsItem]:
+    category_map = {
+        "POST_TYPE_ACTIVITY": "活动",
+        "POST_TYPE_ANNOUNCE": "公告",
+        "POST_TYPE_INFO": "资讯",
+    }
+    result: list[HomeNewsItem] = []
+    for index, row in enumerate(content.get("posts") or []):
+        if not isinstance(row, dict):
+            continue
+        title = str(row.get("title") or "").strip()
+        if not title:
+            continue
+        target_url = row.get("link")
+        raw_type = str(row.get("type") or "").strip()
+        result.append(HomeNewsItem(
+            id=f"hoyo-post-{row.get('id') or index}",
+            title=title,
+            category=category_map.get(raw_type, raw_type or "资讯"),
+            target_url=target_url if _allowed(target_url) else None,
+            published_at=_parse_mmdd(row.get("date")),
+        ))
+    return result
+
+
+def _parse_mmdd(value: Any, *, now: Optional[datetime] = None) -> Optional[datetime]:
+    match = re.fullmatch(r"\s*(\d{1,2})/(\d{1,2})\s*", str(value or ""))
+    if match is None:
+        return None
+    reference = now or datetime.now(timezone.utc)
+    try:
+        parsed = datetime(reference.year, int(match.group(1)), int(match.group(2)), tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    if parsed - reference > timedelta(days=45):
+        parsed = parsed.replace(year=reference.year - 1)
+    return parsed
+
+
 def _first_allowed(urls: Iterable[Optional[str]]) -> Optional[str]:
     for url in urls:
         if _allowed(url):
@@ -201,7 +302,7 @@ def _allowed(url: Optional[str]) -> bool:
     if not url:
         return False
     lowered = url.lower()
-    if not (lowered.startswith("http://") or lowered.startswith("https://")):
+    if not lowered.startswith("https://"):
         return False
     host = lowered.split("//", 1)[1].split("/", 1)[0]
     return any(host.endswith(suffix) for suffix in ALLOWED_HOST_SUFFIXES)

@@ -2,6 +2,25 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 20:56:24 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`Refactored_Version`
+- 推送提交：`fix(home): 接入 HoYoPlay 轮播图与公告资讯`
+- 实现内容：
+  - 排查确认 WinUI 轮播与资讯控件工作正常，空白的直接原因是 `HoYoPlayJsonProvider` 只调用 `getAllGameBasicInfo` 获取背景，并始终返回空的 `banners/news`。
+  - Provider 在选定游戏后使用上游 `game.id` 请求 HoYoPlay `getGameContent`，将 `banners[].image` 转换为统一轮播模型，将 `posts[]` 的 `POST_TYPE_ACTIVITY / POST_TYPE_ANNOUNCE / POST_TYPE_INFO` 转换为“活动 / 公告 / 资讯”。内容接口单独失败时继续保留已经取得的背景。
+  - 远程图片和点击链接只接受已知米哈游域名的 HTTPS URL；日期 `MM/dd` 转换为 UTC，并处理跨年内容；新增绝区零国服脱敏固定样本和解析测试。
+  - 修复 `Prepare-PythonRuntime.ps1` 的指纹更新分支：运行时健康时只重装本地 Worker 包，不再错误地先清空完整运行时，从而避免 Provider 更新后 FastAPI 等依赖丢失。
+  - 更新 `docs/HOYOPLAY_PROVIDER.md`，记录 2026-09-26 实测的数据源、字段映射、降级方式和当前限制。
+- 验证结果：
+  - 绝区零官方实时接口返回背景动画、6 张轮播图、9 条内容，分类为资讯 4 / 公告 3 / 活动 2，统一 envelope 错误为 0。
+  - 脱敏样本解析断言通过：3 张轮播图、3 条资讯、三个分类、日期均有效；Python `compileall` 通过。
+  - `dotnet build SteamCN-GameLauncher.sln --configuration Debug -p:Platform=x64` 成功，0 错误、0 警告。
+  - 启动 Debug EXE 后日志确认 `HomeBannerAndNews.SetContent` 收到 `banners=6 news=9`，建立资讯 / 公告 / 活动三个分组，`SelectedNewsItems=4`，`BannerFlipView.Visibility=Visible`。
+- 当前限制：
+  - HoYoPlay `updateInfo` 尚未接入；本次实时验证覆盖绝区零国服，其他 HoYoPlay 游戏共用相同结构，但新增区域或游戏时仍应保存脱敏样本验证。
+
 ## 2026-09-26 20:33:11 +08:00
 
 - 推送人员：`Violet0923`

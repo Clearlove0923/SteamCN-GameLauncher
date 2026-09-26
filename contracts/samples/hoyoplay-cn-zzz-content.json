@@ -1,0 +1,60 @@
+{
+  "retcode": 0,
+  "message": "OK",
+  "data": {
+    "content": {
+      "game": { "id": "x6znKlJ0xK", "biz": "nap_cn" },
+      "language": "zh-cn",
+      "banners": [
+        {
+          "id": "sample-banner-1",
+          "image": {
+            "url": "https://launcher-webstatic.mihoyo.com/launcher-public/sample/banner-1.png",
+            "link": "https://www.miyoushe.com/zzz/article/10001",
+            "login_state_in_link": false
+          }
+        },
+        {
+          "id": "sample-banner-2",
+          "image": {
+            "url": "https://launcher-webstatic.mihoyo.com/launcher-public/sample/banner-2.png",
+            "link": "https://www.miyoushe.com/zzz/article/10002",
+            "login_state_in_link": false
+          }
+        },
+        {
+          "id": "sample-banner-3",
+          "image": {
+            "url": "https://launcher-webstatic.mihoyo.com/launcher-public/sample/banner-3.png",
+            "link": "https://www.miyoushe.com/zzz/article/10003",
+            "login_state_in_link": false
+          }
+        }
+      ],
+      "posts": [
+        {
+          "id": "sample-post-activity",
+          "type": "POST_TYPE_ACTIVITY",
+          "title": "活动示例",
+          "link": "https://www.miyoushe.com/zzz/article/20001",
+          "date": "09/20"
+        },
+        {
+          "id": "sample-post-announce",
+          "type": "POST_TYPE_ANNOUNCE",
+          "title": "公告示例",
+          "link": "https://www.miyoushe.com/zzz/article/20002",
+          "date": "09/19"
+        },
+        {
+          "id": "sample-post-info",
+          "type": "POST_TYPE_INFO",
+          "title": "资讯示例",
+          "link": "https://www.miyoushe.com/zzz/article/20003",
+          "date": "09/18"
+        }
+      ],
+      "social_media_list": []
+    }
+  }
+}

@@ -14,6 +14,7 @@ preference deterministically.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -24,16 +25,24 @@ from home_content.providers.hoyoplay_json import (
     ALLOWED_HOST_SUFFIXES,
     HoYoPlayJsonProvider,
     _allowed,
+    _build_banners,
+    _build_news_items,
     _game_biz_from_game_id,
+    _parse_mmdd,
     _pick_background,
 )
 from home_content.models import HomeContentRequest
 
 SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "hoyoplay-cn-launcher-info.json"
+CONTENT_SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "hoyoplay-cn-zzz-content.json"
 
 
 def _load_fixture() -> dict[str, Any]:
     return json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
+
+
+def _load_content_fixture() -> dict[str, Any]:
+    return json.loads(CONTENT_SAMPLE_PATH.read_text(encoding="utf-8"))
 
 
 def test_steam_app_ids_map_to_hoyoplay_business_ids() -> None:
@@ -53,10 +62,19 @@ def _request(game_id: str, options: dict[str, Any] | None = None) -> HomeContent
     )
 
 
-def _build_provider(fixture: dict[str, Any]) -> HoYoPlayJsonProvider:
+def _build_provider(
+    fixture: dict[str, Any],
+    content_fixture: dict[str, Any] | None = None,
+) -> HoYoPlayJsonProvider:
     """Build a Provider backed by an httpx MockTransport serving the fixture."""
 
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/getGameContent"):
+            payload = content_fixture or {
+                "retcode": 0,
+                "data": {"content": {"banners": [], "posts": []}},
+            }
+            return httpx.Response(200, json=payload)
         return httpx.Response(200, json=fixture)
 
     transport = httpx.MockTransport(handler)
@@ -77,6 +95,24 @@ def test_allowed_host_suffixes_only_known_cdn() -> None:
     assert _allowed("not-a-url") is False
     assert _allowed(None) is False
     assert _allowed("") is False
+    assert _allowed("http://launcher-webstatic.mihoyo.com/insecure.webp") is False
+
+
+def test_content_fixture_builds_banners_and_three_news_categories() -> None:
+    content = _load_content_fixture()["data"]["content"]
+    banners = _build_banners(content)
+    news = _build_news_items(content)
+    assert len(banners) == 3
+    assert all(item.image_url.startswith("https://") for item in banners)
+    assert len(news) == 3
+    assert {item.category for item in news} == {"活动", "公告", "资讯"}
+    assert all(item.published_at is not None for item in news)
+
+
+def test_parse_mmdd_uses_previous_year_for_future_december() -> None:
+    now = datetime(2026, 1, 5, tzinfo=timezone.utc)
+    assert _parse_mmdd("12/20", now=now) == datetime(2025, 12, 20, tzinfo=timezone.utc)
+    assert _parse_mmdd("invalid", now=now) is None
 
 
 def test_pick_background_prefers_video_when_available() -> None:
@@ -170,6 +206,19 @@ async def test_provider_fetch_returns_video_for_nap_cn() -> None:
     assert result.background.video_url is not None
     assert result.background.video_url.endswith(".webm")
     assert any(result.background.video_url.endswith(s) or result.background.video_url.endswith(".mp4") for s in (".webm", ".mp4"))
+
+
+@pytest.mark.asyncio
+async def test_provider_fetch_returns_zzz_banners_and_news() -> None:
+    provider, client = _build_provider(_load_fixture(), _load_content_fixture())
+    try:
+        result = await provider.fetch(_request("4162040"))
+    finally:
+        await client.aclose()
+
+    assert result.background is not None
+    assert len(result.banners) == 3
+    assert len(result.news) == 3
 
 
 @pytest.mark.asyncio

@@ -14,6 +14,8 @@
 - **采样 launcher**:`jGHBHlcOq1`
 - **脱敏样本**:`contracts/samples/hoyoplay-cn-launcher-info.json`
   (URL 中的 32 字符 hex hash 全部替换为 `HASH32`)
+- **内容样本**:`contracts/samples/hoyoplay-cn-zzz-content.json`
+  (2026-09-26 验证绝区零 `getGameContent`;保留字段结构并替换资源 URL 和文章编号)
 
 ## 主端点
 
@@ -111,18 +113,20 @@ C# 客户端降级到静态背景或上次成功缓存。
 FastAPI 路由层将所有上述异常转换成 `HomeContentEnvelope { content: 空, errors: [...] }` 返回,
 HTTP 状态码仍是 200。C# 客户端检查 `Errors` 决定是否使用上次缓存。
 
-**长期回退**:为每个游戏接入老的 `<host>/mdk/launcher/api/content` 端点(可返回 banner / post),
-补齐 Banner 与 News 数据。该端点同样是非公开内部接口,需要按游戏单独保存脱敏样本。
+背景成功后,Provider 从选中的 `game_info_list[].game.id` 调用同一 HoYoPlay 服务的
+`getGameContent` 端点。`data.content.banners` 转换为轮播图，`posts` 的
+`POST_TYPE_ACTIVITY / POST_TYPE_ANNOUNCE / POST_TYPE_INFO` 分别转换为“活动 / 公告 / 资讯”。
+内容端点失败时保留已经取得的背景并返回空内容，避免单一来源失败拖垮整个首页。
 
 ## 测试
 
-- **Provider 单元测试**:`python/tests/test_hoyoplay_provider.py`(pytest,10 项)
+- **Provider 单元测试**:`python/tests/test_hoyoplay_provider.py`(pytest,14 项)
 - **HTTP 端到端**:`Tests/HomeContentE2E.Tests/`(dotnet,12 项)— 调 `/v1/home-content`
   并断言 schemaVersion / providerId / background 字段
 
 ## 已知限制
 
-- 当前 Provider 只暴露背景,**不返回 banner / news / updateInfo**(主端点不提供)
-- 老的 content 端点补齐需要按游戏单独抓样本和验证
+- `updateInfo` 尚未接入
+- 当前内容端点已使用绝区零国服实测；其他 HoYo 游戏继续沿用相同结构，但新增区域或游戏时仍需保存脱敏样本验证
 - URL 域名白名单是手工维护;新增 CDN 域名需要更新 `ALLOWED_HOST_SUFFIXES`
 - OS 端点未单独采样,需要使用国际服启动器再做一次样本验证
