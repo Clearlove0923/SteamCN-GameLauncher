@@ -2,6 +2,20 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 20:28:49 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`Refactored_Version`
+- 推送提交：`fix(home): 使用 Steam AppID 标识首页游戏`
+- 实现内容：
+  - 首页请求的 `gameId` 改为跨设备稳定的 Steam AppID，不再发送本机随机生成的预设 GUID，使同一 Provider 能准确区分不同游戏。
+  - HoYoPlay Provider 同时支持 Steam AppID 与历史业务前缀映射：`4162040` 对应绝区零 `nap_cn`，`1671200` 对应崩坏 3 `bh3_cn`；未知标识仍保留原有回退行为。
+- 验证结果：
+  - 内置 Python 直接断言 Steam AppID、首尾空格与未知值三种映射全部通过。
+  - `dotnet build SteamCN-GameLauncher.sln --configuration Debug -p:Platform=x64` 成功，0 错误、6 个既有 CS8625 警告。
+- 当前限制：
+  - HoYoPlay Provider 当前只消费背景接口；其 Banner 与资讯内容仍未接入。
+
 ## 2026-09-26 20:25:18 +08:00
 
 - 推送人员：`Violet0923`

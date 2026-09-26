@@ -155,7 +155,9 @@ public sealed partial class LauncherHomePage : Page
         {
             var result = await _homeContentService.GetAsync(new HomeContentRequest
             {
-                GameId = game.Id,
+                // Python Provider 需要来源可识别的稳定游戏标识。preset.Id 是本机随机 GUID，
+                // 无法用于区分同一厂商的不同游戏；Steam AppID 才能跨设备稳定映射。
+                GameId = game.AppId.Trim(),
                 ProviderId = ResolveProviderId(game),
                 Locale = "zh-CN"
             }, _homeContentCancellation.Token);

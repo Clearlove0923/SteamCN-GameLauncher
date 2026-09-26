@@ -212,15 +212,17 @@ def _default_launcher_id(region: str) -> str:
 
 
 def _game_biz_from_game_id(game_id: str) -> str:
-    """Map a C# CustomManifestPreset.Id to a HoYoPlay ``biz`` value.
+    """Map a stable game identifier to a HoYoPlay ``biz`` value.
 
-    The mapping is intentionally tolerant: when the game id does not
-    carry a recognised prefix the empty string is returned and the
-    provider falls back to the first available game.
+    C# sends the Steam AppID. Provider callers may also use the historical
+    HoYo prefix, so both forms remain supported. Unknown identifiers return
+    an empty value and the provider falls back to the first available game.
     """
 
     normalized = (game_id or "").strip().lower()
     mapping = {
+        "1671200": "bh3_cn",
+        "4162040": "nap_cn",
         "bh3": "bh3_cn",
         "hk4e": "hk4e_cn",
         "hkrpg": "hkrpg_cn",

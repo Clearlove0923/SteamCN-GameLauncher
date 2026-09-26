@@ -24,6 +24,7 @@ from home_content.providers.hoyoplay_json import (
     ALLOWED_HOST_SUFFIXES,
     HoYoPlayJsonProvider,
     _allowed,
+    _game_biz_from_game_id,
     _pick_background,
 )
 from home_content.models import HomeContentRequest
@@ -33,6 +34,12 @@ SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "h
 
 def _load_fixture() -> dict[str, Any]:
     return json.loads(SAMPLE_PATH.read_text(encoding="utf-8"))
+
+
+def test_steam_app_ids_map_to_hoyoplay_business_ids() -> None:
+    assert _game_biz_from_game_id("1671200") == "bh3_cn"
+    assert _game_biz_from_game_id(" 4162040 ") == "nap_cn"
+    assert _game_biz_from_game_id("unknown") == ""
 
 
 def _request(game_id: str, options: dict[str, Any] | None = None) -> HomeContentRequest:
