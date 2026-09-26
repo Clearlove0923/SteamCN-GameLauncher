@@ -2,6 +2,20 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 20:32:08 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`Refactored_Version`
+- 推送提交：`fix(build): 按 Python 源码指纹刷新内置 Worker`
+- 实现内容：
+  - `Prepare-PythonRuntime.ps1` 对 `python/pyproject.toml` 与 `python/home_content/**/*.py` 生成确定性 SHA256 指纹，并写入内置运行时；指纹变化时强制重装项目包，依赖未变化时使用 `--no-deps`，避免构建继续复制旧 Provider。
+  - 构建使用 `--no-build-isolation` 复用运行时已有的 setuptools，源码更新不需要再次访问 PyPI；导入检查同时覆盖 `home_content` 与四项运行依赖。
+- 验证结果：
+  - 首次运行根据新指纹重装 Worker 后，第二次运行直接输出 `Embedded Python is ready`，未重复安装。
+  - 清空 `PYTHONPATH` 后从 `.build/python-runtime` 导入已安装的 HoYoPlay Provider，`4162040 -> nap_cn` 断言通过，证明内置包已同步到最新源码。
+- 当前限制：
+  - 全新环境第一次准备运行时仍需联网下载固定 Python 归档和 wheels；后续源码改动只重装本地项目包。
+
 ## 2026-09-26 20:28:49 +08:00
 
 - 推送人员：`Violet0923`

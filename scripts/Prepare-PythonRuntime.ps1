@@ -12,6 +12,7 @@ $archiveUrl = 'https://github.com/astral-sh/python-build-standalone/releases/dow
 $archiveSha256 = 'fac843934a3ec32914fda4902f7b4d291e52dceed27ce5a944f4492098c96c05'
 $pythonProject = Join-Path $repoRoot 'python'
 $pythonExe = Join-Path $runtimeRoot 'python.exe'
+$sourceStampPath = Join-Path $runtimeRoot '.steamcn-home-content-source.sha256'
 
 function Assert-ChildPath([string]$Path, [string]$Parent) {
     $resolvedPath = [IO.Path]::GetFullPath($Path).TrimEnd('\')
@@ -23,8 +24,34 @@ function Assert-ChildPath([string]$Path, [string]$Parent) {
 
 function Test-Runtime([string]$Executable) {
     if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) { return $false }
-    & $Executable -c 'import fastapi, httpx, pydantic, uvicorn' 2>$null
-    return $LASTEXITCODE -eq 0
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'SilentlyContinue'
+        & $Executable -c 'import fastapi, home_content, httpx, pydantic, uvicorn' 2>$null
+        return $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
+}
+
+function Get-PythonSourceFingerprint {
+    $sourceFiles = @(
+        Get-Item -LiteralPath (Join-Path $pythonProject 'pyproject.toml')
+        Get-ChildItem -LiteralPath (Join-Path $pythonProject 'home_content') -Recurse -File -Filter '*.py'
+    ) | Sort-Object FullName
+    $manifest = ($sourceFiles | ForEach-Object {
+        '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(),
+            $_.FullName.Substring($pythonProject.Length).TrimStart('\')
+    }) -join "`n"
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($manifest))
+        return ([BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
 }
 
 function Remove-PythonBuildArtifacts {
@@ -41,8 +68,13 @@ function Remove-PythonBuildArtifacts {
 
 # A previous interrupted/local pip build may have left packaging metadata in source.
 Remove-PythonBuildArtifacts
+$sourceFingerprint = Get-PythonSourceFingerprint
+$installedFingerprint = if (Test-Path -LiteralPath $sourceStampPath) {
+    (Get-Content -LiteralPath $sourceStampPath -Raw).Trim()
+} else { '' }
+$runtimeReady = Test-Runtime $pythonExe
 
-if (Test-Runtime $pythonExe) {
+if ($runtimeReady -and $installedFingerprint -eq $sourceFingerprint) {
     Write-Output "Embedded Python is ready: $pythonExe"
     exit 0
 }
@@ -89,11 +121,17 @@ finally {
 }
 
 Write-Output 'Installing Python Worker and its declared dependencies ...'
-& $pythonExe -m pip install --disable-pip-version-check --no-warn-script-location --upgrade $pythonProject
+if ($runtimeReady) {
+    & $pythonExe -m pip install --disable-pip-version-check --no-warn-script-location --no-build-isolation --no-deps --force-reinstall $pythonProject
+}
+else {
+    & $pythonExe -m pip install --disable-pip-version-check --no-warn-script-location --no-build-isolation --upgrade $pythonProject
+}
 if ($LASTEXITCODE -ne 0) { throw "pip failed with exit code $LASTEXITCODE" }
 Remove-PythonBuildArtifacts
 
 if (-not (Test-Runtime $pythonExe)) {
     throw 'Embedded Python dependency verification failed.'
 }
+[IO.File]::WriteAllText($sourceStampPath, "$sourceFingerprint`n", [Text.UTF8Encoding]::new($false))
 Write-Output "Embedded Python is ready: $pythonExe"
