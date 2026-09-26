@@ -2,6 +2,20 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 19:28:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`python_preview`
+- 推送提交：`fix(home-page): 无游戏 / 未适配 AppId 时隐藏资讯 + 轮播 UI`
+- 实现内容：
+  - `Views/Pages/LauncherHomePage.xaml.cs`：`OnNavigatedTo` 的 else 分支（`_currentGame == null`）现在把 `NewsPanel.Visibility` 设为 `Collapsed`，并清空 `_currentHomeContent` / `HomeContentPanel.SetContent(null)`，避免空 "资讯" tab header + 空轮播框架残留。`ResetBackgroundToDefaultBlack()` 在 AppId 不在 `SupportedGameRegistry` 时也做同样清理，避免从支持的鸣潮 / 终末地等切到不支持的游戏时残留上一个游戏的真实 banner + 资讯。切回适配游戏后由 `ApplyHomeAppearance` 按外观档案 `ShowHomeNews` 恢复 `Visible`。
+- 验证结果：
+  - Debug 构建 0 错误 / 6 警告（CS8625 全是历史 null 警告，与本次无关）。
+  - 临时清空 `settings.json` 里所有非 built-in 的 `CustomManifestPreset` + 清 `CurrentCustomManifestId`，重启 launcher → 命中 `MainWindow.ShowEmptyGameLibrary()` → ContentFrame 导航到 `EmptyGameLibraryPage`（"还没有添加游戏" + 添加游戏按钮），`LauncherHomePage` 根本不会被实例化。这是更友好的"无游戏"主体验，本次修改作为双保险补齐边缘情况。
+  - 代码逻辑验证：else 分支直接置 Collapsed，`ResetBackgroundToDefaultBlack` 同步清 NewsPanel + HomeContentPanel，无残留。
+- 当前限制：
+  - "无游戏"主体验由 `MainWindow.ShowEmptyGameLibrary()` 提供（`EmptyGameLibraryPage`），本次 commit 主要补强 `LauncherHomePage` 边缘情况和切换到不支持的 AppId 时的清理。
+
 ## 2026-09-26 19:09:00 +08:00
 
 - 推送人员：`wonderful-oss`
