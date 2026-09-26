@@ -2,6 +2,18 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-26 20:33:11 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`Refactored_Version`
+- 推送提交：`fix(build): 使用 .NET 计算内置运行时摘要`
+- 实现内容：
+  - 运行时归档校验和 Python 源码指纹统一改用 .NET `System.Security.Cryptography.SHA256`，消除对 PowerShell `Get-FileHash` 模块加载状态的依赖。
+- 验证结果：
+  - `powershell.exe -NoProfile` 直接运行准备脚本成功命中已准备缓存。
+- 当前限制：
+  - 无新增运行限制。
+
 ## 2026-09-26 20:32:08 +08:00
 
 - 推送人员：`Violet0923`

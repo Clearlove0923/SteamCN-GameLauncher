@@ -22,6 +22,19 @@ function Assert-ChildPath([string]$Path, [string]$Parent) {
     }
 }
 
+function Get-Sha256([string]$Path) {
+    $stream = [IO.File]::OpenRead($Path)
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha256.ComputeHash($stream)
+        return ([BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+        $stream.Dispose()
+    }
+}
+
 function Test-Runtime([string]$Executable) {
     if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) { return $false }
     $previousPreference = $ErrorActionPreference
@@ -41,7 +54,7 @@ function Get-PythonSourceFingerprint {
         Get-ChildItem -LiteralPath (Join-Path $pythonProject 'home_content') -Recurse -File -Filter '*.py'
     ) | Sort-Object FullName
     $manifest = ($sourceFiles | ForEach-Object {
-        '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(),
+        '{0}  {1}' -f (Get-Sha256 $_.FullName),
             $_.FullName.Substring($pythonProject.Length).TrimStart('\')
     }) -join "`n"
     $sha256 = [Security.Cryptography.SHA256]::Create()
@@ -81,7 +94,7 @@ if ($runtimeReady -and $installedFingerprint -eq $sourceFingerprint) {
 
 New-Item -ItemType Directory -Path $downloadRoot -Force | Out-Null
 if (Test-Path -LiteralPath $archivePath) {
-    $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualHash = Get-Sha256 $archivePath
     if ($actualHash -ne $archiveSha256) {
         Remove-Item -LiteralPath $archivePath -Force
     }
@@ -92,7 +105,7 @@ if (-not (Test-Path -LiteralPath $archivePath)) {
     Invoke-WebRequest -Uri $archiveUrl -OutFile $archivePath -UseBasicParsing
 }
 
-$actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$actualHash = Get-Sha256 $archivePath
 if ($actualHash -ne $archiveSha256) {
     throw "Embedded Python SHA256 mismatch. Expected $archiveSha256, got $actualHash."
 }
