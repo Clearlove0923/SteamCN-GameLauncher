@@ -109,6 +109,13 @@ public sealed partial class LauncherHomePage : Page
         {
             _currentGame = null;
             StartGameButton.IsEnabled = false;
+            // 还没选游戏时隐藏轮播 + 资讯 UI：
+            //  - 避免显示空 "资讯" tab 干扰首次启动用户；
+            //  - 避免 HomeContentPanel 残留上一次的游戏数据；
+            //  - 切换到真游戏后由 ApplyHomeAppearance 按外观档案恢复可见性。
+            _currentHomeContent = null;
+            HomeContentPanel.SetContent(null);
+            NewsPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         }
     }
 
@@ -170,6 +177,11 @@ public sealed partial class LauncherHomePage : Page
         HomeBackgroundImage.Source = null;
         HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         DefaultBlackBackground.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        // AppId 不在已适配清单时也把资讯 + 轮播藏起来，避免上一个游戏的真实数据
+        // 残留在未验证游戏的窗口上；切回适配游戏时由 ApplyHomeAppearance 恢复。
+        _currentHomeContent = null;
+        HomeContentPanel.SetContent(null);
+        NewsPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
     }
 
     /// <summary>
