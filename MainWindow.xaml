@@ -27,6 +27,10 @@
         <MediaPlayerElement x:Name="HomeBackdropVideoNext" Grid.RowSpan="2" IsHitTestVisible="False"
                             AreTransportControlsEnabled="False" Stretch="UniformToFill"
                             Visibility="Collapsed"/>
+        <Border x:Name="HomeVideoLoadingBlack" Grid.RowSpan="2" IsHitTestVisible="False"
+                Background="Black" Visibility="Collapsed"/>
+        <Image x:Name="HomeVideoLoadingImage" Grid.RowSpan="2" IsHitTestVisible="False"
+               Stretch="UniformToFill" Visibility="Collapsed"/>
         <Border x:Name="BackgroundOverlay" Grid.RowSpan="2" IsHitTestVisible="False"
                 Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}" Visibility="Collapsed"/>
 

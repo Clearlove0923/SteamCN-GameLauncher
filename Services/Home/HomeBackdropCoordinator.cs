@@ -23,6 +23,13 @@ public sealed class HomeBackdropCoordinator
         Changed?.Invoke(Current);
     }
 
+    public void Hold(Guid owner)
+    {
+        if (_owner != owner || !Current.IsActive) return;
+        Current = Current with { IsHolding = true };
+        Changed?.Invoke(Current);
+    }
+
     public void Clear(Guid owner)
     {
         // 新页面可能先完成加载，旧页面稍后才 Unloaded；只有当前 owner 能清空背景，
@@ -38,7 +45,8 @@ public sealed record HomeBackdropState(
     bool IsActive,
     bool PlayAnimation,
     bool ForceBlack,
-    HomeBackground? Background)
+    HomeBackground? Background,
+    bool IsHolding = false)
 {
     public static HomeBackdropState Inactive { get; } = new(false, false, false, null);
 }

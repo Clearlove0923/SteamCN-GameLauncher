@@ -156,6 +156,7 @@ public sealed partial class MainWindow : Window
             if (!_exitFromTray && _trayIcon is not null)
             {
                 args.Cancel = true;
+                SuspendHomeMediaForTray();
                 _appWindow.Hide();
                 LogService.Instance.AddLog("[窗口] 已隐藏到系统托盘");
                 return;

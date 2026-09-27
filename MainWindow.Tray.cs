@@ -55,6 +55,7 @@ public sealed partial class MainWindow
         if (_appWindow.Presenter is OverlappedPresenter presenter) presenter.Restore();
         _appWindow.Show();
         Activate();
+        ResumeHomeMediaFromTray();
         LogService.Instance.AddLog("[窗口] 已从系统托盘恢复");
     }
 

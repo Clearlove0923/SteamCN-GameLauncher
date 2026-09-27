@@ -120,6 +120,8 @@ public sealed partial class LauncherHomePage : Page
 
     private async Task ShowGameAsync(Models.CustomManifestPreset game)
     {
+        // 获取新游戏内容可能需要网络：先冻结旧视频当前帧，待新背景确实可显示再切换。
+        _homeBackdrop.Hold(_homeBackdropOwner);
         _currentGame = game;
         _activeHomeMatch = null;
         _forceBlackBackground = false;
@@ -139,7 +141,7 @@ public sealed partial class LauncherHomePage : Page
         {
             _currentHomeContent = null;
             HomeContentPanel.SetContent(null);
-            ResetBackgroundToDefaultBlack();
+            ResetBackgroundToAppearance();
             return;
         }
         _activeHomeMatch = match;
@@ -175,14 +177,14 @@ public sealed partial class LauncherHomePage : Page
         {
             if (_navigatedAway || _currentGame != game) return;
             _logService.AddLog($"[首页内容] 切换游戏失败：{ex.Message}");
-            ResetBackgroundToDefaultBlack();
+            ResetBackgroundToAppearance();
         }
     }
 
-    private void ResetBackgroundToDefaultBlack()
+    private void ResetBackgroundToAppearance()
     {
-        _forceBlackBackground = true;
-        _homeBackdrop.Show(_homeBackdropOwner, null, false, forceBlack: true);
+        _forceBlackBackground = false;
+        _homeBackdrop.Show(_homeBackdropOwner, null, false);
         // 未匹配安装文件时也把资讯 + 轮播藏起来，避免上一个游戏的真实数据
         // 残留在未验证游戏的窗口上；切回适配游戏时由 ApplyHomeAppearance 恢复。
         _currentHomeContent = null;

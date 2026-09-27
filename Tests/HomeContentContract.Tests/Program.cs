@@ -35,6 +35,13 @@ backdrop.Show(firstOwner, envelope.Content.Background, playAnimation: true);
 Check(publishedBackdrop is { IsActive: true, PlayAnimation: true, ForceBlack: false }
       && publishedBackdrop.Background?.VideoUrl == envelope.Content.Background?.VideoUrl,
     "home page publishes source-agnostic background state to the window layer");
+backdrop.Hold(firstOwner);
+Check(publishedBackdrop is { IsHolding: true, IsActive: true }
+      && publishedBackdrop.Background?.VideoUrl == envelope.Content.Background?.VideoUrl,
+    "game switch holds the current backdrop until the next game is ready");
+backdrop.Show(firstOwner, null, playAnimation: false);
+Check(publishedBackdrop is { IsHolding: false, IsActive: true, Background: null },
+    "a game without adapted media releases the hold and selects the appearance fallback");
 backdrop.Show(secondOwner, envelope.Content.Background, playAnimation: true);
 backdrop.Clear(firstOwner);
 Check(publishedBackdrop is { IsActive: true },
