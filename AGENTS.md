@@ -165,3 +165,65 @@ contracts/                      JSON Schema、请求和响应样本
 - 优先使用声明式 JSONPath、CSS selector、JS 变量映射和分类映射；加密、签名、批量 POST、混合本地资源等特殊来源再使用专用 Provider。
 - 不把 Provider 响应对象直接绑定到 XAML。先转换为统一 DTO，再由 ViewModel 形成展示状态。
 - 不原样复制参考项目中正在迁移或无法编译验证的 API 调用。参考其分层和交互方式时，必须按本项目契约重新实现并通过本项目测试。
+
+## 版本更新官网同步
+
+软件每次发布新版本后，必须同步官网下载网址，否则用户从官网下载到的是旧版本。官网是一个独立仓库，不在本仓库内发布。
+
+- 官网仓库：`ZZY-MAX-09.github.io`（本地目录 `F:\my-site`），线上地址 `https://zzy-max-09.github.io/`。
+- 官网下载区由 `version.json` 单一配置驱动，HTML 里的链接只是兜底地址；**不得直接改 HTML 而不改 `version.json`**。
+- 安装包的分发主渠道是 GitHub Release（`Clearlove0923/SteamCN-GameLauncher`），官网只做展示与跳转。
+
+### 网址的两种形态
+
+| 附件命名 | 官网下载网址 | 是否随版本变化 |
+|---|---|---|
+| 带版本号 | `.../releases/download/v2.6.3/SteamCN-GameLauncher-v2.6.3-win-x64-setup.exe` | 每次发版必变，版本号在网址中出现两处（路径段与文件名段） |
+| 固定名 `SteamCN-GameLauncher-Setup.exe` | `.../releases/latest/download/SteamCN-GameLauncher-Setup.exe` | 不随版本变化，`latest` 自动指向最新 Release |
+
+- 带版本号的网址**禁止手工拼改**，两处版本号漏改任意一处即 404，必须由脚本按模板生成。
+- 采用固定名时，固定名附件必须存在于**最新** Release 中，否则 `latest` 直链 404；需要保留版本化归档名时，同一 Release 可同时上传两份附件。
+
+### 同步范围
+
+一次版本更新需要同步下列内容，且彼此一致：
+
+| 位置 | 内容 |
+|---|---|
+| 官网 `version.json` | `version`（新版本号）、`date`（发布日期）、`windows.url`（该版本的 Release 直链） |
+| 官网 `index.html` | 下载按钮的兜底 `href` |
+| 本仓库 `CHANGELOG.md` | 顶部新增该版本条目 |
+| 本仓库版本号 | `version.json` / csproj / AppInfo / appxmanifest 四处一致，tag 带 `v` 前缀 |
+
+同步 `index.html` 兜底地址不能省略：国内访客可能无法访问 `api.github.com`，此时页面会回落到写死地址，未同步就会拿到旧版。
+
+### 同步命令
+
+在官网目录执行：
+
+```bash
+cd /f/my-site
+
+# 附件仍带版本号：按 urlPattern 模板自动生成该版本直链（推荐）
+bash update-release.sh v2.6.3 --auto
+
+# 附件已改为固定名：切到 latest 永久直链，只需执行一次
+bash update-release.sh v2.6.3 --fixed
+
+# 推送上线
+bash deploy.sh "更新到 v2.6.3"
+```
+
+### 同步后验证
+
+- 官网下载区显示的版本号、日期与 Release 的 tag、发布日期一致。
+- 复制主下载按钮地址，确认版本号正确或为 `latest/download/SteamCN-GameLauncher-Setup.exe`。
+- 在官网与 Release 各点一次完整下载，确认可下载且文件哈希与本次构建产物一致。
+- 用移动网络访问官网再验证一次，确认国内网络下按钮不失效。
+- 同步错误时使用 `bash rollback.sh` 回退，不得用 force push 改写历史。
+
+### 禁止事项
+
+- 禁止把安装包提交进官网仓库；官网仓库已忽略 `downloads/` 与 `*.exe`。
+- 禁止在固定名附件尚未上传时切换到 `--fixed`，会直接导致官网下载 404。
+- 禁止只改官网版本号而不改下载直链，会造成版本与文件不一致。
