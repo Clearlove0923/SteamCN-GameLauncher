@@ -13,12 +13,17 @@ $projectVersion = @($project.Project.PropertyGroup.Version | Where-Object { $_ }
 $appInfo = Get-Content -LiteralPath (Join-Path $repoRoot 'AppInfo.cs') -Raw
 $installerScript = Join-Path $repoRoot 'SteamCN-GameLauncher.iss'
 $installerDefinition = Get-Content -LiteralPath $installerScript -Raw
-$installerNameMatch = [regex]::Match($installerDefinition, '#define\s+MyAppName\s+"([^"]+)"')
-if (-not $installerNameMatch.Success) { throw 'Installer MyAppName is missing.' }
-$installerName = $installerNameMatch.Groups[1].Value
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $repoRoot 'Package.appxmanifest') -Raw
 if ($projectVersion -ne $version -or $appInfo -notmatch ('Version = "v' + [regex]::Escape($version) + '"') -or $manifest.Package.Identity.Version -ne "$version.0") {
     throw 'Synchronize version.json, project Version, AppInfo.Version and package Version before publishing.'
+}
+foreach ($userDataDirectory in @('GameTime', 'HomeCache')) {
+    if ($installerDefinition -notmatch ('(?im)^Name:\s*"\{app\}\\' + [regex]::Escape($userDataDirectory) + '";[^\r\n]*Flags:\s*uninsneveruninstall')) {
+        throw "Installer must preserve $userDataDirectory during upgrades and uninstall."
+    }
+    if ($installerDefinition -notmatch ('(?im)^Source:[^\r\n]*Excludes:[^\r\n]*\\' + [regex]::Escape($userDataDirectory) + '\\\*')) {
+        throw "Installer must exclude runtime data under $userDataDirectory."
+    }
 }
 if (-not $InnoCompiler) {
     $candidates = @(
@@ -53,11 +58,22 @@ foreach ($localeDir in Get-ChildItem -LiteralPath $resolvedPublish -Directory) {
 foreach ($required in @("$assemblyName.exe", "$assemblyName.dll", "$assemblyName.deps.json", "$assemblyName.runtimeconfig.json", "$assemblyName.pri", 'coreclr.dll', 'Microsoft.UI.Xaml.dll')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishDir $required))) { throw "Publish output missing: $required" }
 }
+foreach ($userDataDirectory in @('GameTime', 'HomeCache')) {
+    $publishedUserData = Join-Path $publishDir $userDataDirectory
+    if (Test-Path -LiteralPath $publishedUserData) {
+        $unexpectedFiles = @(Get-ChildItem -LiteralPath $publishedUserData -Recurse -File -ErrorAction Stop)
+        if ($unexpectedFiles.Count -gt 0) {
+            throw "Publish output contains runtime user data under $userDataDirectory."
+        }
+    }
+}
 Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $publishDir
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\languages\LICENSE.txt') -Destination (Join-Path $publishDir 'Inno-Chinese-Translation-LICENSE.txt')
+Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\FFmpeg-GPL-3.0.txt') -Destination $publishDir
+Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\FFmpeg-SOURCE.txt') -Destination $publishDir
 & $InnoCompiler "/DMyAppVersion=$version" "/DSourceDir=$publishDir" "/O$runRoot" $installerScript
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
-$installer = Join-Path $runRoot "$installerName-v$version-win-x64-setup.exe"
+$installer = Join-Path $runRoot "$assemblyName-v$version-win-x64-setup.exe"
 if (-not (Test-Path -LiteralPath $installer)) { throw 'Installer was not produced.' }
 $checksum = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText((Join-Path $runRoot 'SHA256SUMS.txt'), "$checksum  $([IO.Path]::GetFileName($installer))`n", [Text.UTF8Encoding]::new($false))

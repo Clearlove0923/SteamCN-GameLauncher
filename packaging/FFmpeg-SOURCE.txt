@@ -1,0 +1,22 @@
+FFmpeg binary and corresponding source information
+=================================================
+
+SteamCN-GameLauncher includes the following executable through
+imageio-ffmpeg 0.6.0:
+
+  ffmpeg-win-x86_64-v7.1.exe
+  FFmpeg version 7.1, essentials build from https://www.gyan.dev/ffmpeg/builds/
+  Build configuration: GPL version 3, static Windows x86-64 build.
+
+FFmpeg 7.1 source code is available from the FFmpeg project:
+
+  https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
+  https://git.ffmpeg.org/ffmpeg.git?h=n7.1
+
+Information about the Windows build and its included libraries is available at:
+
+  https://www.gyan.dev/ffmpeg/builds/
+
+The complete GNU General Public License version 3 text is included in
+FFmpeg-GPL-3.0.txt. The imageio-ffmpeg wrapper's BSD license remains in its
+installed dist-info directory inside python-runtime.

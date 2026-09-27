@@ -322,13 +322,13 @@
                             <TextBlock Text="源代码" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                             <HyperlinkButton Content="GitHub →"
                                              HorizontalAlignment="Right"
-                                             NavigateUri="https://github.com/Violet0923/SteamCN-GameLauncher"/>
+                                             NavigateUri="https://github.com/Clearlove0923/SteamCN-GameLauncher"/>
                         </Grid>
                         <Grid>
                             <TextBlock Text="问题反馈/功能建议" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                             <HyperlinkButton Content="提交 Issue →"
                                              HorizontalAlignment="Right"
-                                             NavigateUri="https://github.com/Violet0923/SteamCN-GameLauncher/issues"/>
+                                             NavigateUri="https://github.com/Clearlove0923/SteamCN-GameLauncher/issues"/>
                         </Grid>
                         <InfoBar x:Name="helperInfoBar"
                             Severity="Informational"

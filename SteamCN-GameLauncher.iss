@@ -8,7 +8,7 @@
 #define MyAppName "Steam国服游戏启动器"
 #define MyAppIdName "SteamCN-GameLauncher"
 #define MyAppExeName MyAppIdName + ".exe"
-#define MyAppURL "https://github.com/Violet0923/SteamCN-GameLauncher"
+#define MyAppURL "https://github.com/Clearlove0923/SteamCN-GameLauncher"
 
 [Setup]
 ; 独立仓库使用自己的安装器标识，不与旧项目建立升级关系。
@@ -25,7 +25,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
-OutputBaseFilename={#MyAppName}-v{#MyAppVersion}-win-x64-setup
+OutputBaseFilename={#MyAppIdName}-v{#MyAppVersion}-win-x64-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern windows11

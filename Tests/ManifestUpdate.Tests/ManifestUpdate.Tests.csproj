@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\ManifestUpdate.Tests\</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Models/SteamAppInfo.cs" Link="Models/SteamAppInfo.cs" />

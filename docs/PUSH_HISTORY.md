@@ -2,6 +2,26 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-27 23:37:17 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`master_preview`、`master`
+- 推送提交：`release: 发布 v3.0.0`
+- 实现内容：
+  - 将程序、项目文件、AppInfo、包清单和更新描述统一升级到 `3.0.0`，更新源码、问题反馈、更新检查和下载地址到 `Clearlove0923/SteamCN-GameLauncher`，并补充详细版本日志。
+  - 正式安装包采用 Windows x64 自包含发布，内置 .NET 8、Windows App SDK、Python 3.10 Worker、FastAPI、Uvicorn、HTTPX、Pydantic、imageio-ffmpeg 与 FFmpeg 7.1；用户安装后无需单独配置 .NET、Python、pip、环境变量或 FFmpeg。
+  - 安装包只保留简体中文和英文客户端语言资源；同步使用 `Assets/Icons/SteamCN-GameLauncher.ico` 作为安装程序图标，安装包名称统一为 `SteamCN-GameLauncher-v3.0.0-win-x64-setup.exe`。
+  - 发布脚本增加用户数据保护校验：安装内容不得携带 `GameTime` 或 `HomeCache` 中的运行数据，升级与卸载必须保留这两个目录；同时随包附带 FFmpeg GPLv3 许可证和源码获取说明。
+  - 修正首页真实内容端到端测试：绝区零当前官方背景为合法 HTTPS WebM 时不再被旧的 MP4 专用断言误判，测试异常改为终端报告并返回退出码，避免未处理异常触发 Windows 应用程序错误弹窗。
+  - 统一补齐测试项目的 Debug 输出目录，端到端测试目标框架改为 .NET 8，避免测试产物散落在各项目目录或要求额外的 .NET 10 环境。
+- 验证结果：
+  - 主程序按统一 Debug x64 命令构建成功，0 错误；10 个 C# 测试项目共 223 项检查通过。
+  - 内置 Python Worker 真实端到端检查 10 项通过，已验证绝区零的 schema、Provider、请求参数、HTTPS 视频与海报、轮播、资讯及未知 Provider 错误响应。
+  - Release 自包含发布和 Inno Setup 编译成功；安装内容确认包含 .NET、Windows App SDK、Python 及全部采集依赖和 FFmpeg，只存在 `en-US`、`zh-CN` 两个客户端语言目录，且不包含首页缓存或时长记录文件。
+  - 在隔离目录执行覆盖安装和卸载回归：`GameTime`、`HomeCache` 测试文件的内容与 SHA-256 均保持不变；安装后的 Python 3.10.21 可直接导入 FastAPI、Uvicorn、HTTPX、Pydantic 与 imageio-ffmpeg，FFmpeg 7.1 可直接调用。
+  - 安装程序版本为 3.0.0，编译日志确认使用新版 ICO 更新安装程序图标；安装包 SHA-256 由发布脚本生成并随 Release 提供。
+- 当前限制：截图管理仍为后续功能入口；厂商接口和官网 CMS 变更时可能需要继续维护 Provider；动态背景首次下载或转换仍受网络与设备解码性能影响。按本次用户要求，官网仓库与官网下载地址暂不更新。
+
 ## 2026-09-27 21:17:39 +08:00
 
 - 推送人员：`Violet0923`

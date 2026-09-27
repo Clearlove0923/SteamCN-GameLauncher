@@ -14,11 +14,11 @@ public sealed class UpdateService
     private UpdateService() { }
 
     private const string LatestReleaseApiUrl =
-        "https://api.github.com/repos/Violet0923/SteamCN-GameLauncher/releases/latest";
+        "https://api.github.com/repos/Clearlove0923/SteamCN-GameLauncher/releases/latest";
     private const string ReleasesApiUrl =
-        "https://api.github.com/repos/Violet0923/SteamCN-GameLauncher/releases?per_page=20";
+        "https://api.github.com/repos/Clearlove0923/SteamCN-GameLauncher/releases?per_page=20";
     private const string ReleasesPageUrl =
-        "https://github.com/Violet0923/SteamCN-GameLauncher/releases";
+        "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases";
     private const string DebugLocalUrl = "http://127.0.0.1:9090/version.json";
 
     /// <summary>发现新版本时触发。参数：(message, downloadUrl, forceUpdate)。</summary>

@@ -7,7 +7,7 @@ namespace SteamCNGameLauncher;
 public static class AppInfo
 {
     /// <summary>版本号，如 v2.0.0</summary>
-    public const string Version = "v2.6.1";
+    public const string Version = "v3.0.0";
 
     /// <summary>发布渠道/阶段，如 Alpha 1 Test、Beta、Release</summary>
     public const string Channel = "Release";

@@ -31,6 +31,7 @@ var workerCwd = Environment.GetEnvironmentVariable("HOMECONTENT_CWD")
 
 Process? worker = null;
 var startedByUs = false;
+var failed = false;
 try
 {
     if (!IsReachable(Port))
@@ -67,7 +68,9 @@ try
     var envelope = await transport.FetchAsync(new HomeContentRequest
     {
         RequestId = "e2e-request-1",
-        GameId = "preview-e2e",
+        // Use a real stable game identifier. The Provider no longer receives a
+        // local preset GUID/preview ID because those cannot select game-specific content.
+        GameId = "4162040",
         ProviderId = "hoyoplay-json",
         Locale = "zh-CN",
     });
@@ -75,8 +78,12 @@ try
     Check(envelope.SchemaVersion == 1, "schemaVersion == 1");
     Check(envelope.ProviderId == "hoyoplay-json", "providerId round-trip");
     Check(envelope.RequestId == "e2e-request-1", "requestId round-trip");
-    Check(envelope.Content.Background?.VideoUrl?.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) == true,
-        "background video URL present");
+    var videoUrl = envelope.Content.Background?.VideoUrl;
+    Check(Uri.TryCreate(videoUrl, UriKind.Absolute, out var videoUri) &&
+          videoUri.Scheme == Uri.UriSchemeHttps &&
+          (videoUri.AbsolutePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+           videoUri.AbsolutePath.EndsWith(".webm", StringComparison.OrdinalIgnoreCase)),
+        "HTTPS background video URL present");
     Check(envelope.Content.Background?.ImageUrl?.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) == true,
         "background poster URL present");
     Check(envelope.Content.Banners.Count >= 1, "at least one banner");
@@ -90,7 +97,7 @@ try
         await transport.FetchAsync(new HomeContentRequest
         {
             RequestId = "e2e-request-2",
-            GameId = "preview-e2e",
+            GameId = "4162040",
             ProviderId = "does-not-exist",
             Locale = "zh-CN",
         });
@@ -102,6 +109,13 @@ try
         Console.WriteLine("PASS: unknown providerId rejected with 400");
     }
 }
+catch (Exception ex)
+{
+    // 测试失败属于可报告结果，不应让未处理的 CLR 异常触发 Windows Error Reporting 弹窗。
+    failed = true;
+    Console.Error.WriteLine($"FAIL: {ex.Message}");
+    Console.Error.WriteLine(ex.StackTrace);
+}
 finally
 {
     if (startedByUs && worker is { HasExited: false })
@@ -109,6 +123,12 @@ finally
         try { worker.Kill(entireProcessTree: true); } catch { }
     }
     worker?.Dispose();
+}
+
+if (failed)
+{
+    Environment.ExitCode = 1;
+    return;
 }
 
 Console.WriteLine($"All {checks} checks passed.");
