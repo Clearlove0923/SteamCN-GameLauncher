@@ -16,9 +16,8 @@ the entire news carousel + tabbed news feed:
   * Background — the home page itself does not embed a background
     ``<video>`` / ``<img>``; the JS bundle swaps a ``<video class="bg">``
     based on viewport. We therefore fall back to the first banner
-    image as a static background image so the C# UI has something to
-    render even before the launcher-specific background video is
-    downloaded.
+    image as a static background image. A launcher-verified video may
+    be supplied separately through per-game ``backgroundVideoUrl``.
 
 ### Network endpoints
 
@@ -179,7 +178,7 @@ class NetEaseStaticCmsProvider(HomeContentProvider):
                 banners = _build_banners(banner_rows, max_banners)
                 news_items = _build_news_items(news_rows, news_per_tab)
 
-        background = _build_background(background_image)
+        background = _build_background(background_image, options.get("backgroundVideoUrl"))
         return HomeContent(
             background=background,
             banners=banners,
@@ -268,15 +267,21 @@ def parse_home_html(
 # ---------------------------------------------------------------------------
 
 
-def _build_background(fallback_image: Optional[str]) -> HomeBackground:
+def _build_background(
+    fallback_image: Optional[str], video_url: Optional[str] = None,
+) -> HomeBackground:
     """Wrap the optional static background image.
 
     The NIE static-CMS homepage itself does not expose a background
     video; the upstream JS bundle swaps a ``<video class="bg">`` at
     runtime. We surface the first banner image as a static fallback
-    so the C# UI has something to render immediately.
+    so the C# UI has something to render immediately. The official
+    launcher's video is a separate source selected by game config.
     """
-    return HomeBackground(video_url=None, image_url=fallback_image, local_path=None)
+    # Launcher media is separate from the marketing CMS. Only a verified
+    # HTTPS source supplied by this game's configuration may override it.
+    video = video_url if isinstance(video_url, str) and video_url.startswith("https://") and _allowed(video_url) else None
+    return HomeBackground(video_url=video, image_url=fallback_image, local_path=None)
 
 
 def _build_banners(

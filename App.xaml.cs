@@ -11,6 +11,7 @@ public partial class App : Application
 {
     public static Window MainWindow { get; private set; } = null!;
     public static PythonWorkerSpawner? WorkerSpawner { get; private set; }
+    public static Task? WorkerStartupTask { get; private set; }
     private readonly CancellationTokenSource _workerStartupCancellation = new();
     private static readonly string CrashLogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -36,10 +37,9 @@ public partial class App : Application
         {
             MainWindow = new MainWindow();
             MainWindow.Closed += (sender, e) => OnMainWindowClosed();
+            // 页面等待此任务得到本次启动专属的 Worker 端口；窗口仍立即显示。
+            WorkerStartupTask = TrySpawnWorkerAsync();
             MainWindow.Activate();
-
-            // 后台静默拉起 Python Worker 子进程；失败仅记 log，不影响主流程。
-            _ = TrySpawnWorkerAsync();
 
             // 后台静默检查更新，不阻塞启动
             _ = Task.Run(async () =>
@@ -72,6 +72,11 @@ public partial class App : Application
             if (!settings.SpawnPythonWorkerOnLaunch)
             {
                 LogService.Instance.AddLog("[worker] SpawnPythonWorkerOnLaunch=false; skip auto-spawn");
+                return;
+            }
+            if (!PythonWorkerSpawner.IsLoopbackBaseUrl(settings.HomeContentWorkerBaseUrl))
+            {
+                LogService.Instance.AddLog("[worker] configured remote home-content endpoint; no local worker spawned");
                 return;
             }
 

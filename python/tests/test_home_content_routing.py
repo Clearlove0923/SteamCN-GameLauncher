@@ -34,8 +34,8 @@ class HomeContentRoutingTests(unittest.TestCase):
         with patch.object(server, "create_provider", return_value=FakeProvider()) as create:
             response = asyncio.run(request())
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["providerId"], "hoyoplay-json")
-        create.assert_called_once_with("hoyoplay-json")
+        self.assertEqual(response.json()["providerId"], "mihoyo")
+        create.assert_called_once_with("mihoyo")
         self.assertEqual(captured[0].game_id, "genshin-impact")
         self.assertEqual(captured[0].provider_options["gameBiz"], "hk4e_cn")
 
@@ -53,6 +53,34 @@ class HomeContentRoutingTests(unittest.TestCase):
         response = asyncio.run(request())
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["errors"][0]["code"], "unsupported_game")
+
+    def test_yysls_executable_routes_verified_cn_background_video(self) -> None:
+        server = importlib.import_module("home_content.server.app")
+        captured = []
+
+        class FakeProvider:
+            async def fetch(self, request):
+                captured.append(request)
+                return HomeContent()
+
+        async def request():
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),
+                                         base_url="http://test") as client:
+                return await client.post("/v1/home-content", json={
+                    "requestId": "route-yysls", "gameId": "stale",
+                    "providerId": "auto",
+                    "executablePath": r"E:\Games\yysls\WhereWindsMeetDirect.exe",
+                })
+
+        with patch.object(server, "create_provider", return_value=FakeProvider()):
+            response = asyncio.run(request())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["providerId"], "netease")
+        self.assertEqual(captured[0].provider_options["region"], "cn")
+        self.assertEqual(
+            captured[0].provider_options["backgroundVideoUrl"],
+            "https://h72.fp.ps.netease.com/file/6a39fae9fb7d0ec11d494d33Dh7Ufxa207",
+        )
 
 
 if __name__ == "__main__":

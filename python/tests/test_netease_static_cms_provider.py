@@ -144,6 +144,16 @@ def test_allowed_host_suffixes() -> None:
     assert _allowed("ftp://www.yysls.cn/") is False
 
 
+def test_verified_launcher_video_keeps_static_fallback() -> None:
+    poster = "https://www.yysls.cn/banner.jpg"
+    video = "https://h72.fp.ps.netease.com/file/verified-media"
+    background = _build_background(poster, video)
+    assert background.video_url == video
+    assert background.image_url == poster
+    assert _build_background(poster, "https://example.invalid/video.mp4").video_url is None
+    assert _build_background(poster, "http://h72.fp.ps.netease.com/file/video").video_url is None
+
+
 def test_tab_and_kind_category_maps() -> None:
     # Tab index → category.
     assert TAB_CATEGORY["0"] == "其他"

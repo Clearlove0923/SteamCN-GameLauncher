@@ -1,5 +1,7 @@
 # NextJsDataProvider (无限暖暖)
 
+首页使用公司级 `PaperGamesProvider`（`providerId=papergames`）；`NextJsDataProvider` / `nextjs-data` 保留为旧配置兼容入口。
+
 `provider_id = "nextjs-data"`. Owns the 无限暖暖 (Infinity Nikki)
 Next.js marketing site for OS (INFOLD PTE. LTD.) and CN (上海暖叠
 网络科技有限公司 / Papergames) builds. The site is a Next.js SSR

@@ -1,5 +1,7 @@
 # PerfectWorldHybridProvider
 
+首页使用公司级 `PerfectWorldProvider`（`providerId=perfect-world`）；`PerfectWorldHybridProvider` / `perfect-world-hybrid` 保留为旧配置兼容入口。
+
 `python/home_content/providers/perfect_world_hybrid.py` 是完美世界《异环》(Neverness to Everness)启动器的首页 Provider。背景优先读本地启动器资源,其余来自完美世界官网的 JS 数据端点。
 
 > 该 Provider 同时调用两个**已知的、但**非公开 API(完美世界 / 鹰角 / 库洛 / 米哈游 / 网易 / 叠纸的首页内容端点均如此)。**不得作为稳定 SLA 的开放 API 使用**。端点 URL 在新版启动器或官网改版后可能漂移。

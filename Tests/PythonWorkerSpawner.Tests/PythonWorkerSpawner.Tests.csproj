@@ -22,5 +22,6 @@
     <Compile Include="../../Services/LogService.cs" Link="Services/LogService.cs" />
     <Compile Include="../../Services/SettingsService.cs" Link="Services/SettingsService.cs" />
     <Compile Include="../../Services/Home/PythonWorkerSpawner.cs" Link="Services/Home/PythonWorkerSpawner.cs" />
+    <Compile Include="../../Services/Home/WorkerProcessJob.cs" Link="Services/Home/WorkerProcessJob.cs" />
   </ItemGroup>
 </Project>

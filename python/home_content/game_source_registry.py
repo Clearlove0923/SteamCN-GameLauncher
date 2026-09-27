@@ -1,4 +1,4 @@
-"""读取共享游戏来源字典；先匹配真实 EXE，再匹配安装路径中的完整目录名。"""
+"""读取共享游戏来源字典；先匹配安装目录，再用真实 EXE 名称兜底。"""
 
 from __future__ import annotations
 
@@ -23,11 +23,12 @@ def _segments(path: str | None) -> list[str]:
 
 
 @lru_cache(maxsize=1)
-def _indexes() -> tuple[dict[str, GameSource], dict[str, GameSource]]:
-    # 启动后只解析一次 JSON，后续请求直接查两个哈希表。
+def _indexes() -> tuple[dict[str, list[GameSource]], dict[str, GameSource], dict[str, GameSource]]:
+    # 启动后只解析一次 JSON。EXE 可有多个所属游戏，目录名必须唯一。
     payload = json.loads(files("home_content").joinpath("game_sources.json").read_text(encoding="utf-8"))
-    by_exe: dict[str, GameSource] = {}
+    by_exe: dict[str, list[GameSource]] = {}
     by_folder: dict[str, GameSource] = {}
+    by_game_id: dict[str, GameSource] = {}
     game_ids: set[str] = set()
     for row in payload:
         game_id = str(row["gameId"]).strip()
@@ -37,24 +38,39 @@ def _indexes() -> tuple[dict[str, GameSource], dict[str, GameSource]]:
             raise ValueError(f"Invalid game source: {game_id}")
         game_ids.add(game_id)
         source = GameSource(game_id, provider_id, options)
-        for names, index in ((row.get("exeNames", []), by_exe), (row.get("folderNames", []), by_folder)):
-            # 重名配置属于维护错误，启动时明确报错，避免请求被随机路由到错误 Provider。
-            for name in names:
-                key = str(name).strip().casefold()
-                if not key or key in index or "/" in key or "\\" in key:
-                    raise ValueError(f"Duplicate or invalid game-source identifier: {name}")
-                index[key] = source
-    return by_exe, by_folder
+        by_game_id[game_id.casefold()] = source
+        app_id = str(row.get("appId", "")).strip()
+        if app_id:
+            by_game_id[app_id.casefold()] = source
+        for name in row.get("exeNames", []):
+            key = str(name).strip().casefold()
+            if not key or "/" in key or "\\" in key:
+                raise ValueError(f"Invalid game-source EXE name: {name}")
+            owners = by_exe.setdefault(key, [])
+            if source in owners:
+                raise ValueError(f"Duplicate game-source EXE name: {name}")
+            owners.append(source)
+        for name in row.get("folderNames", []):
+            key = str(name).strip().casefold()
+            if not key or key in by_folder or "/" in key or "\\" in key:
+                raise ValueError(f"Duplicate or invalid game-source folder: {name}")
+            by_folder[key] = source
+    return by_exe, by_folder, by_game_id
+
+
+def get_game_source_by_id(game_id: str | None) -> GameSource | None:
+    """Resolve a company's game selection from the same shared source file."""
+    return _indexes()[2].get((game_id or "").strip().casefold())
 
 
 def match_game_source(executable_path: str | None, install_directory: str | None) -> GameSource | None:
-    """EXE 完整文件名优先；未命中才由近到远匹配安装目录段。"""
-    by_exe, by_folder = _indexes()
+    """EXE 路径和安装路径中的目录由近到远优先；最后匹配 EXE 完整文件名。"""
+    by_exe, by_folder, _ = _indexes()
     exe_segments = _segments(executable_path)
-    if exe_segments and exe_segments[-1] in by_exe:
-        return by_exe[exe_segments[-1]]
-    for path in (executable_path, install_directory):
-        for segment in reversed(_segments(path)):
+    for segments in (exe_segments[:-1], _segments(install_directory)):
+        for segment in reversed(segments):
             if segment in by_folder:
                 return by_folder[segment]
+    if exe_segments and len(owners := by_exe.get(exe_segments[-1], [])) == 1:
+        return owners[0]
     return None

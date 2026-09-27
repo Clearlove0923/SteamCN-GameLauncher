@@ -4,7 +4,7 @@ namespace SteamCNGameLauncher.Models.Home;
 
 /// <summary>
 /// 从仓库唯一的游戏来源 JSON 建立 C# 侧索引；Python Worker 读取同一份文件。
-/// 首页先匹配真实可执行文件，再匹配安装路径目录段，不依赖 Steam AppID 推断来源。
+/// 首页先匹配路径中的游戏安装目录，再用真实可执行文件名兜底，不依赖 Steam AppID 推断来源。
 /// </summary>
 public static class SupportedGameRegistry
 {
@@ -19,6 +19,7 @@ public static class SupportedGameRegistry
         public string[] FolderNames { get; init; } = [];
         public Dictionary<string, JsonElement> ProviderOptions { get; init; } = new(StringComparer.Ordinal);
         public Dictionary<string, string> NewsCategoryLabels { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+        public string[] NewsCategoryOrder { get; init; } = [];
     }
 
     public sealed record Match(
@@ -26,13 +27,14 @@ public static class SupportedGameRegistry
         string ProviderId,
         IReadOnlyDictionary<string, JsonElement> ProviderOptions,
         IReadOnlyDictionary<string, string> NewsCategoryLabels,
+        IReadOnlyList<string> NewsCategoryOrder,
         IReadOnlyList<string> FolderNames);
 
     private static readonly IReadOnlyList<SupportedSource> Sources = LoadSources();
     private static readonly IReadOnlyDictionary<string, SupportedSource> SourcesByAppId = Sources
         .Where(source => !string.IsNullOrWhiteSpace(source.AppId))
         .ToDictionary(source => source.AppId.Trim(), StringComparer.Ordinal);
-    private static readonly IReadOnlyDictionary<string, SupportedSource> SourcesByExe = BuildIndex(source => source.ExeNames);
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<SupportedSource>> SourcesByExe = BuildExeIndex();
     private static readonly IReadOnlyDictionary<string, SupportedSource> SourcesByFolder = BuildIndex(source => source.FolderNames);
 
     public static IReadOnlySet<string> AppIds { get; } =
@@ -73,25 +75,50 @@ public static class SupportedGameRegistry
         return index;
     }
 
-    /// <summary>EXE 名称优先，之后按路径中完整的目录段匹配；从不使用 Steam AppID 猜游戏。</summary>
+    private static IReadOnlyDictionary<string, IReadOnlyList<SupportedSource>> BuildExeIndex()
+    {
+        // 不同游戏可能都有 launcher.exe。保留所有所属游戏，但无目录时只允许唯一 EXE 命中。
+        var index = new Dictionary<string, List<SupportedSource>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var source in Sources)
+            foreach (var name in source.ExeNames)
+            {
+                var key = name.Trim();
+                if (string.IsNullOrWhiteSpace(key) || key.Contains('\\') || key.Contains('/'))
+                    throw new InvalidOperationException($"首页来源 EXE 名称无效：{key}");
+                if (!index.TryGetValue(key, out var owners))
+                    index[key] = owners = [];
+                if (owners.Contains(source))
+                    throw new InvalidOperationException($"首页来源 EXE 名称重复：{key}");
+                owners.Add(source);
+            }
+        return index.ToDictionary(pair => pair.Key,
+            pair => (IReadOnlyList<SupportedSource>)pair.Value, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>按 EXE 路径和安装路径中由近到远的完整目录段优先匹配，最后用 EXE 名称兜底。</summary>
     public static bool TryMatch(string? executablePath, string? installDirectory, out Match match)
     {
-        var exe = (executablePath ?? "").Replace('/', '\\').Split('\\').Last().Trim();
-        if (!string.IsNullOrWhiteSpace(exe) && SourcesByExe.TryGetValue(exe, out var byExe))
-        {
-            match = ToMatch(byExe);
-            return true;
-        }
-
-        foreach (var path in new[] { executablePath, installDirectory })
+        foreach (var (path, isExecutablePath) in new[] { (executablePath, true), (installDirectory, false) })
         {
             if (string.IsNullOrWhiteSpace(path)) continue;
-            foreach (var segment in path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries).Reverse())
+            var segments = path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+            var directoryCount = isExecutablePath ? segments.Length - 1 : segments.Length;
+            for (var i = directoryCount - 1; i >= 0; i--)
+            {
+                var segment = segments[i];
                 if (SourcesByFolder.TryGetValue(segment.Trim(), out var byFolder))
                 {
                     match = ToMatch(byFolder);
                     return true;
                 }
+            }
+        }
+        var exe = (executablePath ?? "").Replace('/', '\\').Split('\\').Last().Trim();
+        if (!string.IsNullOrWhiteSpace(exe) && SourcesByExe.TryGetValue(exe, out var owners)
+            && owners.Count == 1)
+        {
+            match = ToMatch(owners[0]);
+            return true;
         }
         match = null!;
         return false;
@@ -124,6 +151,7 @@ public static class SupportedGameRegistry
         source.ProviderOptions.ToDictionary(pair => pair.Key,
             pair => pair.Value.Clone(), StringComparer.Ordinal),
         source.NewsCategoryLabels,
+        source.NewsCategoryOrder,
         source.FolderNames);
 
     // 旧版预设编辑器仍依赖 AppID 查找入口；仅用于兼容，不参与新首页的游戏识别。

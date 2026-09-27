@@ -14,7 +14,7 @@ void Check(bool condition, string message)
 try
 {
     Check(SupportedGameRegistry.TryMatch(@"D:\Games\Genshin Impact Game\YuanShen.exe", null, out var genshin)
-        && genshin.GameId == "genshin-impact" && genshin.ProviderId == "hoyoplay-json"
+        && genshin.GameId == "genshin-impact" && genshin.ProviderId == "mihoyo"
         && genshin.ProviderOptions["gameBiz"].GetString() == "hk4e_cn"
         && genshin.ProviderOptions["videoOnly"].GetBoolean(),
         "game EXE resolves to the right provider with typed source options");
@@ -22,27 +22,88 @@ try
         && genshinFolder.GameId == "genshin-impact",
         "official install folder is used when EXE is unknown");
     Check(SupportedGameRegistry.TryMatch(@"D:\Games\Genshin Impact Game\HTGame.exe", null, out var preferredExe)
-        && preferredExe.GameId == "neverness-to-everness",
-        "known EXE takes precedence over a conflicting folder name");
+        && preferredExe.GameId == "genshin-impact",
+        "recognized install folder takes precedence over a conflicting EXE name");
+    Check(SupportedGameRegistry.TryMatch(@"E:\Games\原神\Genshin Impact Game\YuanShen.exe", null, out var nestedFolder)
+        && nestedFolder.GameId == "genshin-impact"
+        && SupportedGameRegistry.GetCacheFolderName(nestedFolder,
+            @"E:\Games\原神\Genshin Impact Game\YuanShen.exe", null) == "Genshin Impact Game",
+        "nearest recognized install folder wins for a nested game path");
+    Check(SupportedGameRegistry.TryMatch(@"E:\Games\原神\Genshin Impact Game\MySteamLaunchBridge.exe", null,
+            out var bridgeFolder)
+        && bridgeFolder.GameId == "genshin-impact",
+        "custom direct-launch bridge uses the game install folder");
+    Check(SupportedGameRegistry.TryMatch(@"D:\Other\GenshinImpact.exe", null, out var globalGenshin)
+        && globalGenshin.GameId == "genshin-impact",
+        "documented Genshin executable is an EXE fallback alias");
+    Check(SupportedGameRegistry.TryMatch(@"D:\Other\BH3.exe", null,
+            out var bh3Executable) && bh3Executable.GameId == "honkai-impact-3rd",
+        "game executable remains a standalone fallback keyword");
+    Check(SupportedGameRegistry.TryMatch(@"D:\鸣潮\launcher.exe", null, out var kuroLauncher)
+        && kuroLauncher.GameId == "wuthering-waves"
+        && SupportedGameRegistry.TryMatch(@"D:\yysls\launcher.exe", null, out var neteaseLauncher)
+        && neteaseLauncher.GameId == "where-winds-meet",
+        "shared launcher executable is disambiguated by the install folder");
+    Check(!SupportedGameRegistry.TryMatch(@"D:\Other\launcher.exe", null, out _),
+        "shared launcher executable without a known install folder does not choose a provider");
+    Check(!SupportedGameRegistry.TryMatch(@"D:\Other\EpicWebHelper.exe", null, out _)
+        && !SupportedGameRegistry.TryMatch(@"D:\Other\crashpad_handler.exe", null, out _)
+        && !SupportedGameRegistry.TryMatch(@"D:\Other\ZFGameBrowser.exe", null, out _)
+        && !SupportedGameRegistry.TryMatch(@"D:\Other\WhereWindsMeetLaunchCapture.exe", null, out _),
+        "helper and diagnostic executables are excluded from EXE keywords");
+    Check(SupportedGameRegistry.TryMatch(@"D:\Other\unknown.exe", @"D:\Games\鸣潮", out var installFolder)
+        && installFolder.GameId == "wuthering-waves",
+        "explicit install directory is checked before EXE fallback");
     Check(SupportedGameRegistry.TryMatch(@"D:\NTE\NTEGame.exe", null, out var alternateExe)
         && alternateExe.GameId == "neverness-to-everness",
         "a second official executable identifies the same game");
+    var sourceCases = new (string Path, string GameId, string ProviderId, string? GameBiz)[]
+    {
+        (@"D:\原神\YuanShen.exe", "genshin-impact", "mihoyo", "hk4e_cn"),
+        (@"D:\绝区零\ZenlessZoneZero.exe", "zenless-zone-zero", "mihoyo", "nap_cn"),
+        (@"D:\崩坏星穹铁道\StarRail.exe", "honkai-star-rail", "mihoyo", "hkrpg_cn"),
+        (@"D:\崩坏3\BH3.exe", "honkai-impact-3rd", "mihoyo", "bh3_cn"),
+        (@"D:\鸣潮\Client-Win64-Shipping.exe", "wuthering-waves", "kuro", null),
+        (@"D:\明日方舟终末地\Endfield.exe", "arknights-endfield", "hypergryph", null),
+        (@"D:\异环\HTGame.exe", "neverness-to-everness", "perfect-world", null),
+        (@"D:\无限暖暖\InfinityNikki.exe", "infinity-nikki", "papergames", null),
+        (@"D:\燕云十六声\wwm.exe", "where-winds-meet", "netease", null),
+    };
+    foreach (var (path, gameId, providerId, gameBiz) in sourceCases)
+    {
+        Check(SupportedGameRegistry.TryMatch(path, null, out var source)
+            && source.GameId == gameId && source.ProviderId == providerId
+            && source.NewsCategoryOrder.Count > 0
+            && source.NewsCategoryOrder.Distinct(StringComparer.OrdinalIgnoreCase).Count()
+                == source.NewsCategoryOrder.Count
+            && (gameBiz is null || source.ProviderOptions["gameBiz"].GetString() == gameBiz),
+            $"EXE routes {gameId} to its source and configured news categories");
+        var unknownExe = Path.Combine(Path.GetDirectoryName(path)!, "unknown.exe");
+        Check(SupportedGameRegistry.TryMatch(unknownExe, null, out var folderSource)
+            && folderSource.GameId == gameId && folderSource.ProviderId == providerId,
+            $"localized folder identifies {gameId} when EXE is unknown");
+    }
     Check(!SupportedGameRegistry.TryMatch(@"D:\Games\unknown.exe", @"D:\Games\Other", out _),
         "unknown paths do not borrow a provider from the preset AppID");
+    Check(SupportedGameRegistry.TryMatch(@"D:\无限暖暖\InfinityNikki.exe", null, out var nikki)
+        && nikki.NewsCategoryLabels.TryGetValue("资讯", out var nikkiNewsLabel)
+        && nikkiNewsLabel == "新闻"
+        && nikki.NewsCategoryOrder.SequenceEqual(new[] { "公告", "新闻", "活动" }),
+        "Infinity Nikki uses its configured official news labels and order");
     Check(SupportedGameRegistry.GetCacheFolderName(genshin, @"D:\Games\Genshin Impact Game\YuanShen.exe", @"D:\Games")
         == "Genshin Impact Game", "recognized game folder takes priority over the selected parent directory");
     Check(SupportedGameRegistry.GetCacheFolderName(alternateExe, @"D:\Other\NTEGame.exe", @"D:\Games\異環")
         == "異環", "localized install folder names the cache");
     Check(SupportedGameRegistry.TryGetProviderId("3513350", out var kuroProvider)
-        && kuroProvider == "kuro-launcher", "Wuthering Waves AppId resolves to Kuro provider");
+        && kuroProvider == "kuro", "Wuthering Waves AppId resolves to Kuro provider");
     Check(SupportedGameRegistry.TryGetProviderId(" 4162040 ", out var hoyoProvider)
-        && hoyoProvider == "hoyoplay-json", "provider lookup trims AppId and resolves HoYoPlay");
+        && hoyoProvider == "mihoyo", "provider lookup trims AppId and resolves miHoYo");
     Check(!SupportedGameRegistry.TryGetProviderId("not-supported", out var unknownProvider)
         && unknownProvider.Length == 0, "unknown AppId has no implicit provider");
     Check(SupportedGameRegistry.ResolveProviderId("4706890", "mihoyo-launcher", "preview")
-            == "perfect-world-hybrid"
+            == "perfect-world"
         && SupportedGameRegistry.ResolveProviderId("3513350", "mihoyo-launcher", "preview")
-            == "kuro-launcher",
+            == "kuro",
         "known AppIds override stale provider IDs saved by older builds");
     Check(SupportedGameRegistry.AppIds.All(appId =>
             SupportedGameRegistry.GetProviderOptions(appId).TryGetValue("region", out var region)

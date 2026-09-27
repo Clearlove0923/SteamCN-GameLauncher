@@ -5,7 +5,7 @@ that the FastAPI server and the WinUI client can reference a Provider without
 importing its concrete class. These tests pin the registry shape:
 
 * every real Provider exposes a non-empty ``provider_id``
-* the registry contains exactly the seven shipped Providers
+* the registry exposes six company Providers and one generic local Provider
 * ``create_provider`` returns a usable instance
 * unknown IDs raise ``ValueError`` (FastAPI surfaces this as HTTP 400)
 * adding a new Provider requires updating the registry — the explicit tuple
@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import pytest
 
-from home_content.provider_registry import PROVIDER_TYPES, create_provider
+from home_content.provider_registry import PROVIDER_TYPES, LEGACY_PROVIDER_TYPES, create_provider
 from home_content.providers import (
     HoYoPlayJsonProvider,
     HypergryphBatchProvider,
@@ -26,23 +26,44 @@ from home_content.providers import (
     NetEaseStaticCmsProvider,
     NextJsDataProvider,
     PerfectWorldHybridProvider,
+    MiHoYoProvider,
+    KuroProvider,
+    HypergryphProvider,
+    PerfectWorldProvider,
+    PaperGamesProvider,
+    NetEaseProvider,
 )
 from home_content.providers.base import HomeContentProvider
 
 EXPECTED_PROVIDERS: dict[str, type[HomeContentProvider]] = {
+    "mihoyo": MiHoYoProvider,
+    "kuro": KuroProvider,
+    "hypergryph": HypergryphProvider,
+    "perfect-world": PerfectWorldProvider,
+    "papergames": PaperGamesProvider,
+    "netease": NetEaseProvider,
+    "local-launcher-asset": LocalLauncherAssetProvider,
+}
+
+EXPECTED_LEGACY = {
     "hoyoplay-json": HoYoPlayJsonProvider,
     "kuro-launcher": KuroLauncherProvider,
     "hypergryph-batch": HypergryphBatchProvider,
     "perfect-world-hybrid": PerfectWorldHybridProvider,
     "nextjs-data": NextJsDataProvider,
     "netease-static-cms": NetEaseStaticCmsProvider,
-    "local-launcher-asset": LocalLauncherAssetProvider,
 }
 
 
 def test_registry_contains_all_expected_providers() -> None:
     """The seven shipped Providers must all be reachable by their stable ID."""
     assert set(PROVIDER_TYPES.keys()) == set(EXPECTED_PROVIDERS.keys())
+
+
+def test_legacy_provider_ids_remain_available() -> None:
+    assert LEGACY_PROVIDER_TYPES == EXPECTED_LEGACY
+    for provider_id, provider_cls in EXPECTED_LEGACY.items():
+        assert isinstance(create_provider(provider_id), provider_cls)
 
 
 def test_registry_ids_match_provider_classes() -> None:

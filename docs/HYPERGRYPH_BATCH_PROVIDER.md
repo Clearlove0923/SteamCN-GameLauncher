@@ -1,5 +1,7 @@
 # HypergryphBatchProvider
 
+首页使用公司级 `HypergryphProvider`（`providerId=hypergryph`）；`HypergryphBatchProvider` / `hypergryph-batch` 保留为旧配置兼容入口。
+
 `python/home_content/providers/hypergryph_batch.py` 是鹰角《明日方舟:终末地》(Endfield)
 以及同厂商其他游戏的首页 Provider。当前默认指向 **Endfield Global**,通过
 `providerOptions` 可切换到 CN 或指定不同的 `appCode` / `channel` / `subChannel`。

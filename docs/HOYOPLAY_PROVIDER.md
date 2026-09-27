@@ -1,5 +1,7 @@
 # HoYoPlay Provider
 
+首页使用公司级 `MiHoYoProvider`（`providerId=mihoyo`）选择游戏；`HoYoPlayJsonProvider` / `hoyoplay-json` 保留为旧配置兼容入口。
+
 `python/home_content/providers/hoyoplay_json.py` 是米哈游 / HoYoverse 启动器的首页 Provider,
 服务原神、崩坏3、星穹铁道、绝区零、未定事件簿、云·原神。
 

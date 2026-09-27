@@ -4,7 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:SteamCNGameLauncher.Views.Controls">
     <!-- 在固定设计画布内排版，再整体适配外框，避免系统 DPI 缩放挤占三行资讯空间。 -->
-    <Viewbox Stretch="Fill">
+    <Viewbox Stretch="Uniform">
         <Border x:Name="DesignSurface" Width="576" Height="425"
                 Background="Transparent" CornerRadius="14">
             <Grid>

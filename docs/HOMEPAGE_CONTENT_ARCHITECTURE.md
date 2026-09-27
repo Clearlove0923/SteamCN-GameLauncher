@@ -43,7 +43,7 @@ Python 将不同厂商和本地启动器来源转换为同一个 `HomeContent`�
 }
 ```
 
-`executablePath` 来自预设的真实游戏 EXE，`installDirectory` 来自预设的安装目录。Python 首先按 EXE 文件名匹配，然后按路径中的完整目录段匹配；两者都未命中时返回 `unsupported_game`，不会根据 Steam AppID 猜测。匹配后 Python 从 `python/home_content/game_sources.json` 选择 Provider 及国服参数，忽略请求中可能过期的 `providerId` 和 `providerOptions`。映射表加载一次，使用字典查找，不扫描磁盘。原神示例匹配 `YuanShen.exe` 或 `Genshin Impact Game`；异环允许 `HTGame.exe` 或 `NTEGame.exe`。`cacheFolderName` 优先采用路径中识别出的游戏文件夹名称，其次是用户填写的安装目录末段，最后是稳定游戏标识。请求路径仅传给本机 Worker，不写入日志。
+`executablePath` 来自预设中用户填写的 EXE，可能是游戏本体，也可能是自制的直启桥接程序；`installDirectory` 来自预设的安装目录。Python 首先按 EXE 路径中由近到远的完整游戏目录段匹配，再按填写的安装目录由近到远匹配，最后按 EXE 完整文件名兜底；都未命中时返回 `unsupported_game`，不会根据 Steam AppID 猜测。匹配后 Python 从 `python/home_content/game_sources.json` 选择 Provider 及国服参数，忽略请求中可能过期的 `providerId` 和 `providerOptions`。映射表加载一次，使用字典查找，不扫描磁盘。`E:\Games\原神\Genshin Impact Game\YuanShen.exe` 优先命中最近的 `Genshin Impact Game`；自制 EXE 位于该目录内时也按原神路由。`cacheFolderName` 优先采用路径中识别出的游戏文件夹名称，其次是用户填写的安装目录末段，最后是稳定游戏标识。请求路径仅传给本机 Worker，不写入日志。
 
 ## 响应契约
 
@@ -126,16 +126,16 @@ Python 将不同厂商和本地启动器来源转换为同一个 `HomeContent`�
 
 ## Provider 标识
 
-Provider 类名与配置标识分离。首批稳定标识建议为：
+首页按公司选择 Provider，再按共享来源字典中的 `gameId` 和游戏参数选择该公司的具体游戏。旧版来源形态标识仍可用于读取已保存的配置；新增来源使用公司标识：
 
 | Python 类 | providerId |
 |---|---|
-| `HoYoPlayJsonProvider` | `hoyoplay-json` |
-| `KuroLauncherProvider` | `kuro-launcher` |
-| `HypergryphBatchProvider` | `hypergryph-batch` |
-| `PerfectWorldHybridProvider` | `perfect-world-hybrid` |
-| `NextJsDataProvider` | `nextjs-data` |
-| `NetEaseStaticCmsProvider` | `netease-static-cms` |
+| `MiHoYoProvider` | `mihoyo`；旧 `hoyoplay-json` |
+| `KuroProvider` | `kuro`；旧 `kuro-launcher` |
+| `HypergryphProvider` | `hypergryph`；旧 `hypergryph-batch` |
+| `PerfectWorldProvider` | `perfect-world`；旧 `perfect-world-hybrid` |
+| `PaperGamesProvider` | `papergames`；旧 `nextjs-data` |
+| `NetEaseProvider` | `netease`；旧 `netease-static-cms` |
 | `LocalLauncherAssetProvider` | `local-launcher-asset` |
 
 ### 国服默认来源
@@ -145,16 +145,22 @@ SteamCN 内置适配游戏统一使用中国大陆来源。EXE 别名、安装�
 
 | 游戏 | Provider | 默认来源 |
 |---|---|---|
-| 鸣潮 | `kuro-launcher` | 国服 GameStarter CDN，`G152` / `zh-Hans` |
-| 绝区零、崩坏 3 | `hoyoplay-json` | 米哈游中国大陆 HoYoPlay，`*_cn` game biz |
-| 燕云十六声 | `netease-static-cms` | `yysls.cn` 国服官网 CMS |
-| 无限暖暖 | `nextjs-data` | `infinitynikki.nuanpaper.com` 国服站点与资讯接口 |
-| 异环 | `perfect-world-hybrid` | `yh.wanmei.com`、`games.wanmei.com` 和 `wmupd.com` 国服来源 |
-| 明日方舟：终末地 | `hypergryph-batch` | 鹰角国服 launcher，`appCode=6LL0KJuqHBVz33WK`、渠道 `1`、`zh-cn` |
+| 鸣潮 | `kuro` | 国服 GameStarter CDN，`G152` / `zh-Hans` |
+| 原神、绝区零、崩坏：星穹铁道、崩坏 3 | `mihoyo` | 米哈游中国大陆 HoYoPlay，各游戏分别使用 `hk4e_cn`、`nap_cn`、`hkrpg_cn`、`bh3_cn` |
+| 燕云十六声 | `netease` | `yysls.cn` 国服官网 CMS |
+| 无限暖暖 | `papergames` | `infinitynikki.nuanpaper.com` 国服站点与资讯接口 |
+| 异环 | `perfect-world` | `yh.wanmei.com`、`games.wanmei.com` 和 `wmupd.com` 国服来源 |
+| 明日方舟：终末地 | `hypergryph` | 鹰角国服 launcher，`appCode=6LL0KJuqHBVz33WK`、渠道 `1`、`zh-cn` |
 
 新增内置游戏时配置必须包含 `region=cn`；启动器加载配置时会验证这一约束。国际服来源不能作为 SteamCN 内置游戏的隐式回退。默认区域策略变更时必须同步递增 C# 首页缓存键版本，避免旧的国际服元数据在有效期内继续显示。
 
-资讯分类按各游戏返回的数据动态显示，不预设每个游戏都有固定的三个标签。`newsCategoryLabels` 可按游戏来源覆盖展示标签；鸣潮的 `news` 分组显示为“新闻”，其他游戏仍按各自来源显示“资讯”或其他分类。分类按钮切换对应列表，条目和轮播图仅打开数据提供的 HTTPS 链接。
+匹配名称以用户填写的 EXE 路径和安装目录中的完整游戏目录段为优先，EXE 文件名仅作兜底。字典包含上述游戏的常见中文安装目录名；《无限暖暖》属于叠纸来源，当前仍使用已验证的官网 Next.js 数据。匹配到米哈游游戏后，`mihoyo` 再以该游戏的 `gameBiz` 选择专属首页内容；缺少有效游戏选择时返回错误，避免误显示旗下另一款游戏。目录名中的冒号在 Windows 路径中不可用，例如《崩坏：星穹铁道》使用 `崩坏星穹铁道` 作为目录别名。未匹配的路径不会借用其他游戏的 Provider。
+
+`exeNames` 只记录游戏本体、正式启动器或实际承担启动链路的桥接 EXE；不包含崩溃上报、WebView、反作弊服务、SDK、安装器、更新器、备份和诊断程序。来源可以是本机安装链路，也可以是官方资料、发行平台启动配置或公开补丁清单。`matchNotes` 和 `matchSources` 记录版本、证据和未核实范围。多个游戏可使用同名启动器，目录匹配仍优先，脱离已识别目录的同名 EXE 不触发 Provider 选择。新增公司或游戏时按 `AGENTS.md` 的“新增公司或游戏的首页匹配字典”规则补充来源和两端离线测试。
+
+资讯分类按各游戏返回的数据动态显示，不预设每个游戏都有固定的三个标签。每条游戏来源都配置 `newsCategoryLabels` 和 `newsCategoryOrder`，由该游戏已核对的官网或启动器来源决定名称和顺序；无限暖暖配置为“公告 / 新闻 / 活动”，其中来源的“资讯”显示为“新闻”。只显示本次确有内容的分类，未知分类追加显示；空内容时不造默认“资讯”标签。轮播图保持原始宽高比填满资讯栏，比例不一致时裁切边缘。分类按钮切换对应列表，条目和轮播图仅打开数据提供的 HTTPS 链接。
+
+所有公司和游戏的本机采集共用一个 Python Worker。启动时若配置端口已被其他进程占用，本次会在空闲回环端口启动自己的 Worker，不复用可能过期的旧进程；页面使用本次 Worker 的实际端口。主程序正常退出时结束其进程树，Windows Job 对象也在主程序异常退出后结束该 Worker。用户自行启动的外部服务不属于本程序，不会被结束。
 
 `providerId` 一旦进入用户配置便视为持久化标识。重命名 Python 类时不得直接更改已有标识，需要提供迁移或别名。
 

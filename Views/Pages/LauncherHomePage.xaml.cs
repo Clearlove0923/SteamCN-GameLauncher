@@ -20,7 +20,7 @@ public sealed partial class LauncherHomePage : Page
     private readonly HomeBackdropCoordinator _homeBackdrop = HomeBackdropCoordinator.Instance;
     private readonly HomeVideoVariantSelector _videoVariantSelector = HomeContentServiceFactory.VideoSelector;
     private readonly Guid _homeBackdropOwner = Guid.NewGuid();
-    private readonly IHomeContentService _homeContentService;
+    private IHomeContentService _homeContentService;
     private string? _activeLayoutProfileId;
     private CancellationTokenSource? _homeContentCancellation;
     private Models.CustomManifestPreset? _currentGame;
@@ -40,7 +40,7 @@ public sealed partial class LauncherHomePage : Page
         // 窗口跨显示器或缩放率变化时，保持资讯栏的截图实际像素尺寸不变。
         SizeChanged += (_, _) => ApplyLayoutProfile(_activeLayoutProfileId);
 
-        _homeContentService = HomeContentServiceFactory.Instance.GetOrCreate(_settingsService.Load());
+        _homeContentService = new PreviewHomeContentService();
     }
 
     private void LauncherHomePage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -170,10 +170,30 @@ public sealed partial class LauncherHomePage : Page
                 ProviderOptions = match.ProviderOptions
             };
             _activeHomeRequest = request;
+            if (App.WorkerStartupTask is { } workerStartup)
+                await workerStartup;
+            if (_navigatedAway || !ReferenceEquals(_activeHomeRequest, request)) return;
+            var currentSettings = _settingsService.Load();
+            if (App.WorkerSpawner is { OwnsProcess: true, IsRunning: true } worker)
+                currentSettings.HomeContentWorkerBaseUrl = worker.BaseUrl;
+            else if (currentSettings.SpawnPythonWorkerOnLaunch
+                && PythonWorkerSpawner.IsLoopbackBaseUrl(currentSettings.HomeContentWorkerBaseUrl))
+                // Worker 启动失败时仍走缓存服务，但绝不连接可能过期的旧端口。
+                currentSettings.HomeContentWorkerBaseUrl = App.WorkerSpawner?.BaseUrl
+                    ?? "http://127.0.0.1:1";
+            var service = HomeContentServiceFactory.Instance.GetOrCreate(currentSettings);
+            if (!ReferenceEquals(service, _homeContentService))
+            {
+                if (_homeContentService is IHomeContentRefreshSource previous)
+                    previous.ContentRefreshed -= HomeContentService_ContentRefreshed;
+                _homeContentService = service;
+                if (IsLoaded && service is IHomeContentRefreshSource next)
+                    next.ContentRefreshed += HomeContentService_ContentRefreshed;
+            }
             var result = await _homeContentService.GetAsync(request, _homeContentCancellation.Token);
             if (_navigatedAway || !ReferenceEquals(_activeHomeRequest, request)) return;
             _currentHomeContent = _videoVariantSelector.Select(request, result.Content);
-            HomeContentPanel.SetContent(_currentHomeContent, match.NewsCategoryLabels);
+            HomeContentPanel.SetContent(_currentHomeContent, match.NewsCategoryLabels, match.NewsCategoryOrder);
             ApplyHomeAppearance();
             if (result.IsStale)
                 _logService.AddLog("[首页缓存] 已立即显示本地缓存，正在后台刷新最新内容");
@@ -212,7 +232,8 @@ public sealed partial class LauncherHomePage : Page
         {
             if (_navigatedAway || _activeHomeRequest != active || !IsLoaded) return;
             _currentHomeContent = _videoVariantSelector.Select(active, e.Result.Content);
-            HomeContentPanel.SetContent(_currentHomeContent, _activeHomeMatch?.NewsCategoryLabels);
+            HomeContentPanel.SetContent(_currentHomeContent, _activeHomeMatch?.NewsCategoryLabels,
+                _activeHomeMatch?.NewsCategoryOrder);
             ApplyHomeAppearance();
         });
     }

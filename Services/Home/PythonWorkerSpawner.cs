@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Net;
 using SteamCNGameLauncher.Models;
 
 namespace SteamCNGameLauncher.Services.Home;
@@ -18,7 +19,7 @@ namespace SteamCNGameLauncher.Services.Home;
 ///
 /// 探测策略（按优先级）：
 /// <list type="number">
-///   <item><see cref="AppSettings.HomeContentWorkerBaseUrl"/> 端口已经在听 → 直接复用，不 spawn</item>
+///   <item><see cref="AppSettings.HomeContentWorkerBaseUrl"/> 端口已经在听 → 另选空闲端口，避免复用旧进程</item>
 ///   <item><see cref="AppSettings.PythonExecutablePath"/> 非空且文件存在 → 用之</item>
 ///   <item>否则按 PATH + 常见安装目录探测 <c>python.exe</c> / <c>python3.exe</c> / <c>py</c> 等</item>
 /// </list>
@@ -31,21 +32,24 @@ public sealed class PythonWorkerSpawner : IDisposable
 {
     private readonly AppSettings _settings;
     private readonly LogService _logService;
-    private readonly int _port;
+    private int _port;
+    private WorkerProcessJob? _job;
     private Process? _process;
     private bool _disposed;
     private bool _started;
     private bool _ownsProcess;
 
     /// <summary>
-    /// Worker 是否仍在运行。
-    /// fast-path（端口已被外部进程占用）时 <see cref="_process"/> 仍是 null，
-    /// 但调用方已经把"存在外部进程在跑"视为可服务，因此本属性同样返回 true。
+    /// 本次启动创建的 Worker 是否仍在运行。
     /// </summary>
     public bool IsRunning => _started && (_process is null || !_process.HasExited);
 
-    /// <summary>Worker 是否由本进程拉起（区别于"外部已存在"）。</summary>
+    /// <summary>Worker 是否由本进程拉起。</summary>
     public bool OwnsProcess => _ownsProcess;
+    public string BaseUrl => $"http://127.0.0.1:{_port}";
+
+    public static bool IsLoopbackBaseUrl(string? baseUrl) =>
+        Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) && uri.IsLoopback;
 
     /// <summary>stdout/stderr 一行到达时触发，调用方负责落 LogService。</summary>
     public event Action<string>? OutputReceived;
@@ -63,8 +67,7 @@ public sealed class PythonWorkerSpawner : IDisposable
     }
 
     /// <summary>
-    /// 尝试拉起 Python Worker：先探测端口，若已被占用则视为"外部已在运行"直接返回 true；
-    /// 否则探测 python 解释器 + spawn 进程并等待端口可连。
+    /// 尝试拉起 Python Worker：已占用端口改用空闲端口，随后启动受 Job 对象监管的子进程。
     /// </summary>
     /// <returns>true 表示 launcher 可以走 <see cref="FastApiHomeContentService"/>；false 表示需要降级。</returns>
     public async Task<bool> StartAsync(CancellationToken cancellationToken = default)
@@ -85,10 +88,14 @@ public sealed class PythonWorkerSpawner : IDisposable
 
         if (await IsPortListeningAsync(_port, cancellationToken).ConfigureAwait(false))
         {
-            _logService.AddLog($"[worker] port {_port} already listening; skip spawn");
-            _started = true;
-            _ownsProcess = false;
-            return true;
+            // 端口上的进程可能是上次异常退出遗留的旧 Worker。
+            // 本次启动选独立端口，确保只使用并管理自己创建的 Worker。
+            var occupiedPort = _port;
+            using var reservation = new TcpListener(IPAddress.Loopback, 0);
+            reservation.Start();
+            _port = ((IPEndPoint)reservation.LocalEndpoint).Port;
+            reservation.Stop();
+            _logService.AddLog($"[worker] port {occupiedPort} occupied; using owned worker on {_port}");
         }
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -152,10 +159,11 @@ public sealed class PythonWorkerSpawner : IDisposable
                 proc.Dispose();
                 return false;
             }
-            proc.BeginOutputReadLine();
-            proc.BeginErrorReadLine();
             _process = proc;
             _ownsProcess = true;
+            _job = WorkerProcessJob.Attach(proc);
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
             _started = true;
             if (cancellationToken.IsCancellationRequested)
             {
@@ -168,6 +176,7 @@ public sealed class PythonWorkerSpawner : IDisposable
         catch (Exception ex)
         {
             _logService.AddLog($"[worker] failed to spawn: {ex.GetType().Name}: {ex.Message}");
+            StopImmediately();
             return false;
         }
 
@@ -201,6 +210,8 @@ public sealed class PythonWorkerSpawner : IDisposable
         }
         catch { /* best effort */ }
         try { proc.Dispose(); } catch { /* best effort */ }
+        _job?.Dispose();
+        _job = null;
         _process = null;
         _ownsProcess = false;
         return false;
@@ -244,6 +255,8 @@ public sealed class PythonWorkerSpawner : IDisposable
         }
 
         try { proc.Dispose(); } catch { /* best effort */ }
+        _job?.Dispose();
+        _job = null;
         _process = null;
         _logService.AddLog("[worker] stopped");
     }
@@ -261,7 +274,7 @@ public sealed class PythonWorkerSpawner : IDisposable
         if (_disposed) return;
         var proc = Interlocked.Exchange(ref _process, null);
         var ownsProcess = _ownsProcess;
-        // 已存在的外部 Worker 不是本程序启动的，不得误杀。
+        // 只结束本次启动的 Worker；端口上已有的其他进程从未被纳入本 Job。
         _ownsProcess = false;
         _started = false;
         if (proc is null) return;
@@ -276,6 +289,8 @@ public sealed class PythonWorkerSpawner : IDisposable
         }
         finally
         {
+            _job?.Dispose();
+            _job = null;
             try { proc.Dispose(); } catch { /* best effort */ }
         }
     }

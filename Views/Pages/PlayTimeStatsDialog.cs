@@ -16,10 +16,11 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
     private readonly IReadOnlyList<PlaySession> _sessions;
     private readonly Dictionary<DateTime, TimeSpan> _days = [];
     private readonly Canvas _chart = new() { Width = BodyWidth, Height = 168 };
-    private readonly TextBlock _rangeTotal = new() { FontSize = 12, Foreground = MutedText };
+    private readonly TextBlock _rangeTotal = new() { FontSize = 12, Foreground = WhiteText };
     private readonly Button[] _rangeButtons = new Button[3];
 
-    private static SolidColorBrush MutedText => Brush(205, 205, 205);
+    private static SolidColorBrush WhiteText => Brush(255, 255, 255);
+    private static SolidColorBrush MutedText => WhiteText;
 
     public PlayTimeStatsDialog(string presetId)
     {
@@ -36,7 +37,7 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
             }
         }
 
-        Background = Brush(62, 62, 62);
+        Background = Brush(204, 27, 32, 40);
         BorderThickness = new Thickness(0);
         CornerRadius = new CornerRadius(8);
         MaxWidth = 1200;
@@ -58,7 +59,8 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         title.Children.Add(new TextBlock { Text = "游戏时长统计", FontSize = 20,
-            FontWeight = FontWeights.Bold, VerticalAlignment = VerticalAlignment.Center });
+            FontWeight = FontWeights.Bold, Foreground = WhiteText,
+            VerticalAlignment = VerticalAlignment.Center });
         var info = new Button { Width = 24, Height = 24, Padding = new Thickness(0),
             Content = new FontIcon { Glyph = "\uE946", FontSize = 12, Foreground = MutedText },
             Background = Brush(0, 0, 0, 0), BorderThickness = new Thickness(0) };
@@ -129,11 +131,12 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
         var stack = new StackPanel { Padding = new Thickness(12, 9, 8, 8), Spacing = 3 };
         stack.Children.Add(new TextBlock { Text = title, FontSize = 12, Foreground = MutedText,
             TextTrimming = TextTrimming.CharacterEllipsis });
-        stack.Children.Add(new TextBlock { Text = value, FontSize = 18, FontWeight = FontWeights.Bold });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 18,
+            FontWeight = FontWeights.Bold, Foreground = WhiteText });
         stack.Children.Add(new TextBlock { Text = detail, FontSize = 11, Foreground = MutedText,
             TextTrimming = TextTrimming.CharacterEllipsis });
-        var card = new Border { Background = Brush(76, 76, 76),
-            BorderBrush = Brush(98, 98, 98), BorderThickness = new Thickness(1),
+        var card = new Border { Background = Brush(100, 80, 88, 100),
+            BorderBrush = Brush(115, 200, 208, 220), BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4), Child = stack };
         Grid.SetColumn(card, column);
         grid.Children.Add(card);
@@ -169,7 +172,7 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
         _chart.Children.Clear();
         for (var i = 0; i < _rangeButtons.Length; i++)
         {
-            _rangeButtons[i].Background = i == range ? Brush(92, 92, 92) : Brush(0, 0, 0, 0);
+            _rangeButtons[i].Background = i == range ? Brush(100, 180, 190, 205) : Brush(0, 0, 0, 0);
             _rangeButtons[i].Foreground = i == range ? Brush(255, 255, 255) : MutedText;
         }
         var buckets = GetBuckets(range);
@@ -303,7 +306,7 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
 
     private static SolidColorBrush HeatBrush(double hours) => hours switch
     {
-        <= 0 => Brush(82, 82, 82),
+        <= 0 => Brush(100, 95, 102, 114),
         < .5 => Brush(64, 66, 112, 168),
         < 2 => Brush(100, 75, 132, 202),
         < 5 => Brush(115, 91, 157, 225),

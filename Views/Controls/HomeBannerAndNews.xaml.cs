@@ -53,7 +53,8 @@ public sealed partial class HomeBannerAndNews : UserControl
         SetContent(new HomeContent());
     }
 
-    public void SetContent(HomeContent? content, IReadOnlyDictionary<string, string>? categoryLabels = null)
+    public void SetContent(HomeContent? content, IReadOnlyDictionary<string, string>? categoryLabels = null,
+        IReadOnlyList<string>? categoryOrder = null)
     {
         // 同一控件按游戏配置重建分类，不把“鸣潮的新闻”等厂商差异写死在 XAML。
         content ??= new HomeContent();
@@ -68,7 +69,7 @@ public sealed partial class HomeBannerAndNews : UserControl
                 banner.TargetUrl));
         }
 
-        BuildNewsGroups(content.News, categoryLabels);
+        BuildNewsGroups(content.News, categoryLabels, categoryOrder);
         SelectNewsGroup(NewsGroups.FirstOrDefault());
         BannerFlipView.SelectedIndex = BannerItems.Count > 0 ? 0 : -1;
         BannerFlipView.Visibility = BannerItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -77,7 +78,8 @@ public sealed partial class HomeBannerAndNews : UserControl
         StartBannerTimerIfNeeded();
     }
 
-    private void BuildNewsGroups(IReadOnlyList<HomeNewsItem> news, IReadOnlyDictionary<string, string>? categoryLabels)
+    private void BuildNewsGroups(IReadOnlyList<HomeNewsItem> news,
+        IReadOnlyDictionary<string, string>? categoryLabels, IReadOnlyList<string>? categoryOrder)
     {
         // 未认识的分类仍创建独立通用分组，避免 Provider 新增类别后内容丢失。
         NewsGroups.Clear();
@@ -102,8 +104,18 @@ public sealed partial class HomeBannerAndNews : UserControl
                 item.TargetUrl));
         }
 
-        if (NewsGroups.Count == 0)
-            NewsGroups.Add(new HomeNewsGroup("information", "资讯"));
+        // 只给实际存在的分类排序；配置不能制造没有内容的空标签。
+        var targetIndex = 0;
+        foreach (var configuredCategory in categoryOrder ?? [])
+        {
+            var (key, _) = ResolveCategory(configuredCategory);
+            if (!groupsByKey.TryGetValue(key, out var group)) continue;
+            var currentIndex = NewsGroups.IndexOf(group);
+            if (currentIndex != targetIndex)
+                NewsGroups.Move(currentIndex, targetIndex);
+            targetIndex++;
+        }
+
     }
 
     private static (string Key, string Header) ResolveCategory(string? category)

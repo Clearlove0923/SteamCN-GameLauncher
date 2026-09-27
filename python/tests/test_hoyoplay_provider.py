@@ -17,6 +17,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -32,6 +33,9 @@ from home_content.providers.hoyoplay_json import (
     _pick_background,
 )
 from home_content.models import HomeContentRequest
+from home_content.models import HomeContent
+from home_content.providers import MiHoYoProvider
+from home_content.game_source_registry import get_game_source_by_id
 
 SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "hoyoplay-cn-launcher-info.json"
 CONTENT_SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "hoyoplay-cn-zzz-content.json"
@@ -50,6 +54,41 @@ def test_steam_app_ids_map_to_hoyoplay_business_ids() -> None:
     assert _game_biz_from_game_id("1671200") == "bh3_cn"
     assert _game_biz_from_game_id(" 4162040 ") == "nap_cn"
     assert _game_biz_from_game_id("unknown") == ""
+
+
+def test_company_provider_selects_each_configured_game() -> None:
+    assert {
+        game_id: get_game_source_by_id(game_id).provider_options["gameBiz"]
+        for game_id in ("genshin-impact", "zenless-zone-zero", "honkai-star-rail", "honkai-impact-3rd")
+    } == {
+        "genshin-impact": "hk4e_cn",
+        "zenless-zone-zero": "nap_cn",
+        "honkai-star-rail": "hkrpg_cn",
+        "honkai-impact-3rd": "bh3_cn",
+    }
+
+
+@pytest.mark.asyncio
+async def test_company_provider_passes_selected_game_biz_to_adapter() -> None:
+    expected = {
+        "genshin-impact": "hk4e_cn",
+        "zenless-zone-zero": "nap_cn",
+        "honkai-star-rail": "hkrpg_cn",
+        "honkai-impact-3rd": "bh3_cn",
+    }
+    adapter_fetch = AsyncMock(return_value=HomeContent())
+    with patch.object(HoYoPlayJsonProvider, "fetch", adapter_fetch):
+        for game_id, game_biz in expected.items():
+            await MiHoYoProvider().fetch(_request(game_id, {"region": "cn"}))
+            assert adapter_fetch.call_args.args[0].provider_options["gameBiz"] == game_biz
+
+
+@pytest.mark.asyncio
+async def test_company_provider_rejects_unknown_game_before_fetch() -> None:
+    with pytest.raises(ValueError, match="Unknown miHoYo game"):
+        await MiHoYoProvider().fetch(_request("unknown-game"))
+    with pytest.raises(ValueError, match="gameBiz does not match"):
+        await MiHoYoProvider().fetch(_request("genshin-impact", {"gameBiz": "nap_cn"}))
 
 
 def _request(game_id: str, options: dict[str, Any] | None = None) -> HomeContentRequest:

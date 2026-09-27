@@ -17,9 +17,12 @@ public class Program
 
     public static async Task<int> Main(string[] args)
     {
+        if (args.Length == 3 && args[0] == "--worker-parent")
+            return await RunWorkerParent(int.Parse(args[1]), args[2]);
         await Run("Ctor_NullSettings_Throws", () => Task.FromResult(Ctor_NullSettings_Throws()));
         await Run("Ctor_NullLogService_Throws", () => Task.FromResult(Ctor_NullLogService_Throws()));
-        await Run("StartAsync_AlreadyListening_ReturnsTrue_NoSpawn", StartAsync_AlreadyListening_ReturnsTrue_NoSpawn);
+        await Run("RemoteEndpoint_IsNotLocalWorker", () => Task.FromResult(RemoteEndpoint_IsNotLocalWorker()));
+        await Run("StartAsync_AlreadyListening_SelectsOwnedPort", StartAsync_AlreadyListening_SelectsOwnedPort);
         await Run("StartAsync_PythonNotFound_ReturnsFalse", StartAsync_PythonNotFound_ReturnsFalse);
         await Run("StartAsync_ZeroBytePythonAlias_ReturnsFalse", StartAsync_ZeroBytePythonAlias_ReturnsFalse);
         await Run("StartAsync_CmdExitsImmediately_ReturnsFalse", StartAsync_CmdExitsImmediately_ReturnsFalse);
@@ -30,6 +33,9 @@ public class Program
         await Run("Exited_FiresWhenChildExits", Exited_FiresWhenChildExits);
         await Run("StartAsync_Canceled_DoesNotSpawn", StartAsync_Canceled_DoesNotSpawn);
         await Run("StopImmediately_NullProcess_DoesNotThrow", StopImmediately_NullProcess_DoesNotThrow);
+        await Run("OwnedWorker_StopsWithSpawner", OwnedWorker_StopsWithSpawner);
+        await Run("OccupiedPort_StartsSeparateHealthyWorker", OccupiedPort_StartsSeparateHealthyWorker);
+        await Run("OwnedWorker_ExitsWhenParentDies", OwnedWorker_ExitsWhenParentDies);
         await Run("LogService_BackgroundLog_MarshalsCollectionChange", LogService_BackgroundLog_MarshalsCollectionChange);
 
         int failed = 0;
@@ -95,8 +101,8 @@ public class Program
         }
     }
 
-    // ===== 3. StartAsync 端口已被占 → 不 spawn、直接复用 =====
-    private static async Task StartAsync_AlreadyListening_ReturnsTrue_NoSpawn()
+    // ===== 3. 已占用端口不能复用不受本程序管理的旧 Worker =====
+    private static async Task StartAsync_AlreadyListening_SelectsOwnedPort()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
@@ -108,11 +114,15 @@ public class Program
         realListener.Start();
         try
         {
-            using var spawner = new PythonWorkerSpawner(MakeSettings(port), LogService.Instance);
+            var settings = MakeSettings(port);
+            settings.PythonExecutablePath = @"C:\nonexistent\python.exe";
+            using var spawner = new PythonWorkerSpawner(settings, LogService.Instance);
             var ok = await spawner.StartAsync();
-            if (!ok) throw new Exception("StartAsync returned false while port was already listening");
-            if (spawner.OwnsProcess) throw new Exception("OwnsProcess should be false");
-            if (!spawner.IsRunning) throw new Exception("IsRunning should be true (existing process assumed alive)");
+            if (ok) throw new Exception("No Python runtime should be available for this test");
+            if (new Uri(spawner.BaseUrl).Port == port)
+                throw new Exception("Spawner reused a port owned by an unrelated process");
+            if (spawner.OwnsProcess || spawner.IsRunning)
+                throw new Exception("Spawner must not claim the unrelated listener");
         }
         finally
         {
@@ -130,6 +140,15 @@ public class Program
         var ok = await spawner.StartAsync();
         if (ok) throw new Exception("StartAsync should return false when python.exe missing");
         if (spawner.OwnsProcess) throw new Exception("OwnsProcess should be false");
+    }
+
+    private static bool RemoteEndpoint_IsNotLocalWorker()
+    {
+        if (!PythonWorkerSpawner.IsLoopbackBaseUrl("http://127.0.0.1:8765")
+            || !PythonWorkerSpawner.IsLoopbackBaseUrl("http://localhost:8765")
+            || PythonWorkerSpawner.IsLoopbackBaseUrl("https://content.example.com"))
+            throw new Exception("Only loopback endpoints may be treated as local Workers.");
+        return true;
     }
 
     // WindowsApps 会在未安装 Python 时留下 0 字节 python.exe；不得把它当成可用运行时。
@@ -191,6 +210,119 @@ public class Program
         spawner.StopImmediately();
         if (spawner.IsRunning) throw new Exception("Worker remained running after immediate stop.");
         return Task.CompletedTask;
+    }
+
+    private static async Task OwnedWorker_StopsWithSpawner()
+    {
+        var python = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+            "..", "..", "python-runtime", "python.exe"));
+        if (!File.Exists(python)) throw new Exception("Packaged Python runtime is missing.");
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        var settings = MakeSettings(port);
+        settings.PythonExecutablePath = python;
+        settings.PythonWorkerStartupTimeoutSeconds = 8;
+        using var spawner = new PythonWorkerSpawner(settings, LogService.Instance);
+        if (!await spawner.StartAsync() || !spawner.OwnsProcess)
+            throw new Exception("Real Worker did not start as an owned process.");
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        using var response = await client.GetAsync($"{spawner.BaseUrl}/healthz");
+        if (!response.IsSuccessStatusCode) throw new Exception("Worker health check failed.");
+        spawner.StopImmediately();
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            try
+            {
+                using var probe = new TcpClient();
+                await probe.ConnectAsync(IPAddress.Loopback, port);
+            }
+            catch (SocketException) { return; }
+            await Task.Delay(100);
+        }
+        throw new Exception("Worker still listens after its owner stopped it.");
+    }
+
+    private static async Task OccupiedPort_StartsSeparateHealthyWorker()
+    {
+        using var occupied = new TcpListener(IPAddress.Loopback, 0);
+        occupied.Start();
+        var originalPort = ((IPEndPoint)occupied.LocalEndpoint).Port;
+        var settings = MakeSettings(originalPort);
+        settings.PythonExecutablePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+            "..", "..", "python-runtime", "python.exe"));
+        settings.PythonWorkerStartupTimeoutSeconds = 8;
+        using var spawner = new PythonWorkerSpawner(settings, LogService.Instance);
+        if (!await spawner.StartAsync() || !spawner.OwnsProcess
+            || new Uri(spawner.BaseUrl).Port == originalPort)
+            throw new Exception("Occupied port was reused or fresh Worker did not start.");
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        using var response = await client.GetAsync($"{spawner.BaseUrl}/healthz");
+        if (!response.IsSuccessStatusCode) throw new Exception("Fresh Worker was not healthy.");
+        spawner.StopImmediately();
+    }
+
+    private static async Task<int> RunWorkerParent(int port, string readyFile)
+    {
+        var settings = MakeSettings(port);
+        settings.PythonExecutablePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+            "..", "..", "python-runtime", "python.exe"));
+        settings.PythonWorkerStartupTimeoutSeconds = 8;
+        using var spawner = new PythonWorkerSpawner(settings, LogService.Instance);
+        if (!await spawner.StartAsync() || !spawner.OwnsProcess) return 2;
+        await File.WriteAllTextAsync(readyFile, spawner.BaseUrl);
+        await Task.Delay(Timeout.Infinite);
+        return 0;
+    }
+
+    private static async Task OwnedWorker_ExitsWhenParentDies()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        var readyFile = Path.Combine(Path.GetTempPath(), $"worker-ready-{Guid.NewGuid():N}.txt");
+        var assemblyPath = typeof(Program).Assembly.Location;
+        using var parent = Process.Start(new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            ArgumentList = { assemblyPath, "--worker-parent", port.ToString(), readyFile },
+        }) ?? throw new Exception("Could not start the test parent process.");
+        try
+        {
+            for (var attempt = 0; attempt < 100 && !File.Exists(readyFile); attempt++)
+            {
+                if (parent.HasExited) throw new Exception($"Test parent exited with {parent.ExitCode}.");
+                await Task.Delay(100);
+            }
+            if (!File.Exists(readyFile)) throw new Exception("Test parent did not start Worker.");
+            using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) })
+            using (var response = await client.GetAsync($"http://127.0.0.1:{port}/healthz"))
+                if (!response.IsSuccessStatusCode) throw new Exception("Worker was not healthy.");
+
+            // 只结束父进程，不使用 tree kill；Job 关闭后应自行结束 Worker。
+            parent.Kill(entireProcessTree: false);
+            await parent.WaitForExitAsync();
+            for (var attempt = 0; attempt < 30; attempt++)
+            {
+                try
+                {
+                    using var probe = new TcpClient();
+                    await probe.ConnectAsync(IPAddress.Loopback, port);
+                }
+                catch (SocketException) { return; }
+                await Task.Delay(100);
+            }
+            throw new Exception("Worker survived after its parent process died.");
+        }
+        finally
+        {
+            if (!parent.HasExited) parent.Kill(entireProcessTree: true);
+            if (File.Exists(readyFile)) File.Delete(readyFile);
+        }
     }
 
     private static async Task StartAsync_Canceled_DoesNotSpawn()

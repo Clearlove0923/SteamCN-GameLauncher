@@ -1,5 +1,7 @@
 # NetEaseStaticCmsProvider (燕云十六声 / Where Winds Meet)
 
+首页使用公司级 `NetEaseProvider`（`providerId=netease`）；`NetEaseStaticCmsProvider` / `netease-static-cms` 保留为旧配置兼容入口。
+
 `provider_id = "netease-static-cms"`. Owns the 燕云十六声 (Where Winds
 Meet) marketing site, which is built with NetEase's NIE static-CMS
 template and server-side renders the full banner + tabbed news feed
@@ -18,6 +20,13 @@ The home page itself does **not** embed a background ``<video>`` /
 ``<img>`` — the upstream JS bundle swaps a ``<video class="bg">`` at
 runtime. We therefore fall back to the first banner image as a
 static background so the C# UI has something to render immediately.
+
+2026-09-27 对照国服官方启动器播放器日志与录制画面，确认当前首页动画来自
+`h72.fp.ps.netease.com/file/...`，而非官网首张 Banner，也不是安装目录中的
+`Initiator_loop_video.mp4` 或资源包里的两段片头视频。当前已验证的媒体地址放在
+`game_sources.json` 的该游戏 `backgroundVideoUrl` 中；Provider 只接受可信域名的
+HTTPS 视频地址。播放器使用原生播放与缓存，官网 Banner 图继续用作失败回退。
+官方启动器地址可能随活动或版本切换，需重新核对日志后更新配置。
 
 ## Network endpoints
 
@@ -92,9 +101,8 @@ The Provider maps the upstream payload into the
 `Background / Banners / News / UpdateInfo` DTOs defined in
 `contracts/home-content-v1.schema.json`. Key mappings:
 
-* **Background** — `image_url` = first banner image (no
-  `video_url` / `local_path`); the upstream's runtime-injected
-  ``<video class="bg">`` cannot be captured server-side.
+* **Background** — `image_url` = first banner image；配置中有经过验证的
+  `backgroundVideoUrl` 时填入 `video_url`，否则仅使用静态回退图。
 * **Banners** — one ``HomeBanner`` per ``.swiper-slide a`` inside
   ``.banner``. ``target_url`` = ``<a href>`` (only kept when the host
   is on the allow-list); ``title`` = ``title`` attribute.

@@ -1,5 +1,7 @@
 # KuroLauncherProvider
 
+首页使用公司级 `KuroProvider`（`providerId=kuro`）；`KuroLauncherProvider` / `kuro-launcher` 保留为旧配置兼容入口。
+
 `python/home_content/providers/kuro_launcher.py` 是库洛《鸣潮》启动器的首页 Provider。
 默认指向 **Wuthering Waves 国服 (CN)**(`G152`),库洛其他游戏(战双帕弥什等)共享同一套端点形态,通过 `providerOptions` 传入不同的 `appId` / `appKey` / `gameId` / `region` 即可接入。
 

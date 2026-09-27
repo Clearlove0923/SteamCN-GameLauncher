@@ -2,10 +2,12 @@
   {
     "appId": "3513350",
     "gameId": "wuthering-waves",
-    "exeNames": ["Client-Win64-Shipping.exe"],
-    "folderNames": ["Wuthering Waves Game", "Wuthering Waves"],
-    "providerId": "kuro-launcher",
+    "exeNames": ["Client-Win64-Shipping.exe", "Wuthering Waves.exe", "launcher.exe", "launcher_main.exe"],
+    "folderNames": ["Wuthering Waves Game", "Wuthering Waves", "鸣潮"],
+    "matchNotes": "2026-09-27 本机安装目录核对游戏本体与启动器入口；崩溃处理、WebView、反作弊、安装和更新程序不作为匹配关键字。共享 launcher.exe 需结合游戏目录。",
+    "providerId": "kuro",
     "newsCategoryLabels": { "资讯": "新闻" },
+    "newsCategoryOrder": ["活动", "公告", "新闻"],
     "providerOptions": {
       "region": "cn",
       "appId": "10003",
@@ -17,8 +19,11 @@
     "appId": "4162040",
     "gameId": "zenless-zone-zero",
     "exeNames": ["ZenlessZoneZero.exe"],
-    "folderNames": ["ZenlessZoneZero Game", "Zenless Zone Zero"],
-    "providerId": "hoyoplay-json",
+    "folderNames": ["ZenlessZoneZero Game", "Zenless Zone Zero", "绝区零"],
+    "matchNotes": "2026-09-27 本机核对游戏本体 EXE；崩溃处理和浏览器辅助程序不作为匹配关键字。",
+    "providerId": "mihoyo",
+    "newsCategoryLabels": { "资讯": "资讯" },
+    "newsCategoryOrder": ["活动", "公告", "资讯"],
     "providerOptions": {
       "region": "cn",
       "launcher_id": "jGHBHlcOq1",
@@ -30,8 +35,12 @@
     "appId": "1671200",
     "gameId": "honkai-impact-3rd",
     "exeNames": ["BH3.exe"],
-    "folderNames": ["Honkai Impact 3rd Game"],
-    "providerId": "hoyoplay-json",
+    "folderNames": ["Honkai Impact 3rd Game", "Honkai Impact 3rd", "崩坏3", "崩坏三"],
+    "matchNotes": "2026-09-27 查阅崩坏3 Steam 国服 2026-04-01 depot manifest；只保留游戏入口 BH3.exe，排除崩溃处理和浏览器辅助程序。本机未安装。",
+    "matchSources": ["https://steamdb.info/depot/1668941/manifests/"],
+    "providerId": "mihoyo",
+    "newsCategoryLabels": { "资讯": "资讯" },
+    "newsCategoryOrder": ["活动", "公告", "资讯"],
     "providerOptions": {
       "region": "cn",
       "launcher_id": "jGHBHlcOq1",
@@ -42,17 +51,29 @@
   {
     "appId": "3564740",
     "gameId": "where-winds-meet",
-    "exeNames": ["wwm.exe", "yysls.exe"],
-    "folderNames": ["Where Winds Meet", "燕云十六声"],
-    "providerId": "netease-static-cms",
-    "providerOptions": { "region": "cn" }
+    "exeNames": ["launcher.exe", "yysls.exe", "wwm.exe", "WhereWindsMeetDirect.exe"],
+    "folderNames": ["Where Winds Meet", "燕云十六声", "yysls"],
+    "matchNotes": "2026-09-27 本机核对启动器、游戏本体和自制直启桥接程序；wwm.exe 是保留的 Steam 版本别名，本机未发现。录制、诊断和辅助程序不作为关键字。背景视频由本机官方启动器播放器日志确认，并抽帧核对桥船画面；此媒体地址可能随活动更新，失效时回退官网静态图。",
+    "providerId": "netease",
+    "newsCategoryLabels": { "资讯": "新闻" },
+    "newsCategoryOrder": ["新闻", "公告", "活动"],
+    "providerOptions": {
+      "region": "cn",
+      "backgroundVideoUrl": "https://h72.fp.ps.netease.com/file/6a39fae9fb7d0ec11d494d33Dh7Ufxa207"
+    }
   },
   {
     "appId": "3164330",
     "gameId": "infinity-nikki",
-    "exeNames": ["InfinityNikki.exe"],
-    "folderNames": ["InfinityNikki", "Infinity Nikki", "InfinityNikkiGlobal"],
-    "providerId": "nextjs-data",
+    "newsCategoryLabels": { "资讯": "新闻" },
+    "newsCategoryOrder": ["公告", "新闻", "活动"],
+    "exeNames": [
+      "launcher.exe", "xstarter.exe", "InfinityNikki.exe",
+      "X6Game-Win64-Shipping.exe", "InfinityNikkiLaunchBridge.exe"
+    ],
+    "folderNames": ["InfinityNikki", "Infinity Nikki", "InfinityNikkiGlobal", "InfinityNikki Launcher", "无限暖暖"],
+    "matchNotes": "2026-09-27 本机核对正式启动链 launcher.exe → xstarter.exe → InfinityNikki.exe → X6Game-Win64-Shipping.exe；自制直启桥接程序单列。排除备份、SDK、崩溃处理和安装器。",
+    "providerId": "papergames",
     "providerOptions": { "region": "cn", "locale": "zh-CN" }
   },
   {
@@ -60,23 +81,33 @@
     "gameId": "neverness-to-everness-legacy",
     "exeNames": [],
     "folderNames": [],
-    "providerId": "perfect-world-hybrid",
+    "matchNotes": "仅供旧 AppID 配置兼容；不参与 EXE 或目录匹配。",
+    "providerId": "perfect-world",
+    "newsCategoryLabels": { "资讯": "新闻" },
+    "newsCategoryOrder": ["公告", "新闻", "活动"],
     "providerOptions": { "region": "cn", "language": "zh-cn" }
   },
   {
     "appId": "4706890",
     "gameId": "neverness-to-everness",
-    "exeNames": ["HTGame.exe", "NTEGame.exe"],
+    "exeNames": ["NTELauncher.exe", "NTEGame.exe", "HTGame.exe"],
     "folderNames": ["Neverness To Everness", "NTE", "异环", "異環"],
-    "providerId": "perfect-world-hybrid",
+    "matchNotes": "2026-09-27 本机核对外层启动器 NTELauncher.exe、内层启动器 NTEGame.exe 和游戏本体 HTGame.exe；其他辅助程序不作为关键字。",
+    "providerId": "perfect-world",
+    "newsCategoryLabels": { "资讯": "新闻" },
+    "newsCategoryOrder": ["公告", "新闻", "活动"],
     "providerOptions": { "region": "cn", "language": "zh-cn" }
   },
   {
     "appId": "4732690",
     "gameId": "arknights-endfield",
-    "exeNames": ["Endfield.exe"],
-    "folderNames": ["Endfield Game", "Arknights Endfield"],
-    "providerId": "hypergryph-batch",
+    "exeNames": ["Launcher.exe", "Endfield.exe"],
+    "folderNames": ["Endfield Game", "Arknights Endfield", "Arknights Endfiled", "明日方舟终末地", "终末地"],
+    "matchNotes": "2026-09-27 本机核对鹰角启动器 Launcher.exe；Steam 启动配置确认游戏入口 Endfield.exe 和 Arknights Endfiled 目录拼写。排除压缩、补丁、WebView 和卸载程序。明日方舟目录属于另一游戏，不复用。",
+    "matchSources": ["https://steamdb.info/app/4732690/config/"],
+    "providerId": "hypergryph",
+    "newsCategoryLabels": { "资讯": "新闻" },
+    "newsCategoryOrder": ["公告", "活动", "新闻"],
     "providerOptions": {
       "region": "cn",
       "baseUrl": "https://launcher.hypergryph.com/api",
@@ -89,15 +120,36 @@
   {
     "appId": "",
     "gameId": "genshin-impact",
-    "exeNames": ["YuanShen.exe"],
-    "folderNames": ["Genshin Impact Game"],
-    "providerId": "hoyoplay-json",
+    "exeNames": ["YuanShen.exe", "GenshinImpact.exe"],
+    "folderNames": ["Genshin Impact Game", "Genshin Impact", "原神"],
+    "matchNotes": "2026-09-27 本机核对国服游戏入口 YuanShen.exe；GenshinImpact.exe 来自 HoYoLAB 官方启动器 FAQ。排除编辑器和崩溃辅助程序；独立的 miHoYo Launcher 不归入原神。",
+    "matchSources": ["https://www.hoyolab.com/article/164528", "https://www.pcgamingwiki.com/wiki/Genshin_Impact"],
+    "providerId": "mihoyo",
+    "newsCategoryLabels": { "资讯": "资讯" },
+    "newsCategoryOrder": ["活动", "公告", "资讯"],
     "providerOptions": {
       "region": "cn",
       "launcher_id": "jGHBHlcOq1",
       "language": "zh-cn",
       "gameBiz": "hk4e_cn",
       "videoOnly": true
+    }
+  },
+  {
+    "appId": "",
+    "gameId": "honkai-star-rail",
+    "exeNames": ["StarRail.exe"],
+    "folderNames": ["Star Rail Game", "Honkai Star Rail", "崩坏星穹铁道", "星穹铁道", "崩铁"],
+    "matchNotes": "2026-09-27 Starward 发布的 HoYoPlay 国服补丁日志确认游戏入口 StarRail.exe；排除崩溃处理和浏览器辅助程序。本机未安装完整游戏。",
+    "matchSources": ["https://github.com/Scighost/Starward/issues/794"],
+    "providerId": "mihoyo",
+    "newsCategoryLabels": { "资讯": "资讯" },
+    "newsCategoryOrder": ["活动", "公告", "资讯"],
+    "providerOptions": {
+      "region": "cn",
+      "launcher_id": "jGHBHlcOq1",
+      "language": "zh-cn",
+      "gameBiz": "hkrpg_cn"
     }
   }
 ]
