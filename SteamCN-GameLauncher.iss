@@ -46,10 +46,13 @@ Name: "{app}\Backgrounds"; Permissions: users-modify; Flags: uninsneveruninstall
 Name: "{app}\logs"; Permissions: users-modify
 ; 一键更新的 ACF 滚动备份；升级和卸载时保留，便于用户恢复。
 Name: "{app}\backups"; Permissions: users-modify; Flags: uninsneveruninstall
+; 游戏时长与首页缓存由运行中的应用维护，升级和卸载时保留。
+Name: "{app}\GameTime"; Permissions: users-modify; Flags: uninsneveruninstall
+Name: "{app}\HomeCache"; Permissions: users-modify; Flags: uninsneveruninstall
 
 [Files]
-; Include new dependencies automatically; exclude development symbols and logs.
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,*.log"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Runtime data must never enter the installer, even if a publish source contains it.
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,*.log,\GameTime\*,\HomeCache\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

@@ -12,9 +12,27 @@
             <controls:HomeBannerAndNews x:Name="HomeContentPanel"/>
         </Border>
 
-        <!-- 启动区固定在右下，保持与米哈游启动器相同的视觉锚点。 -->
+        <!-- 时长入口与启动区共享右下角锚点。 -->
         <StackPanel x:Name="LaunchDock" Margin="0,0,90,90"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal" Spacing="12">
+            <Border x:Name="PlayTimeButtonBackground" Background="#18353941" CornerRadius="42"
+                    PointerEntered="PlayTimeButton_PointerEntered"
+                    PointerExited="PlayTimeButton_PointerExited">
+                <Button x:Name="PlayTimeButton" Width="186" Height="84" Padding="0"
+                        CornerRadius="42" Background="Transparent" Foreground="White"
+                        BorderThickness="0" Click="PlayTimeButton_Click"
+                        ToolTipService.ToolTip="查看游戏时长统计">
+                    <StackPanel x:Name="PlayTimeButtonContent" Orientation="Horizontal" Spacing="10"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Width="40" Height="40" CornerRadius="20" Background="#18272B32">
+                            <FontIcon x:Name="PlayTimeIcon" Glyph="&#xE916;" FontSize="18"
+                                      Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock x:Name="PlayTimeText" Text="0m" FontSize="22" FontWeight="Bold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Border>
             <Border x:Name="LaunchButtonGroupBackground"
                     HorizontalAlignment="Right" Background="#18353941" CornerRadius="42"
                     PointerEntered="LaunchButtonGroup_PointerEntered"

@@ -52,6 +52,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PlayTimeService.Instance.Start();
         LogService.Instance.AttachDispatcher(
             () => DispatcherQueue.HasThreadAccess,
             update => DispatcherQueue.TryEnqueue(() => update()));
@@ -80,6 +81,7 @@ public sealed partial class MainWindow : Window
         _customManifestService.NavigationChanged += OnCustomNavigationChanged;
         Closed += (_, _) =>
         {
+            PlayTimeService.Instance.Dispose();
             _gameLibraryCloseTimer.Stop();
             _customManifestService.NavigationChanged -= OnCustomNavigationChanged;
         };

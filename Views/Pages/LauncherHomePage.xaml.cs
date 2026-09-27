@@ -29,10 +29,12 @@ public sealed partial class LauncherHomePage : Page
     private HomeContentRequest? _activeHomeRequest;
     private SupportedGameRegistry.Match? _activeHomeMatch;
     private bool _navigatedAway;
+    private readonly Microsoft.UI.Xaml.DispatcherTimer _playTimeTimer = new() { Interval = TimeSpan.FromSeconds(10) };
 
     public LauncherHomePage()
     {
         InitializeComponent();
+        _playTimeTimer.Tick += (_, _) => UpdatePlayTime();
         Loaded += LauncherHomePage_Loaded;
         Unloaded += LauncherHomePage_Unloaded;
         // 窗口跨显示器或缩放率变化时，保持资讯栏的截图实际像素尺寸不变。
@@ -54,10 +56,13 @@ public sealed partial class LauncherHomePage : Page
         }
         ApplyLayoutProfile(_activeLayoutProfileId);
         ApplyHomeAppearance();
+        _playTimeTimer.Start();
+        UpdatePlayTime();
     }
 
     private void LauncherHomePage_Unloaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
+        _playTimeTimer.Stop();
         _appearanceService.Changed -= ApplyHomeAppearance;
         if (_homeContentService is IHomeContentRefreshSource refreshSource)
             refreshSource.ContentRefreshed -= HomeContentService_ContentRefreshed;
@@ -90,6 +95,7 @@ public sealed partial class LauncherHomePage : Page
             _activeHomeRequest = null;
             _activeHomeMatch = null;
             StartGameButton.IsEnabled = false;
+            PlayTimeButton.IsEnabled = false;
             // 还没选游戏时隐藏轮播 + 资讯 UI：
             //  - 避免显示空 "资讯" tab 干扰首次启动用户；
             //  - 避免 HomeContentPanel 残留上一次的游戏数据；
@@ -111,6 +117,7 @@ public sealed partial class LauncherHomePage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
+        _playTimeTimer.Stop();
         _navigatedAway = true;
         _activeHomeRequest = null;
         _homeContentCancellation?.Cancel();
@@ -123,6 +130,8 @@ public sealed partial class LauncherHomePage : Page
         // 获取新游戏内容可能需要网络：先冻结旧视频当前帧，待新背景确实可显示再切换。
         _homeBackdrop.Hold(_homeBackdropOwner);
         _currentGame = game;
+        PlayTimeButton.IsEnabled = true;
+        UpdatePlayTime();
         _activeHomeMatch = null;
         _forceBlackBackground = false;
         // 新游戏元数据与解码器准备期间保留旧背景，资讯立即清空，避免旧内容串到新游戏。
@@ -235,6 +244,14 @@ public sealed partial class LauncherHomePage : Page
             0, 0, profile.LaunchRight / rasterizationScale, profile.LaunchBottom / rasterizationScale);
         LaunchButtonRow.Spacing = 12 / rasterizationScale;
 
+        PlayTimeButton.Width = profile.StartButtonWidth / rasterizationScale;
+        PlayTimeButton.Height = profile.StartButtonHeight / rasterizationScale;
+        PlayTimeButton.CornerRadius = new Microsoft.UI.Xaml.CornerRadius(
+            profile.StartButtonHeight / 2 / rasterizationScale);
+        PlayTimeButtonBackground.CornerRadius = PlayTimeButton.CornerRadius;
+        PlayTimeButtonContent.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+        PlayTimeButtonContent.RenderTransform = CreateDisplayScaleTransform(rasterizationScale);
+
         StartGameButton.Width = profile.StartButtonWidth / rasterizationScale;
         StartGameButton.Height = profile.StartButtonHeight / rasterizationScale;
         StartGameButton.CornerRadius = new Microsoft.UI.Xaml.CornerRadius(
@@ -298,6 +315,8 @@ public sealed partial class LauncherHomePage : Page
                 _ => _steamLaunchService.Launch(_settingsService.Load(), game),
             };
             _logService.AddLog($"[首页启动] {result.Message}");
+            if (result.IsSuccess)
+                PlayTimeService.Instance.NoteLaunch(game.Id, game.HomeLaunchModeId);
             if (!result.IsSuccess)
                 await ShowInfoAsync(result.Message);
         }
@@ -323,12 +342,43 @@ public sealed partial class LauncherHomePage : Page
         _ => "Steam 玩国服",
     };
 
+    private void UpdatePlayTime()
+    {
+        var game = _currentGame;
+        if (game is null) return;
+        var sessions = PlayTimeService.Instance.GetSessions(game.Id);
+        var total = TimeSpan.FromTicks(sessions.Sum(x => (x.EndedAt - x.StartedAt).Ticks));
+        PlayTimeText.Text = PlayTimeStatsDialog.Format(total);
+    }
+
+    private async void PlayTimeButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (_currentGame is not { } game) return;
+        var dialog = new PlayTimeStatsDialog(game.Id) { XamlRoot = XamlRoot };
+        await dialog.ShowAsync();
+        UpdatePlayTime();
+    }
+
     private void LaunchButtonGroup_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
         LaunchButtonGroupBackground.Background = CreateBrush(0xFF, 0xFF, 0xD2, 0x1F);
         StartGameButton.Foreground = CreateBrush(0xFF, 0x17, 0x17, 0x17);
         StartGamePlayIcon.Foreground = CreateBrush(0xFF, 0x27, 0x2B, 0x32);
         LaunchMenuIcon.Foreground = CreateBrush(0xFF, 0x27, 0x2B, 0x32);
+    }
+
+    private void PlayTimeButton_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        PlayTimeButtonBackground.Background = CreateBrush(0xFF, 0xFF, 0xD2, 0x1F);
+        PlayTimeButton.Foreground = CreateBrush(0xFF, 0x17, 0x17, 0x17);
+        PlayTimeIcon.Foreground = CreateBrush(0xFF, 0x27, 0x2B, 0x32);
+    }
+
+    private void PlayTimeButton_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        PlayTimeButtonBackground.Background = CreateBrush(0x18, 0x35, 0x39, 0x41);
+        PlayTimeButton.Foreground = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
+        PlayTimeIcon.Foreground = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
     }
 
     private void LaunchButtonGroup_PointerExited(object sender, PointerRoutedEventArgs e)
