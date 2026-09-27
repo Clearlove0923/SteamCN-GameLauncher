@@ -35,6 +35,7 @@ from home_content.models import HomeContentRequest
 
 SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "hoyoplay-cn-launcher-info.json"
 CONTENT_SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "hoyoplay-cn-zzz-content.json"
+GENSHIN_SAMPLE_PATH = Path(__file__).resolve().parents[2] / "contracts" / "samples" / "hoyoplay-cn-genshin-backgrounds.json"
 
 
 def _load_fixture() -> dict[str, Any]:
@@ -141,6 +142,22 @@ def test_pick_background_prefers_video_when_available() -> None:
     assert bg is not None
     assert bg.video_url == "https://launcher-webstatic.mihoyo.com/vid.webm"
     assert bg.image_url == "https://launcher-webstatic.mihoyo.com/img.webp"
+
+
+def test_genshin_keeps_both_animations_and_excludes_static_candidates() -> None:
+    payload = json.loads(GENSHIN_SAMPLE_PATH.read_text(encoding="utf-8"))
+    bg = _pick_background(payload, "hk4e_cn")
+    assert bg is not None
+    assert [item.id for item in bg.variants] == ["3citmgCMOP", "d7eCRqQwNc"]
+    assert all(item.video_url.endswith(".webm") for item in bg.variants)
+    assert all("STATIC" not in item.image_url for item in bg.variants)
+
+
+def test_video_only_game_does_not_select_a_static_campaign() -> None:
+    payload = json.loads(GENSHIN_SAMPLE_PATH.read_text(encoding="utf-8"))
+    for row in payload["data"]["game_info_list"][0]["backgrounds"]:
+        row["video"]["url"] = ""
+    assert _pick_background(payload, "hk4e_cn", video_only=True) is None
 
 
 def test_pick_background_falls_back_to_image_when_no_video() -> None:

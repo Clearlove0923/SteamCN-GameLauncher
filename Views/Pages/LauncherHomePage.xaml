@@ -4,30 +4,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:controls="using:SteamCNGameLauncher.Views.Controls">
     <Grid Background="{StaticResource AppearancePageBackground}">
-        <!-- 最底层纯黑兜底：AppId 不在 SupportedGameRegistry 时强制显示，
-             让未适配游戏的窗口不会出现测试图或残留主题色。 -->
-        <Border x:Name="DefaultBlackBackground" Background="Black"
-                Grid.RowSpan="2" IsHitTestVisible="False" Visibility="Collapsed"/>
-        <MediaPlayerElement x:Name="HomeBackgroundVideo" IsHitTestVisible="False"
-                            AreTransportControlsEnabled="False" Stretch="UniformToFill"
-                            Visibility="Collapsed"/>
-        <Image x:Name="HomeBackgroundImage" IsHitTestVisible="False"
-               Stretch="UniformToFill" Visibility="Collapsed"/>
         <!-- 首页内容覆盖在全窗口背景上，位置按 1920×1080 米哈游启动器参考布局设置。 -->
-        <Border Background="#14000000" IsHitTestVisible="False"/>
-
-        <!-- 为无边框拖动区预留高度，同时让首页内容从窗口顶部背景内开始排布。 -->
-        <StackPanel Margin="90,72,0,0" MaxWidth="620"
-                    HorizontalAlignment="Left" VerticalAlignment="Top">
-            <TextBlock Text="当前游戏" FontSize="14" FontWeight="SemiBold"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <TextBlock x:Name="GameTitle" Text="选择一个游戏"
-                       FontSize="44" FontWeight="Bold" TextWrapping="Wrap"/>
-            <TextBlock x:Name="GameSubtitle" Text="从游戏列表选择后，即可查看首页内容。"
-                       FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       TextWrapping="Wrap"/>
-        </StackPanel>
-
         <!-- 资讯面板尺寸由 HomeLayoutProfile 控制，不同 Provider 可使用不同布局档案。 -->
         <Border x:Name="NewsPanel" Width="576" Height="425" Margin="90,0,0,76"
                 HorizontalAlignment="Left" VerticalAlignment="Bottom"

@@ -6,20 +6,18 @@
     <!-- 在固定设计画布内排版，再整体适配外框，避免系统 DPI 缩放挤占三行资讯空间。 -->
     <Viewbox Stretch="Fill">
         <Border x:Name="DesignSurface" Width="576" Height="425"
-                Background="#E8171717" CornerRadius="14">
+                Background="Transparent" CornerRadius="14">
             <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition x:Name="BannerRow" Height="261.5"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- 参照 Starward：Banner 独占上半区，轮播按钮隐藏，悬停时显示页码并暂停。
-                 IsHitTestVisible="False" 防止 Banner 子树的 hit area 跨界抢占下半区 News 区域的 click 事件。 -->
+            <!-- Banner 独占上半区，悬停时显示页码并暂停。 -->
             <Grid x:Name="BannerContainer"
-                  IsHitTestVisible="False"
                   PointerEntered="BannerContainer_PointerEntered"
                   PointerExited="BannerContainer_PointerExited">
-                <Border Background="#FF1767A8" CornerRadius="14,14,0,0">
+                <Border Background="#FF1767A8" CornerRadius="14">
                     <Grid>
                         <FlipView x:Name="BannerFlipView"
                                   Background="Transparent"
@@ -30,21 +28,12 @@
                                   SelectionChanged="BannerFlipView_SelectionChanged">
                             <FlipView.ItemTemplate>
                                 <DataTemplate x:DataType="local:HomeBannerDisplayItem">
-                                    <Grid Tapped="Banner_Tapped">
-                                        <Image Source="{x:Bind ImageSource}"
-                                               Stretch="UniformToFill"/>
-                                        <Border VerticalAlignment="Bottom"
-                                                Padding="20,30,20,16">
+                                    <Grid Background="Transparent" Tag="{x:Bind}" Tapped="Banner_Tapped">
+                                        <Border CornerRadius="14">
                                             <Border.Background>
-                                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                                                    <GradientStop Offset="0" Color="#00000000"/>
-                                                    <GradientStop Offset="1" Color="#C8000000"/>
-                                                </LinearGradientBrush>
+                                                <ImageBrush ImageSource="{x:Bind ImageSource}"
+                                                            Stretch="UniformToFill"/>
                                             </Border.Background>
-                                            <TextBlock Text="{x:Bind Title}"
-                                                       FontSize="18" FontWeight="SemiBold"
-                                                       Foreground="White"
-                                                       TextTrimming="CharacterEllipsis"/>
                                         </Border>
                                     </Grid>
                                 </DataTemplate>
@@ -61,7 +50,7 @@
 
                         <Border x:Name="BannerCounterBorder"
                                 Padding="10,3" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                Background="#B8000000" CornerRadius="10,0,0,0"
+                                Background="#B8000000" CornerRadius="10,0,14,0"
                                 Visibility="Collapsed">
                             <TextBlock x:Name="BannerCounter" FontSize="13" Foreground="#FFE4E4E4"/>
                         </Border>
@@ -70,6 +59,8 @@
             </Grid>
 
             <!-- 分类名称和数量由 Provider 数据决定；横向滚动可容纳三个以上的分类。 -->
+            <Border Grid.Row="1" Background="#BF000000" CornerRadius="14"
+                    IsHitTestVisible="False"/>
             <Grid Grid.Row="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="42"/>
@@ -92,6 +83,7 @@
                             <DataTemplate x:DataType="local:HomeNewsGroup">
                                 <Button MinWidth="72" Height="42" Padding="12,3"
                                         Background="Transparent" BorderThickness="0"
+                                        Tag="{x:Bind}"
                                         Click="CategoryButton_Click">
                                     <Grid>
                                         <TextBlock Text="{x:Bind Header}" FontSize="17" FontWeight="Bold"

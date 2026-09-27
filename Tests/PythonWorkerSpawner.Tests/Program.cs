@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using SteamCNGameLauncher.Models;
@@ -27,6 +28,9 @@ public class Program
         await Run("StartAsync_ExtractsPortFromBaseUrl", StartAsync_ExtractsPortFromBaseUrl);
         await Run("OutputReceived_FiresForStdout", OutputReceived_FiresForStdout);
         await Run("Exited_FiresWhenChildExits", Exited_FiresWhenChildExits);
+        await Run("StartAsync_Canceled_DoesNotSpawn", StartAsync_Canceled_DoesNotSpawn);
+        await Run("StopImmediately_NullProcess_DoesNotThrow", StopImmediately_NullProcess_DoesNotThrow);
+        await Run("LogService_BackgroundLog_MarshalsCollectionChange", LogService_BackgroundLog_MarshalsCollectionChange);
 
         int failed = 0;
         Console.WriteLine();
@@ -179,6 +183,43 @@ public class Program
         spawner.Stop();
         spawner.Dispose();
         return true;
+    }
+
+    private static Task StopImmediately_NullProcess_DoesNotThrow()
+    {
+        using var spawner = new PythonWorkerSpawner(MakeSettings(), LogService.Instance);
+        spawner.StopImmediately();
+        if (spawner.IsRunning) throw new Exception("Worker remained running after immediate stop.");
+        return Task.CompletedTask;
+    }
+
+    private static async Task StartAsync_Canceled_DoesNotSpawn()
+    {
+        using var spawner = new PythonWorkerSpawner(MakeSettings(), LogService.Instance);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        try { await spawner.StartAsync(cancellation.Token); }
+        catch (OperationCanceledException)
+        {
+            if (spawner.IsRunning || spawner.OwnsProcess)
+                throw new Exception("Canceled startup must not own a worker process.");
+            return;
+        }
+        throw new Exception("Canceled startup did not throw.");
+    }
+
+    private static async Task LogService_BackgroundLog_MarshalsCollectionChange()
+    {
+        var pending = new ConcurrentQueue<Action>();
+        var logs = LogService.Instance;
+        logs.AttachDispatcher(() => false, action => { pending.Enqueue(action); return true; });
+        var before = logs.Logs.Count;
+        await Task.Run(() => logs.AddLog("background dispatch test"));
+        if (logs.Logs.Count != before || !pending.TryDequeue(out var update))
+            throw new Exception("Background log changed the bound collection before UI dispatch.");
+        update();
+        if (logs.Logs.Count != before + 1)
+            throw new Exception("Dispatched log did not update the bound collection.");
     }
 
     // ===== 7. SpawnPythonWorkerOnLaunch=false → 立即返回 false（不探测端口） =====

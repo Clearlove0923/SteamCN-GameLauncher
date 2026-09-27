@@ -42,6 +42,8 @@ public class AppSettings
     // 端口默认 8765，与 Tests/HomeContentE2E.Tests 端到端测试约定一致。
     public string HomeContentWorkerBaseUrl { get; set; } = "http://127.0.0.1:8765";
     public int HomeContentWorkerTimeoutSeconds { get; set; } = 10;
+    public int HomeCacheMaximumMegabytes { get; set; } = 1024;
+    public int HomeCacheRetentionDays { get; set; } = 30;
 
     /// <summary>
     /// 是否在 launcher 启动时自动拉起 Python Worker 子进程。
@@ -206,7 +208,7 @@ public class CustomManifestPreset
     public string Language { get; set; } = "schinese";
     public string HomeLayoutProfileId { get; set; } = HomeLayoutProfile.MihoyoLauncherId;
     public string HomeLaunchModeId { get; set; } = HomeLaunchModeIds.SteamCn;
-    public string HomeContentProviderId { get; set; } = ""; // v2.7.0 新增：Python Provider 稳定 ID；空 = 用 preview fallback
+    public string HomeContentProviderId { get; set; } = ""; // 旧配置兼容；首页现由真实游戏 EXE/目录自动选择 Provider
 
     public CustomManifestPreset Clone() => new()
     {

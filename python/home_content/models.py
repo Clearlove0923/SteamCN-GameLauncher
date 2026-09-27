@@ -17,15 +17,26 @@ class HomeContentRequest(ContractModel):
     schema_version: int = 1
     request_id: str
     game_id: str
+    executable_path: Optional[str] = None
+    install_directory: Optional[str] = None
+    cache_folder_name: Optional[str] = None
     provider_id: str
     locale: str = "zh-CN"
     provider_options: dict[str, Any] = Field(default_factory=dict)
+
+
+class HomeVideoVariant(ContractModel):
+    id: str
+    video_url: str
+    image_url: Optional[str] = None
+    local_path: Optional[str] = None
 
 
 class HomeBackground(ContractModel):
     video_url: Optional[str] = None
     image_url: Optional[str] = None
     local_path: Optional[str] = None
+    variants: list[HomeVideoVariant] = Field(default_factory=list)
 
 
 class HomeBanner(ContractModel):

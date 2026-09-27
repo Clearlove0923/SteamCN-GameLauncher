@@ -16,6 +16,8 @@
   (URL 中的 32 字符 hex hash 全部替换为 `HASH32`)
 - **内容样本**:`contracts/samples/hoyoplay-cn-zzz-content.json`
   (2026-09-26 验证绝区零 `getGameContent`;保留字段结构并替换资源 URL 和文章编号)
+- **原神背景样本**:`contracts/samples/hoyoplay-cn-genshin-backgrounds.json`
+  (2026-09-27 验证国服背景列表；两项 WebM 动画、两项无视频静态图，资源 hash 已脱敏)
 
 ## 主端点
 
@@ -77,9 +79,12 @@ Launcher ID 通过 `HomeContentRequest.providerOptions.launcher_id` 传入,缺�
 
 每个游戏通常返回 1–4 个 background 候选项。Provider 的选择策略:
 
-1. **首选有 `video.url` 的候选** — 背景动画由 C# 端 `MediaPlayer` 循环播放
-2. **降级到第一个有 `background.url` 的候选** — 静态海报,UI 用作视频失败回退
-3. **候选 URL 域名不在白名单时丢弃** — 白名单见下节
+1. **收集所有有 `video.url` 的候选** — 统一输出到 `background.variants`；应用每次启动按上次选择轮换，同次运行切换游戏或刷新内容时保持同一项
+2. **不将纯静态候选加入动画列表** — 原神的静态宣传图不会作为轮换结果
+3. **没有可用视频时降级到第一个有 `background.url` 的候选** — 静态海报用于没有动画的游戏或失败回退
+4. **候选 URL 域名不在白名单时丢弃** — 白名单见下节
+
+原神来源配置设有 `videoOnly=true`：如果以后接口暂时只返回静态背景，原神不展示这些静态宣传图，而由客户端使用无动画的空背景状态。每次应用启动按上一条 `id` 选下一个视频；选择状态保存在软件缓存目录对应游戏文件夹内。
 
 ## 候选资源验证(白名单)
 
@@ -91,7 +96,7 @@ Launcher ID 通过 `HomeContentRequest.providerOptions.launcher_id` 传入,缺�
 .miyoushe.com
 ```
 
-URL 协议必须是 `http(s)`。白名单外的候选视为无效并丢弃;若所有候选都被丢弃,
+URL 协议必须是 `https`。白名单外的候选视为无效并丢弃;若所有候选都被丢弃,
 Provider 返回 `background=None`,Worker 把错误写到 `envelope.errors`,
 C# 客户端降级到静态背景或上次成功缓存。
 

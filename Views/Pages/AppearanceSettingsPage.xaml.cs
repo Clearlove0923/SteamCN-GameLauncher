@@ -36,8 +36,19 @@ public sealed partial class AppearanceSettingsPage : Page
         InitializeComponent();
         LoadInterfaceOptions();
         _saveTimer.Tick += (_, _) => SaveNow();
-        Loaded += async (_, _) => { _active = true; await RefreshGalleryAsync(); };
-        Unloaded += (_, _) => { _active = false; ++_galleryRequest; if (_saveTimer.IsEnabled) SaveNow(); };
+        Loaded += async (_, _) =>
+        {
+            _active = true;
+            _service.SetSidebarPreviewPage(_selectedPageId);
+            await RefreshGalleryAsync();
+        };
+        Unloaded += (_, _) =>
+        {
+            _active = false;
+            _service.SetSidebarPreviewPage(null);
+            ++_galleryRequest;
+            if (_saveTimer.IsEnabled) SaveNow();
+        };
     }
 
     private void Report(string message, bool error = true)
@@ -127,6 +138,9 @@ public sealed partial class AppearanceSettingsPage : Page
         CardOpacity.Value = value is double opacity && double.IsFinite(opacity)
             ? Math.Clamp(opacity * 100, 0, 100) : Math.Round(defaultColor.A / 255d * 100);
         CardOpacityLabel.Text = $"内容卡片不透明度：{CardOpacity.Value:0}%";
+        SidebarOpacity.Value = double.IsFinite(profile.SidebarOpacity)
+            ? Math.Clamp(profile.SidebarOpacity * 100, 0, 100) : 100;
+        SidebarOpacityLabel.Text = $"侧边栏不透明度：{SidebarOpacity.Value:0}%";
         ShowHomeAnimation.IsOn = profile.ShowHomeAnimation;
         ShowHomeNews.IsOn = profile.ShowHomeNews;
         var isHomeSettings = !_service.Settings.UsePerPageSettings || _selectedPageId == AppearancePageIds.Home;
@@ -144,6 +158,14 @@ public sealed partial class AppearanceSettingsPage : Page
         _service.Preview();
         _saveTimer.Stop();
         _saveTimer.Start();
+    }
+
+    private void SidebarOpacityChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_loading) return;
+        EditingProfile.SidebarOpacity = SidebarOpacity.Value / 100;
+        SidebarOpacityLabel.Text = $"侧边栏不透明度：{SidebarOpacity.Value:0}%";
+        PreviewAndScheduleSave();
     }
 
     private void ShowHomeNews_Toggled(object sender, RoutedEventArgs e)
@@ -176,6 +198,7 @@ public sealed partial class AppearanceSettingsPage : Page
     {
         if (_loading || TargetPage.SelectedItem is not ComboBoxItem item) return;
         _selectedPageId = AppearancePageIds.Normalize(item.Tag?.ToString());
+        _service.SetSidebarPreviewPage(_selectedPageId);
         await RefreshGalleryAsync();
     }
 

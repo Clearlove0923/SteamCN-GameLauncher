@@ -12,6 +12,7 @@ public sealed class AppearanceService
     public string ImageDirectory { get; } = Path.Combine(AppContext.BaseDirectory, "Backgrounds");
     public AppearanceSettings Settings { get; }
     public string ActivePageId { get; private set; } = AppearancePageIds.Home;
+    public string? SidebarPreviewPageId { get; private set; }
     public AppearanceProfile CurrentProfile => Settings.GetEffective(ActivePageId);
     public event Action? Changed;
     private readonly SettingsService _settingsService = new();
@@ -23,6 +24,13 @@ public sealed class AppearanceService
     }
 
     public void Preview() => Changed?.Invoke();
+    public void SetSidebarPreviewPage(string? pageId)
+    {
+        var normalized = pageId is null ? null : AppearancePageIds.Normalize(pageId);
+        if (SidebarPreviewPageId == normalized) return;
+        SidebarPreviewPageId = normalized;
+        Preview();
+    }
     public void SetActivePage(string pageId)
     {
         var normalized = AppearancePageIds.Normalize(pageId);

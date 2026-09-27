@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Windows.Storage.Pickers;
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
+using SteamCNGameLauncher.Services.Home;
 
 namespace SteamCNGameLauncher.Views.Pages;
 
@@ -48,6 +49,8 @@ public sealed partial class SettingsPage : Page
         tglDeveloperMode.IsOn = _settings.DeveloperMode;
         tglDebugMode.IsOn = _settings.DebugMode;
         tglBetaChannel.IsOn = _settings.BetaChannel;
+        numHomeCacheMegabytes.Value = Math.Clamp(_settings.HomeCacheMaximumMegabytes, 128, 4096);
+        numHomeCacheRetentionDays.Value = Math.Clamp(_settings.HomeCacheRetentionDays, 1, 90);
 
         // 设置语言选项（当前预留，ComboBox 禁用）
         SetLanguageSelection(_settings.Language);
@@ -67,6 +70,64 @@ public sealed partial class SettingsPage : Page
         UpdateService.Instance.ReplayIfPending();
 
         _isLoading = false;
+        _ = RefreshHomeCacheSizeAsync();
+    }
+
+    private async Task RefreshHomeCacheSizeAsync()
+    {
+        try
+        {
+            var bytes = await HomeContentServiceFactory.Instance.GetCacheSizeAsync();
+            if (!IsLoaded) return;
+            txtHomeCacheStatus.Text = bytes == 0
+                ? $"当前没有首页缓存。媒体目录：{HomeContentServiceFactory.MediaCacheRoot}"
+                : $"当前占用 {FormatBytes(bytes)}；容量上限 {_settings.HomeCacheMaximumMegabytes} MB，最长保留 {_settings.HomeCacheRetentionDays} 天。媒体目录：{HomeContentServiceFactory.MediaCacheRoot}";
+        }
+        catch (Exception ex)
+        {
+            if (IsLoaded) txtHomeCacheStatus.Text = $"无法读取缓存大小：{ex.Message}";
+        }
+    }
+
+    private async void ClearHomeCache_Click(object sender, RoutedEventArgs e)
+    {
+        btnClearHomeCache.IsEnabled = false;
+        txtHomeCacheStatus.Text = "正在清理…";
+        try
+        {
+            await HomeContentServiceFactory.Instance.ClearCacheAsync();
+            txtHomeCacheStatus.Text = "缓存已清理；再次打开首页时会重新获取内容。";
+        }
+        catch (Exception ex)
+        {
+            txtHomeCacheStatus.Text = $"清理失败：{ex.Message}";
+        }
+        finally
+        {
+            btnClearHomeCache.IsEnabled = true;
+        }
+    }
+
+    private void HomeCachePolicy_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_isLoading || double.IsNaN(sender.Value)) return;
+        _settings.HomeCacheMaximumMegabytes = (int)Math.Clamp(numHomeCacheMegabytes.Value, 128, 4096);
+        _settings.HomeCacheRetentionDays = (int)Math.Clamp(numHomeCacheRetentionDays.Value, 1, 90);
+        SaveSettings();
+        _ = RefreshHomeCacheSizeAsync();
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return $"{value:0.##} {units[unit]}";
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -431,6 +492,8 @@ public sealed partial class SettingsPage : Page
             settings.DebugMode = _settings.DebugMode;
             settings.BetaChannel = _settings.BetaChannel;
             settings.Language = _settings.Language;
+            settings.HomeCacheMaximumMegabytes = _settings.HomeCacheMaximumMegabytes;
+            settings.HomeCacheRetentionDays = _settings.HomeCacheRetentionDays;
         });
     }
 

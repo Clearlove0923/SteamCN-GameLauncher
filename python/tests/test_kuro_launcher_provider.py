@@ -173,7 +173,7 @@ def test_build_news_items_skips_disabled_categories() -> None:
     categories = {item.category for item in items}
     assert "活动" not in categories
     assert "公告" in categories
-    assert "资讯" in categories
+    assert "新闻" in categories
 
 
 def test_build_news_items_assigns_stable_ids() -> None:
@@ -378,7 +378,7 @@ def test_build_news_items_cn_parses_chinese_titles_and_dates() -> None:
         assert item.published_at.year == datetime.now().year
     # Categories preserved in our canonical mapping.
     categories = {item.category for item in items}
-    assert categories == {"活动", "公告", "资讯"}
+    assert categories == {"活动", "公告", "新闻"}
 
 
 @pytest.mark.asyncio

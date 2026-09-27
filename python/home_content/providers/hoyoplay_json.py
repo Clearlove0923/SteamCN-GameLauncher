@@ -50,6 +50,7 @@ import httpx
 
 from ..models import (
     HomeBackground,
+    HomeVideoVariant,
     HomeBanner,
     HomeContent,
     HomeContentError,
@@ -120,7 +121,7 @@ class HoYoPlayJsonProvider(HomeContentProvider):
             raise
 
         game_entry = _pick_game_entry(payload, game_biz)
-        background = _pick_background(payload, game_biz)
+        background = _pick_background(payload, game_biz, video_only=options.get("videoOnly") is True)
         if background is None:
             errors.append(HomeContentError(
                 code="hoyoplay_empty",
@@ -197,7 +198,9 @@ def _pick_game_entry(payload: dict[str, Any], game_biz: str) -> Optional[dict[st
     return entry
 
 
-def _pick_background(payload: dict[str, Any], game_biz: str) -> Optional[HomeBackground]:
+def _pick_background(
+    payload: dict[str, Any], game_biz: str, *, video_only: bool = False,
+) -> Optional[HomeBackground]:
     entry = _pick_game_entry(payload, game_biz)
     if entry is None:
         return None
@@ -206,19 +209,35 @@ def _pick_background(payload: dict[str, Any], game_biz: str) -> Optional[HomeBac
     if not candidates:
         return None
 
-    # Prefer a background that carries a video URL. Fall back to the
-    # first background with a non-empty image URL.
-    video_first = next(
-        (b for b in candidates if _allowed(b.get("video", {}).get("url"))),
-        None,
-    )
-    if video_first is not None:
-        video_url = video_first.get("video", {}).get("url")
+    # 保留所有通过 URL 校验的视频候选，客户端每次启动轮换一次。
+    # 纯静态活动图不进入动画列表，例如原神的千星奇域静态画面。
+    variants: list[HomeVideoVariant] = []
+    seen_urls: set[str] = set()
+    for row in candidates:
+        video_url = (row.get("video") or {}).get("url")
+        if not _allowed(video_url) or video_url in seen_urls:
+            continue
+        seen_urls.add(video_url)
         image_url = _first_allowed([
-            video_first.get("background", {}).get("url"),
-            (video_first.get("icon") or {}).get("url"),
+            (row.get("background") or {}).get("url"),
+            (row.get("icon") or {}).get("url"),
         ])
-        return HomeBackground(video_url=video_url, image_url=image_url, local_path=None)
+        variants.append(HomeVideoVariant(
+            id=str(row.get("id") or video_url),
+            video_url=video_url,
+            image_url=image_url,
+        ))
+    if variants:
+        first = variants[0]
+        return HomeBackground(
+            video_url=first.video_url,
+            image_url=first.image_url,
+            local_path=None,
+            variants=variants,
+        )
+
+    if video_only:
+        return None
 
     image_only = next(
         (b for b in candidates if _allowed(b.get("background", {}).get("url"))),

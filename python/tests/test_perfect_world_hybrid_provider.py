@@ -148,8 +148,8 @@ def test_extract_js_payload_handles_real_intl_news_payload() -> None:
 
 def test_default_constants() -> None:
     assert DEFAULT_APP_CODE == "YDUTE5gscDZ229CW"
-    assert DEFAULT_LANGUAGE == "en-us"
-    assert DEFAULT_REGION == "os"
+    assert DEFAULT_LANGUAGE == "zh-cn"
+    assert DEFAULT_REGION == "cn"
     assert DEFAULT_BG_VIDEO_OS.startswith("https://ntevmg.perfectworld.com/")
     assert DEFAULT_BG_VIDEO_CN.startswith("https://yhvmg.wmupd.com/")
 
@@ -392,7 +392,7 @@ async def test_fetch_os_returns_full_content() -> None:
 
     provider, client = _build_provider(swiper, news)
     try:
-        result = await provider.fetch(_request())
+        result = await provider.fetch(_request({"region": "os", "language": "en-us"}))
     finally:
         await client.aclose()
 
@@ -407,7 +407,7 @@ async def test_fetch_os_returns_full_content() -> None:
 
 
 @pytest.mark.asyncio
-async def test_fetch_cn_uses_yh_endpoints() -> None:
+async def test_fetch_defaults_to_cn_and_uses_yh_endpoints() -> None:
     swiper = _js_payload("nte-game-swiper-cn.json")
     news = _js_payload("nte-news-data-cn.json")
 
@@ -426,7 +426,7 @@ async def test_fetch_cn_uses_yh_endpoints() -> None:
     client = httpx.AsyncClient(transport=transport)
     provider = PerfectWorldHybridProvider(client=client)
     try:
-        result = await provider.fetch(_request({"region": "cn", "language": "zh-cn"}))
+        result = await provider.fetch(_request())
     finally:
         await client.aclose()
 
@@ -482,7 +482,7 @@ async def test_fetch_returns_empty_when_both_endpoints_fail() -> None:
         await client.aclose()
 
     assert result.background is not None
-    assert result.background.video_url == DEFAULT_BG_VIDEO_OS
+    assert result.background.video_url == DEFAULT_BG_VIDEO_CN
     assert result.banners == []
     assert result.news == []
 

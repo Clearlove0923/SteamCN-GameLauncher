@@ -81,10 +81,10 @@ def test_allowed_host_suffixes_only_known_cdn() -> None:
 
 
 def test_default_constants() -> None:
-    assert DEFAULT_APP_CODE == "YDUTE5gscDZ229CW"
-    assert DEFAULT_CHANNEL == "6"
-    assert DEFAULT_LANGUAGE == "en-us"
-    assert DEFAULT_REGION == "os"
+    assert DEFAULT_APP_CODE == "6LL0KJuqHBVz33WK"
+    assert DEFAULT_CHANNEL == "1"
+    assert DEFAULT_LANGUAGE == "zh-cn"
+    assert DEFAULT_REGION == "cn"
     assert ".hg-cdn.com" in ALLOWED_HOST_SUFFIXES
 
 
@@ -295,6 +295,7 @@ async def test_fetch_sends_one_post_with_three_proxy_reqs() -> None:
     assert len(seen) == 1
     request = seen[0]
     assert request.method == "POST"
+    assert request.url.host == "launcher.hypergryph.com"
     body = json.loads(request.content)
     kinds = [item["kind"] for item in body["proxy_reqs"]]
     assert kinds == ["get_main_bg_image", "get_banner", "get_announcement"]
@@ -302,9 +303,9 @@ async def test_fetch_sends_one_post_with_three_proxy_reqs() -> None:
     for item in body["proxy_reqs"]:
         req = next(v for v in item.values() if isinstance(v, dict))
         assert req["appcode"] == DEFAULT_APP_CODE
-        assert req["channel"] == "6"
-        assert req["sub_channel"] == "6"
-        assert req["language"] == "en-us"
+        assert req["channel"] == "1"
+        assert req["sub_channel"] == "1"
+        assert req["language"] == "zh-cn"
 
     # Result is well-formed.
     assert result.background is not None

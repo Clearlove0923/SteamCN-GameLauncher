@@ -1,11 +1,7 @@
-using System.Net.Http;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
-using Windows.Media.Core;
-using Windows.Media.Playback;
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Models.Home;
 using SteamCNGameLauncher.Services;
@@ -21,63 +17,41 @@ public sealed partial class LauncherHomePage : Page
     private readonly DirectGameLaunchService _directGameLaunchService = new();
     private readonly AppearanceService _appearanceService = AppearanceService.Instance;
     private readonly LogService _logService = LogService.Instance;
-    private readonly MediaPlayer _backgroundPlayer = new() { IsLoopingEnabled = true, AutoPlay = true };
+    private readonly HomeBackdropCoordinator _homeBackdrop = HomeBackdropCoordinator.Instance;
+    private readonly HomeVideoVariantSelector _videoVariantSelector = HomeContentServiceFactory.VideoSelector;
+    private readonly Guid _homeBackdropOwner = Guid.NewGuid();
     private readonly IHomeContentService _homeContentService;
     private string? _activeLayoutProfileId;
     private CancellationTokenSource? _homeContentCancellation;
     private Models.CustomManifestPreset? _currentGame;
     private HomeContent? _currentHomeContent;
-    private string? _activeVideoSource;
+    private bool _forceBlackBackground;
+    private HomeContentRequest? _activeHomeRequest;
+    private SupportedGameRegistry.Match? _activeHomeMatch;
+    private bool _navigatedAway;
 
     public LauncherHomePage()
     {
         InitializeComponent();
-        HomeBackgroundVideo.SetMediaPlayer(_backgroundPlayer);
-        _backgroundPlayer.MediaFailed += BackgroundPlayer_MediaFailed;
         Loaded += LauncherHomePage_Loaded;
         Unloaded += LauncherHomePage_Unloaded;
         // 窗口跨显示器或缩放率变化时，保持资讯栏的截图实际像素尺寸不变。
         SizeChanged += (_, _) => ApplyLayoutProfile(_activeLayoutProfileId);
 
-        var settings = _settingsService.Load();
-        _homeContentService = CreateHomeContentService(settings);
-    }
-
-    /// <summary>
-    /// Pick the home-content service to use for this session.
-    ///
-    /// When <see cref="AppSettings.HomeContentWorkerBaseUrl"/> is set and not the
-    /// built-in default placeholder, talk to the Python Worker over HTTP via
-    /// <see cref="FastApiHomeContentService"/>. Otherwise fall back to
-    /// <see cref="PreviewHomeContentService"/> so the page renders something
-    /// even before the worker is launched.
-    /// </summary>
-    private static IHomeContentService CreateHomeContentService(AppSettings settings)
-    {
-        var baseUrl = settings.HomeContentWorkerBaseUrl?.Trim();
-        if (string.IsNullOrEmpty(baseUrl))
-        {
-            return new PreviewHomeContentService();
-        }
-
-        try
-        {
-            var endpoint = new Uri(new Uri(baseUrl), "/v1/home-content");
-            var transport = new HttpHomeContentTransport(
-                new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(1, settings.HomeContentWorkerTimeoutSeconds)) },
-                endpoint);
-            return new FastApiHomeContentService(transport);
-        }
-        catch (UriFormatException)
-        {
-            return new PreviewHomeContentService();
-        }
+        _homeContentService = HomeContentServiceFactory.Instance.GetOrCreate(_settingsService.Load());
     }
 
     private void LauncherHomePage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
+        if (_navigatedAway) return;
         _appearanceService.Changed -= ApplyHomeAppearance;
         _appearanceService.Changed += ApplyHomeAppearance;
+        if (_homeContentService is IHomeContentRefreshSource refreshSource)
+        {
+            // 磁盘旧缓存可以立即显示；后台下载完成后由同一服务推送最新数据。
+            refreshSource.ContentRefreshed -= HomeContentService_ContentRefreshed;
+            refreshSource.ContentRefreshed += HomeContentService_ContentRefreshed;
+        }
         ApplyLayoutProfile(_activeLayoutProfileId);
         ApplyHomeAppearance();
     }
@@ -85,123 +59,151 @@ public sealed partial class LauncherHomePage : Page
     private void LauncherHomePage_Unloaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         _appearanceService.Changed -= ApplyHomeAppearance;
-        StopHomeAnimation();
+        if (_homeContentService is IHomeContentRefreshSource refreshSource)
+            refreshSource.ContentRefreshed -= HomeContentService_ContentRefreshed;
+        _homeBackdrop.Clear(_homeBackdropOwner);
     }
 
     private void ApplyHomeAppearance()
     {
+        // 页面只控制内容与播放意图，真正的视频播放器始终归窗口底层所有。
+        if (_navigatedAway) return;
         var profile = _appearanceService.Settings.GetEffective(AppearancePageIds.Home);
-        NewsPanel.Visibility = profile.ShowHomeNews ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+        NewsPanel.Visibility = profile.ShowHomeNews && _activeHomeMatch is not null
+            ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
         ShowHomeAnimationItem.IsChecked = profile.ShowHomeAnimation;
         ShowHomeNewsItem.IsChecked = profile.ShowHomeNews;
-        // 真实背景进入时先收起纯黑兜底，否则 DefaultBlackBackground 会遮住视频/静态图。
-        DefaultBlackBackground.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-        ApplyHomeAnimation(profile.ShowHomeAnimation ? _currentHomeContent?.Background : null);
+        _homeBackdrop.Show(_homeBackdropOwner, _currentHomeContent?.Background,
+            profile.ShowHomeAnimation, _forceBlackBackground);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _navigatedAway = false;
         var id = e.Parameter as string ?? CustomManifestService.Instance.GetInitialSidebarId();
         if (!string.IsNullOrWhiteSpace(id) && CustomManifestService.Instance.GetById(id) is { } game)
             _ = ShowGameAsync(game);
         else
         {
             _currentGame = null;
+            _activeHomeRequest = null;
+            _activeHomeMatch = null;
             StartGameButton.IsEnabled = false;
             // 还没选游戏时隐藏轮播 + 资讯 UI：
             //  - 避免显示空 "资讯" tab 干扰首次启动用户；
             //  - 避免 HomeContentPanel 残留上一次的游戏数据；
             //  - 切换到真游戏后由 ApplyHomeAppearance 按外观档案恢复可见性。
             _currentHomeContent = null;
+            _forceBlackBackground = true;
             HomeContentPanel.SetContent(null);
             NewsPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            ApplyHomeAppearance();
         }
+    }
+
+    public void SwitchGame(string id)
+    {
+        // 复用现有首页实例，避免 Frame 导航卸载背景时出现短暂黑屏。
+        if (CustomManifestService.Instance.GetById(id) is { } game)
+            _ = ShowGameAsync(game);
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
+        _navigatedAway = true;
+        _activeHomeRequest = null;
         _homeContentCancellation?.Cancel();
+        _homeBackdrop.Clear(_homeBackdropOwner);
         base.OnNavigatedFrom(e);
     }
 
     private async Task ShowGameAsync(Models.CustomManifestPreset game)
     {
         _currentGame = game;
+        _activeHomeMatch = null;
+        _forceBlackBackground = false;
+        // 新游戏元数据与解码器准备期间保留旧背景，资讯立即清空，避免旧内容串到新游戏。
+        HomeContentPanel.SetContent(null);
+        NewsPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         ApplyLaunchMode(game.HomeLaunchModeId);
         StartGameButton.IsEnabled = true;
         ApplyLayoutProfile(game.HomeLayoutProfileId);
-        GameTitle.Text = game.Name;
-        GameSubtitle.Text = string.IsNullOrWhiteSpace(game.GameDisplayName)
-            ? string.Empty
-            : game.GameDisplayName;
-        GameSubtitle.Visibility = string.IsNullOrWhiteSpace(GameSubtitle.Text)
-            ? Microsoft.UI.Xaml.Visibility.Collapsed
-            : Microsoft.UI.Xaml.Visibility.Visible;
 
-        // AppId 不在已适配清单 → 强制显示纯黑默认背景，跳过真实背景渲染，
-        // 也忽略外观设置里的 SourceImage，避免测试图/残留主题色泄漏到未验证游戏。
-        if (!SupportedGameRegistry.IsSupported(game.AppId))
+        // 匹配用户填写的真实游戏 EXE；无法识别时再按路径中的官方游戏目录匹配。
+        // Steam AppID 和预设显示名都不参与首页来源选择。
+        _homeContentCancellation?.Cancel();
+        _activeHomeRequest = null;
+        _activeHomeMatch = null;
+        if (!SupportedGameRegistry.TryMatch(game.ClientExePath, game.InstallDir, out var match))
         {
             _currentHomeContent = null;
             HomeContentPanel.SetContent(null);
             ResetBackgroundToDefaultBlack();
             return;
         }
+        _activeHomeMatch = match;
 
-        _homeContentCancellation?.Cancel();
         _homeContentCancellation = new CancellationTokenSource();
         try
         {
-            var result = await _homeContentService.GetAsync(new HomeContentRequest
+            var request = new HomeContentRequest
             {
-                // Python Provider 需要来源可识别的稳定游戏标识。preset.Id 是本机随机 GUID，
-                // 无法用于区分同一厂商的不同游戏；Steam AppID 才能跨设备稳定映射。
-                GameId = game.AppId.Trim(),
-                ProviderId = ResolveProviderId(game),
-                Locale = "zh-CN"
-            }, _homeContentCancellation.Token);
-            _currentHomeContent = result.Content;
-            HomeContentPanel.SetContent(result.Content);
+                GameId = match.GameId,
+                ExecutablePath = game.ClientExePath,
+                InstallDirectory = game.InstallDir,
+                CacheFolderName = SupportedGameRegistry.GetCacheFolderName(match, game.ClientExePath, game.InstallDir),
+                ProviderId = "auto",
+                Locale = "zh-CN",
+                // Python 使用同一映射表独立选择 Provider；此处选项用于缓存版本区分。
+                ProviderOptions = match.ProviderOptions
+            };
+            _activeHomeRequest = request;
+            var result = await _homeContentService.GetAsync(request, _homeContentCancellation.Token);
+            if (_navigatedAway || !ReferenceEquals(_activeHomeRequest, request)) return;
+            _currentHomeContent = _videoVariantSelector.Select(request, result.Content);
+            HomeContentPanel.SetContent(_currentHomeContent, match.NewsCategoryLabels);
             ApplyHomeAppearance();
+            if (result.IsStale)
+                _logService.AddLog("[首页缓存] 已立即显示本地缓存，正在后台刷新最新内容");
         }
         catch (OperationCanceledException)
         {
             // 快速切换游戏时忽略上一请求的取消结果，避免旧内容覆盖当前游戏。
         }
+        catch (Exception ex)
+        {
+            if (_navigatedAway || _currentGame != game) return;
+            _logService.AddLog($"[首页内容] 切换游戏失败：{ex.Message}");
+            ResetBackgroundToDefaultBlack();
+        }
     }
 
     private void ResetBackgroundToDefaultBlack()
     {
-        _activeVideoSource = null;
-        try { _backgroundPlayer.Source = null; } catch { /* ignore */ }
-        HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-        HomeBackgroundImage.Source = null;
-        HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-        DefaultBlackBackground.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-        // AppId 不在已适配清单时也把资讯 + 轮播藏起来，避免上一个游戏的真实数据
+        _forceBlackBackground = true;
+        _homeBackdrop.Show(_homeBackdropOwner, null, false, forceBlack: true);
+        // 未匹配安装文件时也把资讯 + 轮播藏起来，避免上一个游戏的真实数据
         // 残留在未验证游戏的窗口上；切回适配游戏时由 ApplyHomeAppearance 恢复。
         _currentHomeContent = null;
         HomeContentPanel.SetContent(null);
         NewsPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
     }
 
-    /// <summary>
-    /// Pick the ProviderId for the request. A value explicitly stored in the
-    /// preset wins. Older presets without that field use the verified AppId
-    /// registry, so upgrading the launcher does not require editing every game.
-    /// </summary>
-    private static string ResolveProviderId(Models.CustomManifestPreset game)
+    private void HomeContentService_ContentRefreshed(object? sender, HomeContentRefreshedEventArgs e)
     {
-        var declared = game.HomeContentProviderId?.Trim();
-        if (!string.IsNullOrEmpty(declared))
-        {
-            return declared;
-        }
+        // Worker 下载可晚于下一次切换；请求哈希与引用都匹配才允许刷新当前页面。
+        var active = _activeHomeRequest;
+        if (active is null || HomeCacheKey.Create(active) != HomeCacheKey.Create(e.Request))
+            return;
 
-        return SupportedGameRegistry.TryGetProviderId(game.AppId, out var providerId)
-            ? providerId
-            : PreviewHomeContentService.ProviderId;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_navigatedAway || _activeHomeRequest != active || !IsLoaded) return;
+            _currentHomeContent = _videoVariantSelector.Select(active, e.Result.Content);
+            HomeContentPanel.SetContent(_currentHomeContent, _activeHomeMatch?.NewsCategoryLabels);
+            ApplyHomeAppearance();
+        });
     }
 
     private void HomeDisplayMenuItem_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -214,92 +216,6 @@ public sealed partial class LauncherHomePage : Page
             _logService.AddLog("[首页显示] 设置保存失败，本次运行仍使用当前选择");
     }
 
-    private void ApplyHomeAnimation(HomeBackground? background)
-    {
-        var source = ResolveVideoSource(background?.VideoUrl);
-        if (source is null)
-        {
-            ShowStaticBackground();
-            return;
-        }
-
-        var key = source.AbsoluteUri;
-        if (_activeVideoSource == key)
-        {
-            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-            HomeBackgroundImage.Source = null;
-            HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-            _backgroundPlayer.Play();
-            return;
-        }
-
-        try
-        {
-            _backgroundPlayer.Source = MediaSource.CreateFromUri(source);
-            _activeVideoSource = key;
-            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-            HomeBackgroundImage.Source = null;
-            HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-        }
-        catch (Exception ex)
-        {
-            StopHomeAnimation();
-            _logService.AddLog($"[首页背景] 动画无法播放，已回退到背景图片：{ex.Message}");
-        }
-    }
-
-    private void ShowStaticBackground()
-    {
-        var options = _appearanceService.CurrentProfile.Current;
-        if (string.IsNullOrWhiteSpace(options.SourceImage))
-        {
-            HomeBackgroundImage.Source = null;
-            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-            return;
-        }
-
-        try
-        {
-            var path = _appearanceService.GetImagePath(options.SourceImage);
-            HomeBackgroundImage.Source = new BitmapImage(new Uri(path, UriKind.Absolute));
-            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-        }
-        catch (Exception ex)
-        {
-            HomeBackgroundImage.Source = null;
-            HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-            _logService.AddLog($"[首页背景] 静态背景图加载失败：{ex.Message}");
-        }
-    }
-
-    private static Uri? ResolveVideoSource(string? source)
-    {
-        if (!Uri.TryCreate(source, UriKind.Absolute, out var uri))
-            return null;
-        if (uri.IsFile)
-            return File.Exists(uri.LocalPath) ? uri : null;
-        return uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ? uri : null;
-    }
-
-    private void BackgroundPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
-    {
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            StopHomeAnimation();
-            _logService.AddLog($"[首页背景] 动画播放失败，已回退到背景图片：{args.ErrorMessage}");
-        });
-    }
-
-    private void StopHomeAnimation()
-    {
-        _backgroundPlayer.Pause();
-        _backgroundPlayer.Source = null;
-        _activeVideoSource = null;
-        HomeBackgroundVideo.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-        HomeBackgroundImage.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-        HomeBackgroundImage.Source = null;
-    }
-
     private void ApplyLayoutProfile(string? profileId)
     {
         _activeLayoutProfileId = profileId;
@@ -309,7 +225,6 @@ public sealed partial class LauncherHomePage : Page
         NewsPanel.Height = profile.NewsHeight / rasterizationScale;
         NewsPanel.Margin = new Microsoft.UI.Xaml.Thickness(
             profile.NewsLeft / rasterizationScale, 0, 0, profile.NewsBottom / rasterizationScale);
-        LogService.Instance.AddLog($"[dbg-news] ApplyLayoutProfile: rasterizationScale={rasterizationScale} profile={profile.Id} panel W={NewsPanel.Width} H={NewsPanel.Height} M={NewsPanel.Margin}");
         // 控件内部使用截图实际像素排版，再由 Viewbox 整体适配逻辑像素外框。
         HomeContentPanel.LayoutWidth = profile.NewsWidth;
         HomeContentPanel.LayoutHeight = profile.NewsHeight;

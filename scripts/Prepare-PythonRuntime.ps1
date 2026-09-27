@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 $ErrorActionPreference = 'Stop'
@@ -48,10 +48,23 @@ function Test-Runtime([string]$Executable) {
     }
 }
 
+function Test-VideoTool([string]$Executable) {
+    # 首页 WebM 优化依赖 imageio-ffmpeg 内置可执行文件；只导入包还不足以验证二进制存在。
+    if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) { return $false }
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'SilentlyContinue'
+        & $Executable -c 'import imageio_ffmpeg, os; assert os.path.isfile(imageio_ffmpeg.get_ffmpeg_exe())' 2>$null
+        return $LASTEXITCODE -eq 0
+    }
+    finally { $ErrorActionPreference = $previousPreference }
+}
+
 function Get-PythonSourceFingerprint {
     $sourceFiles = @(
         Get-Item -LiteralPath (Join-Path $pythonProject 'pyproject.toml')
         Get-ChildItem -LiteralPath (Join-Path $pythonProject 'home_content') -Recurse -File -Filter '*.py'
+        Get-Item -LiteralPath (Join-Path $pythonProject 'home_content/game_sources.json')
     ) | Sort-Object FullName
     $manifest = ($sourceFiles | ForEach-Object {
         '{0}  {1}' -f (Get-Sha256 $_.FullName),
@@ -87,7 +100,8 @@ $installedFingerprint = if (Test-Path -LiteralPath $sourceStampPath) {
 } else { '' }
 $runtimeReady = Test-Runtime $pythonExe
 
-if ($runtimeReady -and $installedFingerprint -eq $sourceFingerprint) {
+# 源码指纹和转换工具都齐全才跳过安装；缺一项就同步当前依赖与 Worker 包。
+if ($runtimeReady -and (Test-VideoTool $pythonExe) -and $installedFingerprint -eq $sourceFingerprint) {
     Write-Output "Embedded Python is ready: $pythonExe"
     exit 0
 }
@@ -137,7 +151,8 @@ if (-not $runtimeReady) {
 
 Write-Output 'Installing Python Worker and its declared dependencies ...'
 if ($runtimeReady) {
-    & $pythonExe -m pip install --disable-pip-version-check --no-warn-script-location --no-build-isolation --no-deps --force-reinstall $pythonProject
+    # 旧运行时可能没有新增依赖，不能再用 --no-deps，否则发布目录不会包含转换工具。
+    & $pythonExe -m pip install --disable-pip-version-check --no-warn-script-location --no-build-isolation --upgrade $pythonProject
 }
 else {
     & $pythonExe -m pip install --disable-pip-version-check --no-warn-script-location --no-build-isolation --upgrade $pythonProject
@@ -145,7 +160,7 @@ else {
 if ($LASTEXITCODE -ne 0) { throw "pip failed with exit code $LASTEXITCODE" }
 Remove-PythonBuildArtifacts
 
-if (-not (Test-Runtime $pythonExe)) {
+if (-not (Test-Runtime $pythonExe) -or -not (Test-VideoTool $pythonExe)) {
     throw 'Embedded Python dependency verification failed.'
 }
 [IO.File]::WriteAllText($sourceStampPath, "$sourceFingerprint`n", [Text.UTF8Encoding]::new($false))

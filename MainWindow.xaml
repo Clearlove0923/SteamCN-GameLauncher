@@ -14,9 +14,26 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- All background media lives at window level so the home animation fills the
+             title-bar and navigation-pane area as well as the page content. -->
         <Image x:Name="BackgroundImage" Grid.RowSpan="2" IsHitTestVisible="False" Visibility="Collapsed"/>
+        <Border x:Name="HomeBackdropBlack" Grid.RowSpan="2" IsHitTestVisible="False"
+                Background="Black" Visibility="Collapsed"/>
+        <Image x:Name="HomeBackdropImage" Grid.RowSpan="2" IsHitTestVisible="False"
+               Stretch="UniformToFill" Visibility="Collapsed"/>
+        <MediaPlayerElement x:Name="HomeBackdropVideo" Grid.RowSpan="2" IsHitTestVisible="False"
+                            AreTransportControlsEnabled="False" Stretch="UniformToFill"
+                            Visibility="Collapsed"/>
+        <MediaPlayerElement x:Name="HomeBackdropVideoNext" Grid.RowSpan="2" IsHitTestVisible="False"
+                            AreTransportControlsEnabled="False" Stretch="UniformToFill"
+                            Visibility="Collapsed"/>
         <Border x:Name="BackgroundOverlay" Grid.RowSpan="2" IsHitTestVisible="False"
                 Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}" Visibility="Collapsed"/>
+
+        <!-- The navigation rail is drawn over the home media; its opacity is independent
+             of NavigationView's theme template and does not fade its icons. -->
+        <Border x:Name="SidebarBackdrop" Grid.Row="1" Width="68"
+                HorizontalAlignment="Left" Background="Black" IsHitTestVisible="False"/>
 
         <!-- 强制更新横幅（forceUpdate=true 时显示，占满整行） -->
         <InfoBar x:Name="forceUpdateBanner"
@@ -34,6 +51,8 @@
 
         <NavigationView x:Name="NavView"
                         Grid.Row="1"
+                        Canvas.ZIndex="10"
+                        Background="Transparent"
                         IsBackButtonVisible="Collapsed"
                         IsSettingsVisible="False"
                         PaneDisplayMode="LeftCompact"

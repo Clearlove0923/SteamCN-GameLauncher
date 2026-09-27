@@ -11,6 +11,7 @@ public partial class App : Application
 {
     public static Window MainWindow { get; private set; } = null!;
     public static PythonWorkerSpawner? WorkerSpawner { get; private set; }
+    private readonly CancellationTokenSource _workerStartupCancellation = new();
     private static readonly string CrashLogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SteamCN-GameLauncher",
@@ -62,6 +63,8 @@ public partial class App : Application
 
     private async Task TrySpawnWorkerAsync()
     {
+        // Worker 启动与窗口关闭并发时共用取消令牌，避免关闭后进程才创建成功。
+        PythonWorkerSpawner? spawner = null;
         try
         {
             var settingsService = new SettingsService();
@@ -72,16 +75,21 @@ public partial class App : Application
                 return;
             }
 
-            var spawner = new PythonWorkerSpawner(settings, LogService.Instance);
+            _workerStartupCancellation.Token.ThrowIfCancellationRequested();
+            spawner = new PythonWorkerSpawner(settings, LogService.Instance);
             spawner.OutputReceived += line => LogService.Instance.AddLog($"[worker] {line}");
             spawner.Exited += code => LogService.Instance.AddLog($"[worker] exited with code {code}");
             WorkerSpawner = spawner;
 
-            var ok = await spawner.StartAsync().ConfigureAwait(false);
+            var ok = await spawner.StartAsync(_workerStartupCancellation.Token).ConfigureAwait(false);
             if (!ok)
             {
                 LogService.Instance.AddLog("[worker] StartAsync returned false; FastApiHomeContentService will fall back to PreviewHomeContentService");
             }
+        }
+        catch (OperationCanceledException)
+        {
+            spawner?.StopImmediately();
         }
         catch (Exception ex)
         {
@@ -89,18 +97,24 @@ public partial class App : Application
         }
     }
 
-    private static void OnMainWindowClosed()
+    private void OnMainWindowClosed()
     {
+        // 不在 UI 线程等待 Python 优雅退出；先终止进程树，再完成应用退出。
+        LogService.Instance.AddLog("[窗口] 已进入 Closed，正在结束 Worker");
+        _workerStartupCancellation.Cancel();
+        var spawner = WorkerSpawner;
+        WorkerSpawner = null;
         try
         {
-            WorkerSpawner?.Stop();
-            WorkerSpawner?.Dispose();
+            spawner?.StopImmediately();
+            spawner?.Dispose();
         }
         catch (Exception ex)
         {
             LogService.Instance.AddLog($"[worker] shutdown error: {ex.GetType().Name}: {ex.Message}");
         }
-        WorkerSpawner = null;
+        LogService.Instance.AddLog("[窗口] 清理完成，正在退出应用");
+        Exit();
     }
 
     private void RegisterGlobalExceptionHandlers()

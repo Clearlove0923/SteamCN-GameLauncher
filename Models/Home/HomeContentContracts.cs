@@ -15,6 +15,15 @@ public sealed record HomeContentRequest
     [JsonPropertyName("gameId")]
     public required string GameId { get; init; }
 
+    [JsonPropertyName("executablePath")]
+    public string? ExecutablePath { get; init; }
+
+    [JsonPropertyName("installDirectory")]
+    public string? InstallDirectory { get; init; }
+
+    [JsonPropertyName("cacheFolderName")]
+    public string? CacheFolderName { get; init; }
+
     [JsonPropertyName("providerId")]
     public required string ProviderId { get; init; }
 
@@ -68,6 +77,24 @@ public sealed record HomeBackground
 {
     [JsonPropertyName("videoUrl")]
     public string? VideoUrl { get; init; }
+
+    [JsonPropertyName("imageUrl")]
+    public string? ImageUrl { get; init; }
+
+    [JsonPropertyName("localPath")]
+    public string? LocalPath { get; init; }
+
+    [JsonPropertyName("variants")]
+    public IReadOnlyList<HomeVideoVariant> Variants { get; init; } = Array.Empty<HomeVideoVariant>();
+}
+
+public sealed record HomeVideoVariant
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("videoUrl")]
+    public required string VideoUrl { get; init; }
 
     [JsonPropertyName("imageUrl")]
     public string? ImageUrl { get; init; }

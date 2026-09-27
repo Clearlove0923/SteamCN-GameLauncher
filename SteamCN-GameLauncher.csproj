@@ -39,6 +39,8 @@
 
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
+    <EmbeddedResource Include="python\home_content\game_sources.json"
+                      LogicalName="SteamCNGameLauncher.Config.home-content-sources.json" />
   </ItemGroup>
 
   <!--
@@ -54,6 +56,9 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Assets\Icons\" />

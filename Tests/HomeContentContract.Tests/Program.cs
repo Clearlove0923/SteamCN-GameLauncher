@@ -16,6 +16,33 @@ Check(envelope.SchemaVersion == 1 && envelope.ProviderId == "hoyoplay-json",
     "Python envelope metadata deserializes");
 Check(envelope.Content.Background?.VideoUrl?.EndsWith(".mp4", StringComparison.Ordinal) == true,
     "background animation URL deserializes");
+Check(envelope.Content.Background?.Variants.Select(item => item.Id).SequenceEqual(
+        ["animation-a", "animation-b"]) == true,
+    "Python video variants deserialize without losing their stable IDs");
+var pythonVariants = HomeContentJson.DeserializeEnvelope(File.ReadAllText(
+    Path.Combine(AppContext.BaseDirectory, "hoyoplay-video-variants-envelope.json")));
+Check(pythonVariants.Content.Background?.Variants.Select(item => item.Id).SequenceEqual(
+        ["3citmgCMOP", "d7eCRqQwNc"]) == true
+      && pythonVariants.Content.Background?.Variants.All(item => item.VideoUrl.EndsWith(".webm")) == true,
+    "actual Python Pydantic output deserializes as two video-only Genshin variants");
+var backdrop = HomeBackdropCoordinator.Instance;
+HomeBackdropState? publishedBackdrop = null;
+void OnBackdropChanged(HomeBackdropState state) => publishedBackdrop = state;
+backdrop.Changed += OnBackdropChanged;
+var firstOwner = Guid.NewGuid();
+var secondOwner = Guid.NewGuid();
+backdrop.Show(firstOwner, envelope.Content.Background, playAnimation: true);
+Check(publishedBackdrop is { IsActive: true, PlayAnimation: true, ForceBlack: false }
+      && publishedBackdrop.Background?.VideoUrl == envelope.Content.Background?.VideoUrl,
+    "home page publishes source-agnostic background state to the window layer");
+backdrop.Show(secondOwner, envelope.Content.Background, playAnimation: true);
+backdrop.Clear(firstOwner);
+Check(publishedBackdrop is { IsActive: true },
+    "late unload from the previous home page cannot clear the newly selected game");
+backdrop.Clear(secondOwner);
+Check(publishedBackdrop == HomeBackdropState.Inactive,
+    "leaving home clears window-level playback state");
+backdrop.Changed -= OnBackdropChanged;
 Check(envelope.Content.Banners.Single().TargetUrl == "https://example.invalid/activity/1"
       && envelope.Content.News.Single().TargetUrl == "https://example.invalid/news/1",
     "banner and news links deserialize");
@@ -32,12 +59,18 @@ var requestJson = HomeContentJson.SerializeRequest(new HomeContentRequest
 {
     RequestId = "request-1",
     GameId = "4162040",
-    ProviderId = "hoyoplay-json"
+    ProviderId = "auto",
+    ExecutablePath = @"D:\Games\ZenlessZoneZero Game\ZenlessZoneZero.exe",
+    InstallDirectory = @"D:\Games\ZenlessZoneZero Game",
+    CacheFolderName = "ZenlessZoneZero Game",
 });
 using var requestDocument = JsonDocument.Parse(requestJson);
 Check(requestDocument.RootElement.GetProperty("schemaVersion").GetInt32() == 1
       && requestDocument.RootElement.GetProperty("gameId").GetString() == "4162040"
-      && requestDocument.RootElement.GetProperty("providerId").GetString() == "hoyoplay-json",
+      && requestDocument.RootElement.GetProperty("providerId").GetString() == "auto"
+      && requestDocument.RootElement.GetProperty("executablePath").GetString()?.EndsWith("ZenlessZoneZero.exe") == true
+      && requestDocument.RootElement.GetProperty("installDirectory").GetString()?.EndsWith("ZenlessZoneZero Game") == true
+      && requestDocument.RootElement.GetProperty("cacheFolderName").GetString() == "ZenlessZoneZero Game",
     "C# request uses the camelCase Python contract");
 
 try

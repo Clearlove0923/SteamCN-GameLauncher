@@ -52,7 +52,11 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        LogService.Instance.AttachDispatcher(
+            () => DispatcherQueue.HasThreadAccess,
+            update => DispatcherQueue.TryEnqueue(() => update()));
         NavView.CompactPaneLength = LauncherDimensions.SidebarWidth;
+        SidebarBackdrop.Width = LauncherDimensions.SidebarWidth;
         // 与侧栏重叠一个逻辑像素，鼠标横向移动时不会经过无命中间隙。
         GameLibraryOverlay.Margin = new Thickness(LauncherDimensions.SidebarWidth - 1, 12, 0, 0);
         TitleDragRegion.Margin = new Thickness(LauncherDimensions.SidebarWidth, 0, 150, 0);
@@ -84,6 +88,12 @@ public sealed partial class MainWindow : Window
         RefreshCustomNavigation();
         _lastAcceptedNavigationItem = HomeNavItem;
         NavView.SelectedItem = HomeNavItem;
+        // NavigationView 可能先选中首页却不触发 SelectionChanged；下一轮 UI 消息中补导航。
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (ContentFrame.Content is null)
+                NavigateToHome(_customManifestService.GetInitialSidebarId());
+        });
     }
 
     // ── 更新通知处理 ──────────────────────────────────────────────────────────
@@ -139,6 +149,20 @@ public sealed partial class MainWindow : Window
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
+        InitializeTrayIcon();
+        _appWindow.Closing += (_, args) =>
+        {
+            // 标题栏关闭只隐藏窗口；托盘“退出”设置标志后才真正释放播放器与 Worker。
+            if (!_exitFromTray && _trayIcon is not null)
+            {
+                args.Cancel = true;
+                _appWindow.Hide();
+                LogService.Instance.AddLog("[窗口] 已隐藏到系统托盘");
+                return;
+            }
+            LogService.Instance.AddLog("[窗口] 收到关闭请求，正在释放首页媒体");
+            PrepareHomeMediaForClose();
+        };
 
         _appWindow.Title = AppInfo.WindowTitle;
 
@@ -303,6 +327,12 @@ public sealed partial class MainWindow : Window
     {
         AppearanceService.Instance.SetActivePage(AppearancePageIds.Home);
         if (!string.IsNullOrWhiteSpace(id)) _customManifestService.Select(id);
+        if (!string.IsNullOrWhiteSpace(id) && ContentFrame.Content is Views.Pages.LauncherHomePage current)
+        {
+            // 切游戏不重新导航首页，窗口动画继续播放直到下一段视频就绪。
+            current.SwitchGame(id);
+            return;
+        }
         ContentFrame.Navigate(typeof(Views.Pages.LauncherHomePage), id);
     }
 

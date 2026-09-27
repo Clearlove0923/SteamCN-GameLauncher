@@ -7,7 +7,6 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using SteamCNGameLauncher.Models.Home;
-using SteamCNGameLauncher.Services;
 
 namespace SteamCNGameLauncher.Views.Controls;
 
@@ -52,64 +51,43 @@ public sealed partial class HomeBannerAndNews : UserControl
         Loaded += HomeBannerAndNews_Loaded;
         Unloaded += HomeBannerAndNews_Unloaded;
         SetContent(new HomeContent());
-        LogService.Instance.AddLog("[dbg-banner] ctor: empty SetContent done");
     }
 
-    public void SetContent(HomeContent content)
+    public void SetContent(HomeContent? content, IReadOnlyDictionary<string, string>? categoryLabels = null)
     {
-        LogService.Instance.AddLog($"[dbg-banner] SetContent called: banners={content.Banners.Count} news={content.News.Count}");
-        try
+        // 同一控件按游戏配置重建分类，不把“鸣潮的新闻”等厂商差异写死在 XAML。
+        content ??= new HomeContent();
+        _bannerTimer.Stop();
+        BannerItems.Clear();
+        foreach (var banner in content.Banners)
         {
-            _bannerTimer.Stop();
-            BannerItems.Clear();
-            foreach (var banner in content.Banners)
-            {
-                var src = CreateImageSource(banner.LocalPath, banner.ImageUrl);
-                LogService.Instance.AddLog($"[dbg-banner]   banner[{banner.Id}] title='{banner.Title}' img={src} url={banner.TargetUrl}");
-                BannerItems.Add(new HomeBannerDisplayItem(
-                    banner.Id,
-                    string.IsNullOrWhiteSpace(banner.Title) ? "查看详情" : banner.Title,
-                    src,
-                    banner.TargetUrl));
-            }
-
-            BuildNewsGroups(content.News);
-            LogService.Instance.AddLog($"[dbg-banner] BuildNewsGroups -> NewsGroups.Count={NewsGroups.Count} SelectedNewsItems={SelectedNewsItems.Count}");
-            foreach (var g in NewsGroups)
-            {
-                LogService.Instance.AddLog($"[dbg-banner]   group[{g.Key}] header='{g.Header}' items={g.Items.Count}");
-            }
-            SelectNewsGroup(NewsGroups.FirstOrDefault());
-            LogService.Instance.AddLog($"[dbg-banner] after SelectNewsGroup: _selectedNewsGroup={_selectedNewsGroup?.Key} SelectedNewsItems={SelectedNewsItems.Count}");
-            // Check visual state
-            try
-            {
-                LogService.Instance.AddLog($"[dbg-banner] post-set: ActualWidth={ActualWidth} ActualHeight={ActualHeight} Visibility={Visibility} IsHitTestVisible={IsHitTestVisible} Opacity={Opacity}");
-            }
-            catch (Exception vex) { LogService.Instance.AddLog($"[dbg-banner] post-set err: {vex.Message}"); }
-
-            BannerFlipView.SelectedIndex = BannerItems.Count > 0 ? 0 : -1;
-            BannerFlipView.Visibility = BannerItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-            BannerEmptyState.Visibility = BannerItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            LogService.Instance.AddLog($"[dbg-banner] after SetContent: BannerFlipView.SelectedIndex={BannerFlipView.SelectedIndex} vis={BannerFlipView.Visibility}");
-            UpdateBannerCounter();
-            StartBannerTimerIfNeeded();
+            BannerItems.Add(new HomeBannerDisplayItem(
+                banner.Id,
+                string.IsNullOrWhiteSpace(banner.Title) ? "查看详情" : banner.Title,
+                CreateImageSource(banner.LocalPath, banner.ImageUrl),
+                banner.TargetUrl));
         }
-        catch (Exception ex)
-        {
-            LogService.Instance.AddLog($"[dbg-banner] SetContent EXCEPTION: {ex.GetType().Name}: {ex.Message}");
-            LogService.Instance.AddLog($"[dbg-banner]   stack: {ex.StackTrace?.Substring(0, Math.Min(500, ex.StackTrace?.Length ?? 0))}");
-            throw;
-        }
+
+        BuildNewsGroups(content.News, categoryLabels);
+        SelectNewsGroup(NewsGroups.FirstOrDefault());
+        BannerFlipView.SelectedIndex = BannerItems.Count > 0 ? 0 : -1;
+        BannerFlipView.Visibility = BannerItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        BannerEmptyState.Visibility = BannerItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateBannerCounter();
+        StartBannerTimerIfNeeded();
     }
 
-    private void BuildNewsGroups(IReadOnlyList<HomeNewsItem> news)
+    private void BuildNewsGroups(IReadOnlyList<HomeNewsItem> news, IReadOnlyDictionary<string, string>? categoryLabels)
     {
+        // 未认识的分类仍创建独立通用分组，避免 Provider 新增类别后内容丢失。
         NewsGroups.Clear();
         var groupsByKey = new Dictionary<string, HomeNewsGroup>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in news)
         {
-            var (key, header) = ResolveCategory(item.Category);
+            var category = item.Category?.Trim();
+            if (category is not null && categoryLabels?.TryGetValue(category, out var mapped) == true)
+                category = mapped;
+            var (key, header) = ResolveCategory(category);
             if (!groupsByKey.TryGetValue(key, out var group))
             {
                 group = new HomeNewsGroup(key, header);
@@ -130,12 +108,14 @@ public sealed partial class HomeBannerAndNews : UserControl
 
     private static (string Key, string Header) ResolveCategory(string? category)
     {
+        // “资讯”和“新闻”分别保留，游戏来源配置可以把二者按需要映射。
         var value = category?.Trim();
         return value?.ToLowerInvariant() switch
         {
             "activity" or "event" or "events" or "活动" => ("activity", "活动"),
             "announce" or "announcement" or "notice" or "公告" => ("announcement", "公告"),
-            "info" or "information" or "news" or "资讯" or "新闻" => ("information", "资讯"),
+            "info" or "information" or "资讯" => ("information", "资讯"),
+            "news" or "新闻" => ("news", "新闻"),
             null or "" => ("information", "资讯"),
             _ => ($"custom:{value.ToLowerInvariant()}", value)
         };
@@ -143,7 +123,7 @@ public sealed partial class HomeBannerAndNews : UserControl
 
     private void CategoryButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: HomeNewsGroup group })
+        if (sender is FrameworkElement { Tag: HomeNewsGroup group })
             SelectNewsGroup(group);
     }
 
@@ -186,7 +166,6 @@ public sealed partial class HomeBannerAndNews : UserControl
 
     private void HomeBannerAndNews_Loaded(object sender, RoutedEventArgs e)
     {
-        LogService.Instance.AddLog($"[dbg-banner] Loaded: ActualWidth={ActualWidth} ActualHeight={ActualHeight} BannerFlipView.Items.Count={BannerFlipView.Items.Count} NewsGroups={NewsGroups.Count} SelectedNewsItems={SelectedNewsItems.Count}");
         StartBannerTimerIfNeeded();
     }
 
@@ -250,34 +229,19 @@ public sealed partial class HomeBannerAndNews : UserControl
 
     private async void Banner_Tapped(object sender, TappedRoutedEventArgs e)
     {
+        // 使用 XAML 显式设置的 Tag 取当前轮播项，避免模板 DataContext 变化导致点击失效。
         var fe = sender as FrameworkElement;
-        LogService.Instance.AddLog($"[dbg-banner] Tapped fired sender={sender?.GetType().Name} dc={fe?.DataContext?.GetType().Name}");
-        if (fe is { DataContext: HomeBannerDisplayItem item })
-        {
-            LogService.Instance.AddLog($"[dbg-banner] resolved url={item.TargetUrl}");
+        if (fe is { Tag: HomeBannerDisplayItem item })
             await OpenHttpsAsync(item.TargetUrl);
-        }
-        else
-        {
-            LogService.Instance.AddLog($"[dbg-banner] DataContext cast FAILED");
-        }
     }
 
     private async void NewsItem_Click(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
         var fe = sender as FrameworkElement;
-        LogService.Instance.AddLog($"[dbg-news] Click fired sender={sender?.GetType().Name} tag={fe?.Tag?.GetType().Name} dc={fe?.DataContext?.GetType().Name}");
         var item = fe?.Tag as HomeNewsDisplayItem;
         if (item is null) item = fe?.DataContext as HomeNewsDisplayItem;
         if (item is not null)
-        {
-            LogService.Instance.AddLog($"[dbg-news] resolved url={item.TargetUrl}");
             await OpenHttpsAsync(item.TargetUrl);
-        }
-        else
-        {
-            LogService.Instance.AddLog($"[dbg-news] could not resolve item");
-        }
     }
 
     private static async Task OpenHttpsAsync(string? targetUrl)

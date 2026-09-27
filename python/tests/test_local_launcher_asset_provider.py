@@ -329,16 +329,14 @@ def _build_fs_from_fixture(name: str) -> tuple[FakeFS, dict[str, Any]]:
 
 
 def _winpath(url_or_path: str) -> str:
-    """Prefix a leading ``/`` with ``C:/`` on Windows so a POSIX-style
-    path (``"/opt/foo"``) or POSIX-style ``file://`` URL
-    (``"file:///opt/foo"``) matches ``Path.resolve()`` / ``as_uri()``
-    output on Windows.  No-op on POSIX."""
+    """把 POSIX 样本路径映射到当前 Windows 工作盘符，避免测试写死 C 盘。"""
     if os.name != "nt":
         return url_or_path
+    drive = Path.cwd().anchor[:2]
     if url_or_path.startswith("file:///"):
-        return "file:///C:/" + url_or_path[len("file:///"):]
+        return f"file:///{drive}/" + url_or_path[len("file:///"):]
     if url_or_path.startswith("/"):
-        return "C:/" + url_or_path[1:]
+        return f"{drive}/" + url_or_path[1:]
     return url_or_path
 
 
@@ -350,12 +348,9 @@ async def test_fetch_windows_layout() -> None:
 
     # ``Path.as_uri()`` percent-encodes the spaces in
     # ``Program Files`` / ``Where Winds Meet``.
-    expected_video = _winpath(
-        "file:///Program%20Files/Where%20Winds%20Meet/bg.mp4"
-    )
-    expected_image = _winpath(
-        "file:///Program%20Files/Where%20Winds%20Meet/bg.jpg"
-    )
+    # 这份 Windows 样本显式使用 C:，与其他 POSIX 样本跟随当前盘符的规则不同。
+    expected_video = "file:///C:/Program%20Files/Where%20Winds%20Meet/bg.mp4"
+    expected_image = "file:///C:/Program%20Files/Where%20Winds%20Meet/bg.jpg"
     assert result.background is not None
     assert result.background.video_url == expected_video
     assert result.background.image_url == expected_image
@@ -440,7 +435,7 @@ async def test_fetch_respects_config_file_name_override() -> None:
     }, ensure_ascii=False))
     provider = _provider_for(fs)
     result = await provider.fetch(_request({
-        "installDir": "C:/opt/game",
+        "installDir": _winpath("/opt/game"),
         "configFileName": "launcher.json",
     }))
     assert result.update_info is not None

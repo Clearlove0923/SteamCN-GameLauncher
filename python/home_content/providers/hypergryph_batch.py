@@ -16,10 +16,9 @@ the home content layout:
   * ``get_announcement``  → tabs[].announcements[] with start_ts and jump_url
 
 The endpoint is shipped inside the Hypergryph desktop launcher (and the
-mobile web portal) — it is **not** a public API. Sampled 2026-09-14
-against the Global Endfield build (appCode ``YDUTE5gscDZ229CW``,
-channel/subChannel ``6``, language ``en-us``). Behaviour, host names and
-the JSON shape are all subject to change without notice.
+mobile web portal) — it is **not** a public API. The OS build was sampled
+2026-09-14 and the CN parameters were verified 2026-09-26. Behaviour, host
+names and the JSON shape are all subject to change without notice.
 
 Response layout
 ---------------
@@ -41,6 +40,9 @@ Endfield the defaults are:
 
 Other Hypergryph titles share the same shape but a different triple,
 which callers pass via ``providerOptions``.
+
+The default is the CN triple. The OS triple is used only when callers
+explicitly pass ``providerOptions.region="os"``.
 
 Tab name mapping (English UI → normalized Chinese category)
 ----------------------------------------------------------
@@ -74,12 +76,32 @@ logger = logging.getLogger("home_content.providers.hypergryph_batch")
 DEFAULT_BASE_OS = "https://launcher.gryphline.com/api"
 DEFAULT_BASE_CN = "https://launcher.hypergryph.com/api"
 
-# Defaults for Endfield Global — sampled 2026-09-14.
-DEFAULT_APP_CODE = "YDUTE5gscDZ229CW"
-DEFAULT_CHANNEL = "6"
-DEFAULT_SUB_CHANNEL = "6"
-DEFAULT_LANGUAGE = "en-us"
-DEFAULT_REGION = "os"
+# 终末地国服与海外服的接口域名、appCode、渠道和语言必须作为一组选择。
+# 避免把国服端点与海外服参数混用；SteamCN 默认使用国服配置。
+DEFAULT_REGION = "cn"
+
+_REGION_CONSTANTS: dict[str, dict[str, str]] = {
+    "cn": {
+        "base_url": DEFAULT_BASE_CN,
+        "app_code": "6LL0KJuqHBVz33WK",
+        "channel": "1",
+        "sub_channel": "1",
+        "language": "zh-cn",
+    },
+    "os": {
+        "base_url": DEFAULT_BASE_OS,
+        "app_code": "YDUTE5gscDZ229CW",
+        "channel": "6",
+        "sub_channel": "6",
+        "language": "en-us",
+    },
+}
+
+# 兼容旧测试和调用者使用的常量名，其值始终对应默认国服区域。
+DEFAULT_APP_CODE = _REGION_CONSTANTS[DEFAULT_REGION]["app_code"]
+DEFAULT_CHANNEL = _REGION_CONSTANTS[DEFAULT_REGION]["channel"]
+DEFAULT_SUB_CHANNEL = _REGION_CONSTANTS[DEFAULT_REGION]["sub_channel"]
+DEFAULT_LANGUAGE = _REGION_CONSTANTS[DEFAULT_REGION]["language"]
 
 # Allow-list of hosts we trust for media & jump URLs.
 ALLOWED_HOST_SUFFIXES: tuple[str, ...] = (
@@ -125,12 +147,14 @@ class HypergryphBatchProvider(HomeContentProvider):
 
     async def fetch(self, request: HomeContentRequest) -> HomeContent:
         options = request.provider_options or {}
-        region = str(options.get("region", DEFAULT_REGION)).lower()
-        base_url = str(options.get("baseUrl", DEFAULT_BASE_CN if region == "cn" else DEFAULT_BASE_OS))
-        app_code = str(options.get("appCode", DEFAULT_APP_CODE))
-        channel = str(options.get("channel", DEFAULT_CHANNEL))
-        sub_channel = str(options.get("subChannel", DEFAULT_SUB_CHANNEL))
-        language = str(options.get("language", DEFAULT_LANGUAGE))
+        requested_region = str(options.get("region", DEFAULT_REGION)).strip().lower()
+        region = requested_region if requested_region in _REGION_CONSTANTS else DEFAULT_REGION
+        defaults = _REGION_CONSTANTS[region]
+        base_url = str(options.get("baseUrl", defaults["base_url"]))
+        app_code = str(options.get("appCode", defaults["app_code"]))
+        channel = str(options.get("channel", defaults["channel"]))
+        sub_channel = str(options.get("subChannel", defaults["sub_channel"]))
+        language = str(options.get("language", defaults["language"]))
 
         url = f"{base_url.rstrip('/')}/proxy/web/batch_proxy"
         body = _build_request_body(app_code, channel, sub_channel, language)

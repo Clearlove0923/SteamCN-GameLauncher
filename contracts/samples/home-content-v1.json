@@ -7,7 +7,21 @@
     "background": {
       "videoUrl": "https://example.invalid/background.mp4",
       "imageUrl": "https://example.invalid/background.webp",
-      "localPath": null
+      "localPath": null,
+      "variants": [
+        {
+          "id": "animation-a",
+          "videoUrl": "https://example.invalid/background.mp4",
+          "imageUrl": "https://example.invalid/background.webp",
+          "localPath": null
+        },
+        {
+          "id": "animation-b",
+          "videoUrl": "https://example.invalid/background-b.mp4",
+          "imageUrl": "https://example.invalid/background-b.webp",
+          "localPath": null
+        }
+      ]
     },
     "banners": [
       {

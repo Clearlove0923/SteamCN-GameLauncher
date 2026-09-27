@@ -21,7 +21,21 @@
           "properties": {
             "videoUrl": { "type": ["string", "null"] },
             "imageUrl": { "type": ["string", "null"] },
-            "localPath": { "type": ["string", "null"] }
+            "localPath": { "type": ["string", "null"] },
+            "variants": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "videoUrl"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "videoUrl": { "type": "string" },
+                  "imageUrl": { "type": ["string", "null"] },
+                  "localPath": { "type": ["string", "null"] }
+                },
+                "additionalProperties": true
+              }
+            }
           }
         },
         "banners": {

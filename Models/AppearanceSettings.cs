@@ -58,6 +58,9 @@ public class AppearanceProfile
     public bool Enabled { get; set; }
     // Null preserves the theme's original card opacity for existing settings.
     public double? CardOpacity { get; set; }
+    // The navigation rail is pure black by default; opacity controls how much
+    // of the window-wide home animation remains visible behind it.
+    public double SidebarOpacity { get; set; } = 1d;
     public bool ShowHomeAnimation { get; set; } = true;
     public bool ShowHomeNews { get; set; } = true;
     public string SelectedImage { get; set; } = "";
@@ -83,6 +86,7 @@ public class AppearanceProfile
         {
             Enabled = Enabled,
             CardOpacity = CardOpacity,
+            SidebarOpacity = SidebarOpacity,
             ShowHomeAnimation = ShowHomeAnimation,
             ShowHomeNews = ShowHomeNews,
             SelectedImage = SelectedImage,
@@ -95,6 +99,9 @@ public class AppearanceProfile
     {
         SelectedImage ??= "";
         Images ??= new();
+        SidebarOpacity = double.IsFinite(SidebarOpacity)
+            ? Math.Clamp(SidebarOpacity, 0d, 1d)
+            : 1d;
     }
 }
 

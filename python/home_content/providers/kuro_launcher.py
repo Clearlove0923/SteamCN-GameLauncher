@@ -354,7 +354,7 @@ def _build_news_items(payload: dict[str, Any]) -> list[HomeNewsItem]:
     for category, raw_category_key in (
         ("活动", "activity"),
         ("公告", "notice"),
-        ("资讯", "news"),
+        ("新闻", "news"),
     ):
         bucket = guidance.get(raw_category_key)
         if not isinstance(bucket, dict):

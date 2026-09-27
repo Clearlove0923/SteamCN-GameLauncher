@@ -79,7 +79,7 @@ def test_provider_id_constant() -> None:
 
 
 def test_default_region_and_endpoints() -> None:
-    assert DEFAULT_REGION == "os"
+    assert DEFAULT_REGION == "cn"
     assert DEFAULT_BASE_OS == "https://infinitynikki.infoldgames.com"
     assert DEFAULT_BASE_CN == "https://infinitynikki.nuanpaper.com"
     assert DEFAULT_LOCALE_OS == "zh-TW"
@@ -441,7 +441,7 @@ async def test_fetch_os_pulls_home_and_three_sections() -> None:
 
 
 @pytest.mark.asyncio
-async def test_fetch_cn_uses_pv_list_when_video_tag_missing() -> None:
+async def test_fetch_defaults_to_cn_and_uses_pv_list_when_video_tag_missing() -> None:
     cn_home = _load("infinity-nikki-home-cn.json")
     cn_s1 = _load("infinity-nikki-news-list-cn-s1.json")
     cn_s0 = _load("infinity-nikki-news-list-cn-s0.json")
@@ -469,7 +469,7 @@ async def test_fetch_cn_uses_pv_list_when_video_tag_missing() -> None:
 
     provider, client = _make_provider(handler)
     try:
-        result = await provider.fetch(_request({"region": "cn"}))
+        result = await provider.fetch(_request())
     finally:
         await client.aclose()
 

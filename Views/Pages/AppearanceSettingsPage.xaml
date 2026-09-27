@@ -34,13 +34,16 @@
                     <TextBlock x:Name="CardOpacityLabel" Text="内容卡片不透明度"/>
                     <Slider x:Name="CardOpacity" Minimum="0" Maximum="100" StepFrequency="1"
                             AutomationProperties.Name="内容卡片不透明度" ValueChanged="CardOpacityChanged"/>
+                    <TextBlock x:Name="SidebarOpacityLabel" Text="侧边栏不透明度"/>
+                    <Slider x:Name="SidebarOpacity" Minimum="0" Maximum="100" StepFrequency="1"
+                            AutomationProperties.Name="侧边栏不透明度" ValueChanged="SidebarOpacityChanged"/>
                     <TextBlock x:Name="OpacityLabel" Text="图片不透明度"/>
                     <Slider x:Name="ImageOpacity" Minimum="0" Maximum="100" StepFrequency="1"
                             AutomationProperties.Name="图片不透明度" ValueChanged="SliderChanged"/>
                     <TextBlock x:Name="OverlayLabel" Text="遮罩强度"/>
                     <Slider x:Name="OverlayOpacity" Minimum="0" Maximum="100" StepFrequency="1"
                             AutomationProperties.Name="遮罩强度" ValueChanged="SliderChanged"/>
-                    <TextBlock Text="卡片不透明度不会影响文字和控件；图片不透明度与遮罩强度按每张背景图片分别保存。"
+                    <TextBlock Text="侧边栏底色默认为纯黑色，可单独调节透明度；卡片不透明度不会影响文字和控件；图片不透明度与遮罩强度按每张背景图片分别保存。"
                                TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
             </Border>

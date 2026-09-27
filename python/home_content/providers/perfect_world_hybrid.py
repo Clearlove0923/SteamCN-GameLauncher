@@ -46,7 +46,7 @@ overrides the image fallback.
 
 ### Per-game mapping
 
-Defaults match Endfield. ``providerOptions`` accepts:
+Defaults match 异环国服. ``providerOptions`` accepts:
 
   * ``region``  — ``os`` (Global) / ``cn`` (国服) / ``tw`` (台港澳 — not yet
     implemented; the OS launcher currently serves tw regions via
@@ -104,10 +104,11 @@ ALLOWED_HOST_SUFFIXES: tuple[str, ...] = (
     ".static.pwsdk.com",
 )
 
-# Defaults for Endfield Global.
-DEFAULT_APP_CODE = "YDUTE5gscDZ229CW"
-DEFAULT_LANGUAGE = "en-us"
-DEFAULT_REGION = "os"
+# SteamCN serves the Mainland China build by default. OS remains available
+# only when a caller explicitly sets providerOptions.region="os".
+DEFAULT_APP_CODE = "YDUTE5gscDZ229CW"  # legacy export; not used by this provider
+DEFAULT_LANGUAGE = "zh-cn"
+DEFAULT_REGION = "cn"
 
 DEFAULT_TIMEOUT = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
 DEFAULT_HEADERS = {

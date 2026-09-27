@@ -1,0 +1,36 @@
+{
+  "retcode": 0,
+  "data": {
+    "game_info_list": [
+      {
+        "game": { "id": "1Z8W5NHUQb", "biz": "hk4e_cn" },
+        "backgrounds": [
+          {
+            "id": "3citmgCMOP",
+            "type": "BACKGROUND_TYPE_VIDEO",
+            "background": { "url": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_FIRST.webp" },
+            "video": { "url": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_FIRST.webm" }
+          },
+          {
+            "id": "d7eCRqQwNc",
+            "type": "BACKGROUND_TYPE_VIDEO",
+            "background": { "url": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_SECOND.webp" },
+            "video": { "url": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_SECOND.webm" }
+          },
+          {
+            "id": "Lpbk6DFGXh",
+            "type": "BACKGROUND_TYPE_UNSPECIFIED",
+            "background": { "url": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_STATIC_ONE.webp" },
+            "video": { "url": "" }
+          },
+          {
+            "id": "4zT14tpFYi",
+            "type": "BACKGROUND_TYPE_UNSPECIFIED",
+            "background": { "url": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_STATIC_TWO.webp" },
+            "video": { "url": "" }
+          }
+        ]
+      }
+    ]
+  }
+}

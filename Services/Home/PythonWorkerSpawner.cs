@@ -69,6 +69,7 @@ public sealed class PythonWorkerSpawner : IDisposable
     /// <returns>true 表示 launcher 可以走 <see cref="FastApiHomeContentService"/>；false 表示需要降级。</returns>
     public async Task<bool> StartAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (_started)
         {
             return _process is null || !_process.HasExited;
@@ -89,6 +90,7 @@ public sealed class PythonWorkerSpawner : IDisposable
             _ownsProcess = false;
             return true;
         }
+        cancellationToken.ThrowIfCancellationRequested();
 
         var pythonExe = ResolvePythonExecutable();
         if (pythonExe is null)
@@ -123,6 +125,7 @@ public sealed class PythonWorkerSpawner : IDisposable
         Process proc;
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
             proc.OutputDataReceived += (_, e) =>
             {
@@ -154,8 +157,14 @@ public sealed class PythonWorkerSpawner : IDisposable
             _process = proc;
             _ownsProcess = true;
             _started = true;
+            if (cancellationToken.IsCancellationRequested)
+            {
+                StopImmediately();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
             _logService.AddLog($"[worker] spawned python worker pid={proc.Id} port={_port} cwd={workingDir}");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logService.AddLog($"[worker] failed to spawn: {ex.GetType().Name}: {ex.Message}");
@@ -242,8 +251,33 @@ public sealed class PythonWorkerSpawner : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true;
         Stop();
+        _disposed = true;
+    }
+
+    /// <summary>关闭窗口时立即终止当前启动器拥有的 Worker，避免 UI 线程等待控制台进程。</summary>
+    public void StopImmediately()
+    {
+        if (_disposed) return;
+        var proc = Interlocked.Exchange(ref _process, null);
+        var ownsProcess = _ownsProcess;
+        // 已存在的外部 Worker 不是本程序启动的，不得误杀。
+        _ownsProcess = false;
+        _started = false;
+        if (proc is null) return;
+        try
+        {
+            if (ownsProcess && !proc.HasExited)
+                proc.Kill(entireProcessTree: true);
+        }
+        catch (Exception ex)
+        {
+            _logService.AddLog($"[worker] immediate shutdown failed: {ex.GetType().Name}: {ex.Message}");
+        }
+        finally
+        {
+            try { proc.Dispose(); } catch { /* best effort */ }
+        }
     }
 
     private static int ExtractPort(string baseUrl)

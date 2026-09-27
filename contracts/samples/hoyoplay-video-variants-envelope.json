@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "requestId": "genshin-variants-contract",
+  "providerId": "hoyoplay-json",
+  "fetchedAt": "2026-09-27T00:00:00Z",
+  "content": {
+    "background": {
+      "videoUrl": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_FIRST.webm",
+      "imageUrl": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_FIRST.webp",
+      "localPath": null,
+      "variants": [
+        {
+          "id": "3citmgCMOP",
+          "videoUrl": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_FIRST.webm",
+          "imageUrl": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_FIRST.webp",
+          "localPath": null
+        },
+        {
+          "id": "d7eCRqQwNc",
+          "videoUrl": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_SECOND.webm",
+          "imageUrl": "https://launcher-webstatic.mihoyo.com/launcher-public/2026/09/14/HASH_SECOND.webp",
+          "localPath": null
+        }
+      ]
+    },
+    "banners": [],
+    "news": [],
+    "updateInfo": null
+  },
+  "errors": []
+}

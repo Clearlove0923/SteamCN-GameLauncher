@@ -10,9 +10,18 @@ public class LogService
 
     private readonly string _logFilePath;
     private readonly object _writeLock = new();
+    private Func<bool>? _hasUiAccess;
+    private Func<Action, bool>? _enqueueUi;
     private const int MaxInMemoryLogs = 1000;
 
     public ObservableCollection<string> Logs { get; } = new();
+
+    public void AttachDispatcher(Func<bool> hasUiAccess, Func<Action, bool> enqueueUi)
+    {
+        // 磁盘日志可从任意线程写；绑定集合只能在 WinUI UI 线程更新。
+        _hasUiAccess = hasUiAccess ?? throw new ArgumentNullException(nameof(hasUiAccess));
+        _enqueueUi = enqueueUi ?? throw new ArgumentNullException(nameof(enqueueUi));
+    }
 
     private LogService()
     {
@@ -25,17 +34,43 @@ public class LogService
     public void AddLog(string message)
     {
         var entry = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        Logs.Add(entry);
-
-        if (Logs.Count > MaxInMemoryLogs)
-            Logs.RemoveAt(0);
-
         AppendToFile($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
+        DispatchToUi(() =>
+        {
+            Logs.Add(entry);
+            if (Logs.Count > MaxInMemoryLogs)
+                Logs.RemoveAt(0);
+        });
     }
 
     public void Clear()
     {
-        Logs.Clear();
+        DispatchToUi(Logs.Clear);
+    }
+
+    private void DispatchToUi(Action update)
+    {
+        var enqueueUi = _enqueueUi;
+        if (enqueueUi is not null && _hasUiAccess is { } hasUiAccess)
+        {
+            try
+            {
+                if (!hasUiAccess())
+                {
+                    // 窗口可能已关闭；磁盘日志已经写入，UI 队列失效不影响退出。
+                    enqueueUi(() => TryUpdateMemory(update));
+                    return;
+                }
+            }
+            catch { return; /* 关闭过程中 UI 队列可能已经不可用。 */ }
+        }
+        TryUpdateMemory(update);
+    }
+
+    private static void TryUpdateMemory(Action update)
+    {
+        try { update(); }
+        catch { /* 日志观察者异常不能打断窗口退出。 */ }
     }
 
     private static string ResolveLogDirectory()

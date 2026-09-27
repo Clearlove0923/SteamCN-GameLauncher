@@ -109,6 +109,39 @@
                 </StackPanel>
             </Border>
 
+            <!-- 首页内容缓存 -->
+            <Border Background="{StaticResource AppearanceCardBackground}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="16">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="首页内容缓存" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="txtHomeCacheStatus" Text="正在计算缓存大小…"
+                                   FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="用户配置和公告资讯元数据保存在用户目录；背景动画、轮播图和资讯图片按游戏保存在软件目录的 HomeCache 文件夹。"
+                                   FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="18">
+                            <NumberBox x:Name="numHomeCacheMegabytes" Header="容量上限（MB）"
+                                       Width="170" Minimum="128" Maximum="4096" SmallChange="128"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="HomeCachePolicy_ValueChanged"/>
+                            <NumberBox x:Name="numHomeCacheRetentionDays" Header="最长保留（天）"
+                                       Width="170" Minimum="1" Maximum="90" SmallChange="1"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="HomeCachePolicy_ValueChanged"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Button x:Name="btnClearHomeCache" Grid.Column="1" Content="清理缓存"
+                            VerticalAlignment="Center" Click="ClearHomeCache_Click"/>
+                </Grid>
+            </Border>
+
             <!-- 开发者选项 -->
             <Border Background="{StaticResource AppearanceCardBackground}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"

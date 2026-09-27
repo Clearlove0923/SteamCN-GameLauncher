@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutDir>$(MSBuildThisFileDirectory)..\..\bin\x64\Debug\net8.0-windows10.0.19041.0\Tests\HomeContentCache.Tests\</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../AppInfo.cs" Link="AppInfo.cs" />
+    <Compile Include="../../Models/Home/HomeContentContracts.cs" Link="Models/Home/HomeContentContracts.cs" />
+    <Compile Include="../../Models/Home/GameScreenshotPathContracts.cs" Link="Models/Home/GameScreenshotPathContracts.cs" />
+    <Compile Include="../../Services/LogService.cs" Link="Services/LogService.cs" />
+    <Compile Include="../../Services/Home/IHomeContentService.cs" Link="Services/Home/IHomeContentService.cs" />
+    <Compile Include="../../Services/Home/HomeContentJson.cs" Link="Services/Home/HomeContentJson.cs" />
+    <Compile Include="../../Services/Home/HomeCacheModels.cs" Link="Services/Home/HomeCacheModels.cs" />
+    <Compile Include="../../Services/Home/HomeCacheKey.cs" Link="Services/Home/HomeCacheKey.cs" />
+    <Compile Include="../../Services/Home/HomeVideoVariantSelector.cs" Link="Services/Home/HomeVideoVariantSelector.cs" />
+    <Compile Include="../../Services/Home/FileHomeContentCache.cs" Link="Services/Home/FileHomeContentCache.cs" />
+    <Compile Include="../../Services/Home/FileHomeMediaCache.cs" Link="Services/Home/FileHomeMediaCache.cs" />
+    <Compile Include="../../Services/Home/CachedHomeContentService.cs" Link="Services/Home/CachedHomeContentService.cs" />
+  </ItemGroup>
+</Project>

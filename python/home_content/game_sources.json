@@ -1,0 +1,103 @@
+[
+  {
+    "appId": "3513350",
+    "gameId": "wuthering-waves",
+    "exeNames": ["Client-Win64-Shipping.exe"],
+    "folderNames": ["Wuthering Waves Game", "Wuthering Waves"],
+    "providerId": "kuro-launcher",
+    "newsCategoryLabels": { "资讯": "新闻" },
+    "providerOptions": {
+      "region": "cn",
+      "appId": "10003",
+      "appKey": "Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5",
+      "gameId": "G152"
+    }
+  },
+  {
+    "appId": "4162040",
+    "gameId": "zenless-zone-zero",
+    "exeNames": ["ZenlessZoneZero.exe"],
+    "folderNames": ["ZenlessZoneZero Game", "Zenless Zone Zero"],
+    "providerId": "hoyoplay-json",
+    "providerOptions": {
+      "region": "cn",
+      "launcher_id": "jGHBHlcOq1",
+      "language": "zh-cn",
+      "gameBiz": "nap_cn"
+    }
+  },
+  {
+    "appId": "1671200",
+    "gameId": "honkai-impact-3rd",
+    "exeNames": ["BH3.exe"],
+    "folderNames": ["Honkai Impact 3rd Game"],
+    "providerId": "hoyoplay-json",
+    "providerOptions": {
+      "region": "cn",
+      "launcher_id": "jGHBHlcOq1",
+      "language": "zh-cn",
+      "gameBiz": "bh3_cn"
+    }
+  },
+  {
+    "appId": "3564740",
+    "gameId": "where-winds-meet",
+    "exeNames": ["wwm.exe", "yysls.exe"],
+    "folderNames": ["Where Winds Meet", "燕云十六声"],
+    "providerId": "netease-static-cms",
+    "providerOptions": { "region": "cn" }
+  },
+  {
+    "appId": "3164330",
+    "gameId": "infinity-nikki",
+    "exeNames": ["InfinityNikki.exe"],
+    "folderNames": ["InfinityNikki", "Infinity Nikki", "InfinityNikkiGlobal"],
+    "providerId": "nextjs-data",
+    "providerOptions": { "region": "cn", "locale": "zh-CN" }
+  },
+  {
+    "appId": "4508340",
+    "gameId": "neverness-to-everness-legacy",
+    "exeNames": [],
+    "folderNames": [],
+    "providerId": "perfect-world-hybrid",
+    "providerOptions": { "region": "cn", "language": "zh-cn" }
+  },
+  {
+    "appId": "4706890",
+    "gameId": "neverness-to-everness",
+    "exeNames": ["HTGame.exe", "NTEGame.exe"],
+    "folderNames": ["Neverness To Everness", "NTE", "异环", "異環"],
+    "providerId": "perfect-world-hybrid",
+    "providerOptions": { "region": "cn", "language": "zh-cn" }
+  },
+  {
+    "appId": "4732690",
+    "gameId": "arknights-endfield",
+    "exeNames": ["Endfield.exe"],
+    "folderNames": ["Endfield Game", "Arknights Endfield"],
+    "providerId": "hypergryph-batch",
+    "providerOptions": {
+      "region": "cn",
+      "baseUrl": "https://launcher.hypergryph.com/api",
+      "appCode": "6LL0KJuqHBVz33WK",
+      "channel": "1",
+      "subChannel": "1",
+      "language": "zh-cn"
+    }
+  },
+  {
+    "appId": "",
+    "gameId": "genshin-impact",
+    "exeNames": ["YuanShen.exe"],
+    "folderNames": ["Genshin Impact Game"],
+    "providerId": "hoyoplay-json",
+    "providerOptions": {
+      "region": "cn",
+      "launcher_id": "jGHBHlcOq1",
+      "language": "zh-cn",
+      "gameBiz": "hk4e_cn",
+      "videoOnly": true
+    }
+  }
+]

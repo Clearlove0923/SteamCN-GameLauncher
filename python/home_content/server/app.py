@@ -30,6 +30,7 @@ from ..models import (
     HomeContentRequest,
 )
 from ..provider_registry import create_provider
+from ..game_source_registry import match_game_source
 from .sample_provider import build_sample_envelope, build_sample_screenshot_path
 
 # Diagnostics MUST go to stderr per the unified Python contract; stdout is
@@ -66,6 +67,28 @@ def create_app() -> FastAPI:
         tags=["home-content"],
     )
     async def fetch_home_content(request: HomeContentRequest) -> HomeContentEnvelope:
+        # 本机请求带有用户选择的真实游戏 EXE。字典命中后覆盖旧预设里的 Provider
+        # 与 AppID 推断结果；若两级路径都未命中，则返回结构化的不支持状态。
+        if request.executable_path or request.install_directory:
+            source = match_game_source(request.executable_path, request.install_directory)
+            if source is None:
+                return HomeContentEnvelope(
+                    schema_version=1,
+                    request_id=request.request_id,
+                    provider_id=request.provider_id,
+                    fetched_at=datetime.now(timezone.utc),
+                    content=HomeContent(),
+                    errors=[HomeContentError(
+                        code="unsupported_game",
+                        message="可执行文件及安装目录均未匹配到已配置的游戏首页来源。",
+                        recoverable=True,
+                    )],
+                )
+            request = request.model_copy(update={
+                "game_id": source.game_id,
+                "provider_id": source.provider_id,
+                "provider_options": source.provider_options,
+            })
         try:
             provider = create_provider(request.provider_id)
         except ValueError as error:

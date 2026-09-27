@@ -56,6 +56,9 @@ Defaults match 无限暖暖 / 叠纸. ``providerOptions`` accepts:
   * ``newsLimit`` — per-section page size (default ``4``).
   * ``homePageUrl`` / ``newsApiBase`` — replace the network endpoints.
 
+The default region is ``cn``. ``os`` remains available only as an explicit
+per-preset override.
+
 Verification
 ------------
 Sampled 2026-09-15. Both sites were reachable from the dev machine at
@@ -96,7 +99,9 @@ DEFAULT_LOCALE_CN = "zh-CN"
 DEFAULT_PAGE_PATH = "/home"
 DEFAULT_NEWS_LIMIT = 4
 
-DEFAULT_REGION = "os"
+# SteamCN serves the Mainland China site unless a preset explicitly opts in to
+# another region. This keeps backgrounds, banners and news on the same build.
+DEFAULT_REGION = "cn"
 
 # Hosts we trust for media + jump URLs. The OS site and the CN site share
 # the same Next.js / 叠纸 CDN set; we accept either suffix so an OS news
