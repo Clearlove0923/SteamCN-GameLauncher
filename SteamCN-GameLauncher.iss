@@ -20,7 +20,10 @@ AppPublisher=Violet0923
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases/latest
-DefaultDirName={autopf}\{#MyAppIdName}
+; 装到用户目录，避开 Program Files 写权限问题，配合 Velopack 自动更新免 UAC。
+PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=dialog
+DefaultDirName={localappdata}\Programs\{#MyAppIdName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible

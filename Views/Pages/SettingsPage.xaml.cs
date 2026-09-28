@@ -378,6 +378,34 @@ public sealed partial class SettingsPage : Page
 
     private async void BtnDownload_Click(object sender, RoutedEventArgs e)
     {
+        // 优先走 Velopack 自动更新链路（用户已通过 Velopack 安装时）。
+        // 未通过 Velopack 安装（绿色版、Debug）则 fall back 到 GitHub Release 跳转。
+        var vp = Services.Update.VelopackUpdateService.Instance;
+        if (vp.IsInstalled)
+        {
+            try
+            {
+                if (!vp.HasPendingUpdate)
+                {
+                    await vp.CheckAsync();
+                }
+                if (vp.HasPendingUpdate)
+                {
+                    var ok = await vp.DownloadAsync();
+                    if (ok)
+                    {
+                        vp.ApplyAndRestart();
+                        return;  // 进程即将退出，不继续执行 fallback
+                    }
+                }
+                // 下载失败或没有 pending update，回落到浏览器跳转
+            }
+            catch (Exception ex)
+            {
+                _logService.AddLog($"[velopack] 自动更新失败，回落到手动下载：{ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(_downloadUrl)) return;
 
         try

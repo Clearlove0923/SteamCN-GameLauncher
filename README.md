@@ -1,4 +1,16 @@
 # SteamCN-GameLauncher
+
+> ⚠️ **v3.0.0 老用户迁移提示**
+>
+> 本次更新启用了 Velopack 自动更新链路，安装路径从
+> `C:\Program Files\SteamCN-GameLauncher` 迁移到
+> `%LocalAppData%\Programs\SteamCN-GameLauncher`（用户目录）。
+>
+> - 如果你之前装在 Program Files 下，请先**卸载旧版本**，再安装新版。
+> - 你的游戏配置、自定义 Manifest 等设置文件独立于安装目录，**不会丢失**。
+> - 卸载方法：开始菜单 → 设置 → 应用 → 已安装的应用 → 找到「Steam国服游戏启动器」→ 卸载。
+> - 之后的所有更新都将自动完成，无需手动下载安装包。
+
 不用下载国际服，不用繁琐的配置流程，只需几步即可在steam游玩国服二游并且享受steam的相关功能
 
 ## 主要功能

@@ -14,7 +14,8 @@ $appInfo = Get-Content -LiteralPath (Join-Path $repoRoot 'AppInfo.cs') -Raw
 $installerScript = Join-Path $repoRoot 'SteamCN-GameLauncher.iss'
 $installerDefinition = Get-Content -LiteralPath $installerScript -Raw
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $repoRoot 'Package.appxmanifest') -Raw
-if ($projectVersion -ne $version -or $appInfo -notmatch ('Version = "v' + [regex]::Escape($version) + '"') -or $manifest.Package.Identity.Version -ne "$version.0") {
+# v3.0.0 起 AppInfo.Version 不带 v 前缀（Velopack 解析需要 SemVer）。
+if ($projectVersion -ne $version -or $appInfo -notmatch ('Version = "' + [regex]::Escape($version) + '"') -or $manifest.Package.Identity.Version -ne "$version.0") {
     throw 'Synchronize version.json, project Version, AppInfo.Version and package Version before publishing.'
 }
 foreach ($userDataDirectory in @('GameTime', 'HomeCache')) {
@@ -71,6 +72,10 @@ Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $publishDir
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\languages\LICENSE.txt') -Destination (Join-Path $publishDir 'Inno-Chinese-Translation-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\FFmpeg-GPL-3.0.txt') -Destination $publishDir
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\FFmpeg-SOURCE.txt') -Destination $publishDir
+
+# === Inno Setup 通道（官网下载区主链接，老用户主入口）====================
+# v3.0.0 起 Inno Setup 产物用于：① 官网下载页首次安装 ② 老用户跨代升级
+# 已通过此渠道安装的用户后续小版本仍走 Velopack 自动更新（v3.1.0+）。
 & $InnoCompiler "/DMyAppVersion=$version" "/DSourceDir=$publishDir" "/O$runRoot" $installerScript
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
 $installer = Join-Path $runRoot "$assemblyName-v$version-win-x64-setup.exe"
@@ -79,3 +84,40 @@ $checksum = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowe
 [IO.File]::WriteAllText((Join-Path $runRoot 'SHA256SUMS.txt'), "$checksum  $([IO.Path]::GetFileName($installer))`n", [Text.UTF8Encoding]::new($false))
 Write-Output "Installer: $installer"
 Write-Output "SHA256: $checksum"
+
+# === Velopack 通道（自动更新清单 + Update.exe 子进程）====================
+# 产物：io.steamcn.launcher-Setup.exe（NSIS，首次安装给自动更新用户用）
+#      io.steamcn.launcher-{version}-full.nupkg（全量更新包）
+#      io.steamcn.launcher-{version}-delta.nupkg（差分包，需要 --previousPackDir）
+#      releases.stable.json（更新清单）
+#      RELEASES（legacy 兼容）
+$veloDir = Join-Path $runRoot 'velopack'
+New-Item -ItemType Directory -Path $veloDir -Force | Out-Null
+$veloArgs = @(
+    'pack',
+    '--packId', 'io.steamcn.launcher',
+    '--packVersion', $version,
+    '--packDir', $publishDir,
+    '--mainExe', "$assemblyName.exe",
+    '--packTitle', 'Steam国服游戏启动器',
+    '--icon', (Join-Path $repoRoot 'Assets\Icons\SteamCN-GameLauncher.ico'),
+    '--outputDir', $veloDir
+)
+# 如果上一版本的 RELEASES 存在，自动生成 delta 包（调用方需事先把上一版本产物放到 $runRoot\velopack\RELEASES）。
+$prevReleases = Join-Path $veloDir 'RELEASES'
+if (Test-Path -LiteralPath $prevReleases) {
+    $veloArgs += '--deltaReleases'
+    $veloArgs += $prevReleases
+}
+& vpk @veloArgs
+if ($LASTEXITCODE -ne 0) { throw "vpk pack failed: $LASTEXITCODE" }
+foreach ($required in @('io.steamcn.launcher-Setup.exe', 'io.steamcn.launcher-' + $version + '-full.nupkg', 'releases.stable.json')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $veloDir $required))) {
+        # vpk 在某些版本把 RELEASES.json 命名为 releases.stable.json；个别旧版本叫 releases.json
+        $alt = Join-Path $veloDir 'releases.json'
+        if ($required -eq 'releases.stable.json' -and (Test-Path -LiteralPath $alt)) { continue }
+        throw "Velopack output missing: $required"
+    }
+}
+Write-Output "Velopack artifacts: $veloDir"
+Get-ChildItem -LiteralPath $veloDir | ForEach-Object { Write-Output ("  {0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name) }

@@ -4,6 +4,7 @@ using System.Text;
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
 using SteamCNGameLauncher.Services.Home;
+using SteamCNGameLauncher.Services.Update;
 
 namespace SteamCNGameLauncher;
 
@@ -51,6 +52,22 @@ public partial class App : Application
                 catch
                 {
                     // 静默忽略，不影响主流程
+                }
+            });
+
+            // Velopack 通道：用户点角标后真正下载/安装的链路。
+            // 仅当通过 Velopack 打包安装后才会生效；Debug / 绿色版 IsInstalled=false 自动跳过。
+            // 延迟 30 秒启动，避免抢启动期资源。
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+                    await VelopackUpdateService.Instance.CheckAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                    // 静默忽略
                 }
             });
         }

@@ -173,6 +173,72 @@ contracts/                      JSON Schema、请求和响应样本
 - 不把 Provider 响应对象直接绑定到 XAML。先转换为统一 DTO，再由 ViewModel 形成展示状态。
 - 不原样复制参考项目中正在迁移或无法编译验证的 API 调用。参考其分层和交互方式时，必须按本项目契约重新实现并通过本项目测试。
 
+## 启动器自动更新（Velopack）
+
+v3.0.0 起接入 [Velopack](https://velopack.io) 自动更新框架。Velopack 工具链负责从 GitHub Releases 拉版本清单、后台下载、原子替换、重启应用；现有的 `UpdateService`（GitHub Release API 检测）降级为「启动期轻量检测 → 弹角标」，不再负责下载安装。
+
+### 版本号格式
+
+- `AppInfo.Version`、`SteamCN-GameLauncher.csproj` `<Version>`、`version.json`、`Package.appxmanifest` Identity.Version 四处一致。
+- 一律使用 **SemVer 格式**（如 `3.0.0`，**不带 `v` 前缀**）。Velopack 解析需要 SemVer。
+- 显示版本号时由代码拼接：`AppInfo.FullVersion = $"v{Version} ({Channel})"`。
+- Git tag 仍带 `v` 前缀（`v3.0.0`），用于 GitHub Release 标识。
+
+### Velopack 关键标识
+
+| 字段 | 值 | 来源 |
+|---|---|---|
+| `packId` | `io.steamcn.launcher` | `Services/Update/VelopackUpdateService.cs` 常量 |
+| GitHub 仓库 | `Clearlove0923/SteamCN-GameLauncher` | 同上 |
+| 安装路径 | `%LocalAppData%\Programs\io.steamcn.launcher` | Inno Setup `DefaultDirName` |
+
+- `packId` **首次发布后不可修改**，改了老用户会被当作另一款软件。
+- 安装路径**禁止再写回** `C:\Program Files`：`Update.exe` 替换文件时普通用户没有写权限，会触发 UAC 或直接失败。
+
+### 双轨发布产物
+
+`scripts/Publish-Release.ps1` 一次发布产出两套：
+
+| 渠道 | 工具 | 产物 | 用途 |
+|---|---|---|---|
+| **Inno Setup 渠道** | `ISCC.exe` | `SteamCN-GameLauncher-v3.0.0-win-x64-setup.exe` | 官网下载区主链接；v3.0.0 老用户首次迁移安装；老用户跨代升级 |
+| **Velopack 渠道** | `vpk pack` | `io.steamcn.launcher-Setup.exe` + `io.steamcn.launcher-3.0.0-full.nupkg` + `io.steamcn.launcher-3.0.0-delta.nupkg`（如有上一版） + `releases.stable.json` + `RELEASES` | GitHub Release 同一页面上传，自动更新链路读取 |
+
+两份 Setup.exe **命名不同、用途不同**：
+- Inno Setup 的 `SteamCN-GameLauncher-v3.0.0-win-x64-setup.exe` 给官网下载区（用户从浏览器下）
+- Velopack 的 `io.steamcn.launcher-Setup.exe` 给 v3.0.0 起新用户（自动更新用户必须装这个版本才能有 Update.exe）
+
+### 老用户迁移路径
+
+v3.0.0 之前的安装路径是 `C:\Program Files\SteamCN-GameLauncher`。迁移步骤：
+
+1. 用户在 README 顶部看到迁移提示（已加）。
+2. 卸载旧版本：「设置 → 应用 → 已安装的应用 → 找到「Steam国服游戏启动器」→ 卸载」。
+3. 重新下载新版本安装包（Inno Setup 或 Velopack 均可）安装。
+4. 用户的游戏配置、自定义 Manifest 等设置文件独立于安装目录，**不会丢失**（保存在 `%LOCALAPPDATA%\SteamCN-GameLauncher` 下）。
+
+### 自动更新触发流程
+
+1. 启动后期（30 秒延迟）`VelopackUpdateService.CheckAsync()` 调用 GitHub Releases API。
+2. 有更新时通过 `UpdateAvailable` 事件通知 UI 层（未来可加独立角标或 InfoBar）。
+3. 用户在「设置」页点「立即下载」→ `BtnDownload_Click` 优先走 Velopack，未安装 Velopack 时 fall back 到打开 GitHub Release 页面。
+4. Velopack 下载完成后 `ApplyAndRestart()` → 主程序退出 → 同目录 `Update.exe` 子进程接管替换 → 启动新版本。
+
+### Velopack 钩子
+
+`Program.Main` 第一行必须是 `VelopackApp.Build().Run()`：
+
+```csharp
+[STAThread]
+private static void Main(string[] args)
+{
+    VelopackApp.Build().Run();   // 必须放最前
+    // ... 其他启动代码
+}
+```
+
+Update.exe 以 `--install` / `--uninstall` / `--update` 等钩子参数调用主程序时，`Run()` 内部处理钩子并立即退出。正常启动时 `Run()` 不做任何事。
+
 ## 版本更新官网同步
 
 软件每次发布新版本后，必须同步官网下载网址，否则用户从官网下载到的是旧版本。官网是一个独立仓库，不在本仓库内发布。

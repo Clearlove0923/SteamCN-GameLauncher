@@ -5,8 +5,20 @@ using SteamCNGameLauncher.Models;
 namespace SteamCNGameLauncher.Services;
 
 /// <summary>
-/// 查询当前 GitHub 仓库的 Release、比较 tag 版本并触发更新通知事件。
-/// 启动检查失败不会影响应用；Debug 模式仍可从本地 version.json 测试强制更新和时间闸门。
+/// 启动期轻量更新检测：拉 GitHub Releases API、比较 tag 版本、弹角标或强制更新遮罩。
+///
+/// <para>
+/// 与 <see cref="SteamCNGameLauncher.Services.Update.VelopackUpdateService"/> 的分工：
+/// </para>
+/// <list type="bullet">
+/// <item>本服务负责「发现版本」：HTTP 拉清单 → 比较 tag → 通知 UI 显示角标。不下载、不安装。</item>
+/// <item>VelopackUpdateService 负责「交付版本」：用户点按钮后后台下载、重启由 Velopack Update.exe 原子替换。</item>
+/// </list>
+///
+/// <para>
+/// Debug 模式下从本地 http://127.0.0.1:9090/version.json 读取，可验证 <c>forceUpdate</c>
+/// 和 <c>availableAfter</c> 时间闸门。
+/// </para>
 /// </summary>
 public sealed class UpdateService
 {

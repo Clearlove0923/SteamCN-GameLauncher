@@ -56,6 +56,8 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <!-- Velopack: 自动更新框架，从 GitHub Releases 拉取并安装新版本。Update.exe 子进程负责替换文件。 -->
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />

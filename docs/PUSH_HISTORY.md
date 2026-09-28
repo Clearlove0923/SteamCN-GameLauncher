@@ -2,6 +2,27 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-28 21:48:00 +08:00
+
+- 推送人员：`wonderful-oss`
+- 目标分支：`master_preview`
+- 推送提交：Velopack 自动更新框架接入
+- 实现内容：
+  - 引入 [Velopack](https://velopack.io) 自动更新框架，与现有 `UpdateService`（启动期轻量检测 GitHub Release API → 弹角标）共存：Velopack 负责后台下载、原子替换、重启；老的强制更新遮罩 / Debug 模式 `version.json` 时间闸门保留。
+  - `AppInfo.Version` 改为不带 `v` 前缀的 SemVer（`3.0.0`），由代码拼接 `FullVersion = $"v{Version} ({Channel})"` 用于界面显示；Velopack 解析与 `Publish-Release.ps1` 版本号校验同步跟进。
+  - `SteamCN-GameLauncher.iss` 安装路径从 `{autopf}\SteamCN-GameLauncher` 迁到 `{localappdata}\Programs\SteamCN-GameLauncher`，并设置 `PrivilegesRequired=lowest`，免 UAC；安装器是 NSIS，与 Velopack 产物并存作为官网下载区主链接。
+  - 新增 `Services/Update/VelopackUpdateService.cs`（`packId=io.steamcn.launcher`、`GitHubRepoUrl=Clearlove0923/SteamCN-GameLauncher`），封装 `UpdateManager(new GithubSource(...))` 的检查 / 下载 / 应用重启三步；`ApplyAndRestart` 缓存 `UpdateInfo` 避免重复拉清单。
+  - `Program.Main` 第一行插入 `VelopackApp.Build().Run()`，处理 `--install` / `--uninstall` / `--update` 等钩子参数；正常启动时不做事。
+  - `App.xaml.cs` 在启动后期（30 秒延迟）触发 Velopack 检查；失败静默不影响主流程。`SettingsPage.BtnDownload_Click` 优先走 Velopack，未安装 Velopack 时 fall back 到打开 GitHub Release 页面。
+  - `scripts/Publish-Release.ps1` 双轨产出：保留 Inno Setup 产物（官网下载区主链接）+ 新增 `vpk pack` 步骤生成 Velopack 产物（NSIS Setup.exe + full/delta nupkg + `releases.stable.json` + legacy `RELEASES`）；旧版本快照放在 `Output\...\velopack\RELEASES` 时自动生成 delta 包。
+  - 顺手修复 `Models/Home/SupportedGameRegistry.cs` 中 `Split(['\\', '/'], ...)` 集合表达式在 .NET 8 编译器下与 `Split(char[], StringSplitOptions)` / `Split(string[], StringSplitOptions)` 的二义性编译错误（master_preview 原始代码就编译不过）；改为 `new[] { '\\', '/' }` 显式字符数组。
+  - `AGENTS.md` 新增「启动器自动更新（Velopack）」章节，写清 SemVer 规则、`packId` 锁定、双轨发布产物命名、老用户迁移路径、Velopack 钩子位置。
+  - `README.md` 顶部加 v3.0.0 老用户迁移提示，说明 Program Files 旧版需要先卸载再装新版本，用户配置独立于安装目录不会丢失。
+- 验证结果：
+  - 主程序按统一 Debug x64 命令构建成功，0 警告、0 错误。
+  - 现有 C# 测试项目未覆盖本次新增代码（VelopackUpdateService），完整跑全套测试需要后续单独补；本次仅验证编译通过。
+- 当前限制：未购买代码签名证书，Windows SmartScreen 会在首次运行 Setup.exe 时拦截，用户需手动点「仍要运行」；未在隔离虚拟机跑端到端升级流程（用户决定先不管）；v3.0.0 之前的 Inno Setup 安装用户因为没有 `Update.exe`，小版本升级仍需走手动下载 + 重新安装。
+
 ## 2026-09-27 23:37:17 +08:00
 
 - 推送人员：`Violet0923`
