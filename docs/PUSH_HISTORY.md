@@ -2,6 +2,20 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-30 00:59:58 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：GitHub `master_prreview`、`master`；CNB `master_prreview`、`master`
+- 推送提交：`release: 更新 v3.1.2 检查入口`
+- 实现内容：
+  - 点击“检查更新”时直接弹出 CNB 与 GitHub 双来源选择窗口，两个来源分别提供“立即检查”入口，并突出显示国内推荐的 CNB 来源。
+  - 用户选择来源后保存首选项并直接启动 Kachina，由 Kachina 使用对应来源检查和交付更新；保留当前首选来源的手动下载入口及更新器启动失败后的发布页回退。
+  - 版本号保持 `3.1.2`，覆盖更新 GitHub 与 CNB 的同版本 Release 附件和发布说明。
+- 验证结果：
+  - 主程序按统一 Debug x64 命令构建成功，0 错误；更新服务 15 项固定检查全部通过。构建期间仅因当前网络无法读取 NuGet 漏洞索引产生 `NU1900` 警告，不影响编译产物。
+  - 正式 Windows x64 自包含发布、Kachina 打包和 Inno Setup 编译成功；生成 `SteamCN-GameLauncher.Install.3.1.2.exe`（SHA-256 `5523cd64e826990af8c2f1d8762fbcc57be69a1adcb8442457d5ee3d12bb54f8`）与 `SteamCN-GameLauncher-v3.1.2-win-x64-setup.exe`（SHA-256 `f86c36dc7b60279700a9640ec7b4975eff67fe5e293fbcc277877a6f7d739665`）。
+- 当前限制：同版本覆盖发布不会被已安装旧 v3.1.2 的 Kachina 识别为新版本，旧 v3.1.2 用户需从发布页手动重新下载安装；后续版本号递增后可正常走 Kachina 自动更新链路。未执行人工 UI 点击回归；应用与安装包尚未进行商业代码签名，Windows SmartScreen 可能在首次运行时提示风险。
+
 ## 2026-09-30 00:22:39 +08:00
 
 - 推送人员：`Violet0923`

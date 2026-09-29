@@ -335,99 +335,136 @@ public sealed partial class SettingsPage : Page
 
     private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
     {
-        btnCheckUpdate.IsEnabled = false;
-        btnCheckUpdate.Content = "检查中…";
-        txtCheckUpdateStatus.Text = "正在连接服务器…";
-
-        var hadUpdate = false;
-
-        void LocalHandler(LauncherUpdateInfo update) => hadUpdate = true;
-        UpdateService.Instance.UpdateAvailable += LocalHandler;
-
-        try
-        {
-            await UpdateService.Instance.CheckUpdateAsync();
-        }
-        finally
-        {
-            UpdateService.Instance.UpdateAvailable -= LocalHandler;
-        }
-
-        btnCheckUpdate.IsEnabled = true;
-        btnCheckUpdate.Content = "检查更新";
-
-        if (!UpdateService.Instance.LastCheckSucceeded)
-        {
-            txtCheckUpdateStatus.Text = "自动检查失败，可选择发布源手动查看。";
-            _logService.AddLog($"[更新] 手动检查失败：{UpdateService.Instance.LastCheckError ?? "未知错误"}");
-            await ShowUpdateCheckFailedDialogAsync();
-            return;
-        }
-
-        var gateUntil = UpdateService.Instance.PendingGateUntil;
-        txtCheckUpdateStatus.Text = hadUpdate
-            ? "已发现新版本，请查看上方通知。"
-            : gateUntil is not null
-                ? $"新版本计划于 {gateUntil.Value.LocalDateTime:yyyy-MM-dd HH:mm} 开放更新，请稍后再试。"
-                : "当前已是最新版本。";
+        await ShowUpdateSourceChoiceDialogAsync();
     }
 
-    private async Task ShowUpdateCheckFailedDialogAsync()
+    private async Task ShowUpdateSourceChoiceDialogAsync()
     {
-        var sourceSelector = new ComboBox
-        {
-            Header = "选择发布源",
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        sourceSelector.Items.Add(new ComboBoxItem
-        {
-            Content = UpdateSourcePolicy.GetDisplayName(UpdateSourceIds.Cnb),
-            Tag = UpdateSourceIds.Cnb
-        });
-        sourceSelector.Items.Add(new ComboBoxItem
-        {
-            Content = UpdateSourcePolicy.GetDisplayName(UpdateSourceIds.GitHub),
-            Tag = UpdateSourceIds.GitHub
-        });
-        SelectComboTag(sourceSelector, GetSelectedUpdateSource());
-
         var dialog = new ContentDialog
         {
-            Title = "无法自动检查更新",
-            Content = new StackPanel
-            {
-                Spacing = 10,
-                MaxWidth = 560,
-                Children =
-                {
-                    new TextBlock
-                    {
-                        Text = "当前无法连接版本检查服务。你可以选择一个发布源，手动确认是否有新版本。",
-                        TextWrapping = TextWrapping.Wrap
-                    },
-                    sourceSelector,
-                    new TextBlock
-                    {
-                        Text = "这不会自动下载安装；关闭弹窗后也可以稍后重试。",
-                        TextWrapping = TextWrapping.Wrap,
-                        Opacity = 0.72
-                    }
-                }
-            },
-            PrimaryButtonText = "打开发布页",
-            CloseButtonText = "稍后",
-            DefaultButton = ContentDialogButton.Primary,
+            Title = $"检查更新  {AppInfo.FullVersion}",
+            PrimaryButtonText = "手动下载",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.None,
             XamlRoot = XamlRoot
         };
 
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-        if (sourceSelector.SelectedItem is not ComboBoxItem item || item.Tag is not string sourceId) return;
+        var sourcePanel = new StackPanel
+        {
+            Spacing = 10,
+            MinWidth = 520,
+            MaxWidth = 620
+        };
+        sourcePanel.Children.Add(new TextBlock
+        {
+            Text = "选择一个发布源检查新版本。更新只会在你确认后下载和安装。",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 4)
+        });
 
+        sourcePanel.Children.Add(CreateUpdateSourceOption(
+            dialog,
+            UpdateSourceIds.Cnb,
+            "CNB 更新服务",
+            "国内推荐，连接速度通常更稳定",
+            useAccentButton: true));
+        sourcePanel.Children.Add(CreateUpdateSourceOption(
+            dialog,
+            UpdateSourceIds.GitHub,
+            "GitHub 更新服务",
+            "备用来源；访问受限时建议改用 CNB",
+            useAccentButton: false));
+
+        sourcePanel.Children.Add(new TextBlock
+        {
+            Text = $"手动下载将打开当前首选来源：{UpdateSourcePolicy.GetDisplayName(GetSelectedUpdateSource())}",
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.68,
+            FontSize = 12,
+            Margin = new Thickness(0, 4, 0, 0)
+        });
+        dialog.Content = sourcePanel;
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            await OpenManualUpdatePageAsync(GetSelectedUpdateSource());
+    }
+
+    private Border CreateUpdateSourceOption(
+        ContentDialog dialog,
+        string sourceId,
+        string title,
+        string description,
+        bool useAccentButton)
+    {
+        var actionButton = new Button
+        {
+            Content = "立即检查",
+            MinWidth = 112,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        if (useAccentButton)
+        {
+            actionButton.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(255, 0, 120, 212));
+            actionButton.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(255, 255, 255, 255));
+        }
+
+        actionButton.Click += async (_, _) =>
+        {
+            actionButton.IsEnabled = false;
+            dialog.Hide();
+            await Task.Yield();
+            await SelectSourceAndStartUpdaterAsync(sourceId);
+        };
+
+        var content = new Grid { ColumnSpacing = 16 };
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        content.Children.Add(new StackPanel
+        {
+            Spacing = 3,
+            Children =
+            {
+                new TextBlock { Text = title, FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
+                new TextBlock
+                {
+                    Text = description,
+                    TextWrapping = TextWrapping.Wrap,
+                    Opacity = 0.72,
+                    FontSize = 12
+                }
+            }
+        });
+        Grid.SetColumn(actionButton, 1);
+        content.Children.Add(actionButton);
+
+        return new Border
+        {
+            Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AppearanceCardBackground"],
+            BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(64, 128, 128, 128)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14),
+            Child = content
+        };
+    }
+
+    private async Task SelectSourceAndStartUpdaterAsync(string sourceId)
+    {
         sourceId = UpdateSourcePolicy.Normalize(sourceId);
         SetUpdateSourceSelection(sourceId);
         _settings.UpdateSourceId = sourceId;
         SaveSettings();
+        txtCheckUpdateStatus.Text = $"已选择 {UpdateSourcePolicy.GetDisplayName(sourceId)} 检查更新。";
 
+        await StartUpdaterOrOfferManualDownloadAsync(sourceId);
+    }
+
+    private async Task OpenManualUpdatePageAsync(string sourceId)
+    {
         try
         {
             await Windows.System.Launcher.LaunchUriAsync(
@@ -444,7 +481,11 @@ public sealed partial class SettingsPage : Page
 
     private async void BtnDownload_Click(object sender, RoutedEventArgs e)
     {
-        var sourceId = GetSelectedUpdateSource();
+        await StartUpdaterOrOfferManualDownloadAsync(GetSelectedUpdateSource());
+    }
+
+    private async Task StartUpdaterOrOfferManualDownloadAsync(string sourceId)
+    {
         if (KachinaUpdateService.Instance.TryStart(sourceId, out var error))
         {
             (App.MainWindow as MainWindow)?.ExitForUpdate();
