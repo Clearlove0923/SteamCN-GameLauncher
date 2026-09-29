@@ -36,12 +36,19 @@
                                    FontSize="13" TextWrapping="Wrap"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
-                    <Button x:Name="btnDownload"
-                            Grid.Column="1"
-                            Content="立即下载"
-                            Style="{StaticResource AccentButtonStyle}"
-                            VerticalAlignment="Center"
-                            Click="BtnDownload_Click"/>
+                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                        <ComboBox x:Name="cmbUpdateSource"
+                                  MinWidth="150"
+                                  SelectionChanged="UpdateSource_SelectionChanged">
+                            <ComboBoxItem Tag="cnb" Content="CNB（国内推荐）" IsSelected="True"/>
+                            <ComboBoxItem Tag="github" Content="GitHub"/>
+                        </ComboBox>
+                        <Button x:Name="btnDownload"
+                                Content="立即更新"
+                                Style="{StaticResource AccentButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                Click="BtnDownload_Click"/>
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -203,6 +210,28 @@
                                     FontSize="12"/>
                         </StackPanel>
                     </Border>
+
+                    <NavigationViewItemSeparator/>
+
+                    <!-- 更新下载源 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="更新下载源" FontSize="14" FontWeight="Medium"/>
+                            <TextBlock Text="默认使用 CNB；若下载异常，可在此切换到 GitHub 备用源"
+                                       FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ComboBox x:Name="cmbPreferredUpdateSource"
+                                  Grid.Column="1" MinWidth="160"
+                                  SelectionChanged="PreferredUpdateSource_SelectionChanged">
+                            <ComboBoxItem Tag="cnb" Content="CNB（国内推荐）" IsSelected="True"/>
+                            <ComboBoxItem Tag="github" Content="GitHub"/>
+                        </ComboBox>
+                    </Grid>
 
                     <NavigationViewItemSeparator/>
 

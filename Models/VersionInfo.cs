@@ -23,7 +23,7 @@ public sealed class VersionInfo
     [JsonPropertyName("downloadUrl")]
     public DownloadUrls DownloadUrl { get; init; } = new();
 
-    /// <summary>是否强制更新（锁定 UI 直到用户前往下载）</summary>
+    /// <summary>旧版调试契约兼容字段；当前客户端始终忽略，不会强制更新。</summary>
     [JsonPropertyName("forceUpdate")]
     public bool ForceUpdate { get; init; }
 

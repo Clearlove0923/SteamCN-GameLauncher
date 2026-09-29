@@ -20,7 +20,7 @@ AppPublisher=Violet0923
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases/latest
-; 装到用户目录，避开 Program Files 写权限问题，配合 Velopack 自动更新免 UAC。
+; 保持现有安装目录；Kachina 使用 prefer-user，仅在目录不可写时请求 UAC。
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 DefaultDirName={localappdata}\Programs\{#MyAppIdName}

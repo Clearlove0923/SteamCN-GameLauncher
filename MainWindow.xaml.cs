@@ -12,7 +12,6 @@ namespace SteamCNGameLauncher;
 
 public sealed partial class MainWindow : Window
 {
-    private string _forceDownloadUrl = "";
     private AppWindow? _appWindow;
     private readonly CustomManifestService _customManifestService = CustomManifestService.Instance;
     private readonly GameExecutableIconService _gameIconService = new();
@@ -23,6 +22,7 @@ public sealed partial class MainWindow : Window
     private bool _addingCustomManifest;
     private bool _restoringNavigationSelection;
     private bool _confirmingNavigation;
+    private bool _updatePromptShown;
     private NavigationViewItem? _lastAcceptedNavigationItem;
 
     private sealed class GameLibraryEntry : INotifyPropertyChanged
@@ -84,6 +84,7 @@ public sealed partial class MainWindow : Window
             PlayTimeService.Instance.Dispose();
             _gameLibraryCloseTimer.Stop();
             _customManifestService.NavigationChanged -= OnCustomNavigationChanged;
+            UpdateService.Instance.UpdateAvailable -= OnUpdateAvailable;
         };
 
         // 首页是默认页面；游戏列表只是切换入口，不拥有独立页面。
@@ -100,26 +101,61 @@ public sealed partial class MainWindow : Window
 
     // ── 更新通知处理 ──────────────────────────────────────────────────────────
 
-    private void OnUpdateAvailable(string message, string downloadUrl, bool forceUpdate)
+    private void OnUpdateAvailable(LauncherUpdateInfo update)
     {
-        _forceDownloadUrl = downloadUrl;
-
-        DispatcherQueue.TryEnqueue(() =>
+        DispatcherQueue.TryEnqueue(async () =>
         {
-            if (forceUpdate)
+            btnUpdateBadge.Visibility = Visibility.Visible;
+            if (_updatePromptShown) return;
+            _updatePromptShown = true;
+
+            try
             {
-                // 强制更新：显示全屏遮罩 + 顶部横幅，锁定所有导航
-                txtForceUpdateMsg.Text = string.IsNullOrWhiteSpace(message)
-                    ? "当前版本存在严重问题，必须更新后才能继续使用。"
-                    : message;
-                forceUpdateBanner.IsOpen = true;
-                forceUpdateOverlay.Visibility = Visibility.Visible;
-                NavView.IsEnabled = false;
+                var dialog = new ContentDialog
+                {
+                    Title = $"发现新版本 {update.Version}",
+                    Content = new StackPanel
+                    {
+                        Spacing = 10,
+                        MaxWidth = 560,
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = "本次更新内容",
+                                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+                            },
+                            new ScrollViewer
+                            {
+                                MaxHeight = 360,
+                                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                                Content = new TextBlock
+                                {
+                                    Text = update.ReleaseNotes,
+                                    TextWrapping = TextWrapping.Wrap,
+                                    IsTextSelectionEnabled = true
+                                }
+                            },
+                            new TextBlock
+                            {
+                                Text = "更新不会自动安装，你可以现在前往设置更新，或稍后处理。",
+                                TextWrapping = TextWrapping.Wrap,
+                                Opacity = 0.72
+                            }
+                        }
+                    },
+                    PrimaryButtonText = "查看更新",
+                    CloseButtonText = "稍后",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = ((FrameworkElement)Content).XamlRoot
+                };
+                if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                    NavigateToSettings();
             }
-            else
+            catch (Exception ex)
             {
-                // 普通更新：右上角显示提示按钮
-                btnUpdateBadge.Visibility = Visibility.Visible;
+                // 若启动期恰有其他 ContentDialog，保留角标供用户稍后进入设置。
+                LogService.Instance.AddLog($"[更新] 无法显示版本提示弹窗：{ex.GetType().Name}: {ex.Message}");
             }
         });
     }
@@ -128,20 +164,15 @@ public sealed partial class MainWindow : Window
 
     private void BtnUpdateBadge_Click(object sender, RoutedEventArgs e)
     {
+        NavigateToSettings();
+    }
+
+    private void NavigateToSettings()
+    {
         // 统一通过 SelectionChanged 导航，使未保存配置检查不会被绕过。
         NavView.SelectedItem = NavView.FooterMenuItems
             .OfType<NavigationViewItem>()
             .FirstOrDefault(i => i.Tag?.ToString() == "Settings");
-    }
-
-    private async void BtnForceUpdateDownload_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_forceDownloadUrl)) return;
-        try
-        {
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(_forceDownloadUrl));
-        }
-        catch { }
     }
 
     // ── 窗口配置 ──────────────────────────────────────────────────────────────

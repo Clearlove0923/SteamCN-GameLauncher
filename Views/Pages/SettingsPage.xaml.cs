@@ -4,6 +4,7 @@ using Windows.Storage.Pickers;
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
 using SteamCNGameLauncher.Services.Home;
+using SteamCNGameLauncher.Services.Update;
 
 namespace SteamCNGameLauncher.Views.Pages;
 
@@ -16,9 +17,6 @@ public sealed partial class SettingsPage : Page
 
     // 防止 UI 初始化时触发 Toggled / LostFocus 事件
     private bool _isLoading = true;
-
-    // 保存最新版本信息（用于下载跳转）
-    private string _downloadUrl = "";
 
     public SettingsPage()
     {
@@ -49,6 +47,7 @@ public sealed partial class SettingsPage : Page
         tglDeveloperMode.IsOn = _settings.DeveloperMode;
         tglDebugMode.IsOn = _settings.DebugMode;
         tglBetaChannel.IsOn = _settings.BetaChannel;
+        SetUpdateSourceSelection(_settings.UpdateSourceId);
         numHomeCacheMegabytes.Value = Math.Clamp(_settings.HomeCacheMaximumMegabytes, 128, 4096);
         numHomeCacheRetentionDays.Value = Math.Clamp(_settings.HomeCacheRetentionDays, 1, 90);
 
@@ -322,16 +321,12 @@ public sealed partial class SettingsPage : Page
 
     // ── 更新通知处理 ──────────────────────────────────────────────────────────
 
-    private void OnUpdateAvailable(string message, string downloadUrl, bool forceUpdate)
+    private void OnUpdateAvailable(LauncherUpdateInfo update)
     {
-        _downloadUrl = downloadUrl;
-
         // 必须回到 UI 线程更新界面
         DispatcherQueue.TryEnqueue(() =>
         {
-            txtUpdateMessage.Text = string.IsNullOrWhiteSpace(message)
-                ? "发现新版本，点击立即下载。"
-                : message;
+            txtUpdateMessage.Text = $"版本 {update.Version}\n\n{update.ReleaseNotes}";
             updateCard.Visibility = Visibility.Visible;
         });
     }
@@ -346,7 +341,7 @@ public sealed partial class SettingsPage : Page
 
         var hadUpdate = false;
 
-        void LocalHandler(string msg, string url, bool force) => hadUpdate = true;
+        void LocalHandler(LauncherUpdateInfo update) => hadUpdate = true;
         UpdateService.Instance.UpdateAvailable += LocalHandler;
 
         try
@@ -378,44 +373,58 @@ public sealed partial class SettingsPage : Page
 
     private async void BtnDownload_Click(object sender, RoutedEventArgs e)
     {
-        // 优先走 Velopack 自动更新链路（用户已通过 Velopack 安装时）。
-        // 未通过 Velopack 安装（绿色版、Debug）则 fall back 到 GitHub Release 跳转。
-        var vp = Services.Update.VelopackUpdateService.Instance;
-        if (vp.IsInstalled)
+        var sourceId = GetSelectedUpdateSource();
+        if (KachinaUpdateService.Instance.TryStart(sourceId, out var error))
+        {
+            (App.MainWindow as MainWindow)?.ExitForUpdate();
+            return;
+        }
+
+        _logService.AddLog($"[更新] 将回退到手动下载：{error}");
+        var manualUrl = UpdateSourcePolicy.GetManualDownloadUrl(sourceId);
+        var dialog = new ContentDialog
+        {
+            Title = "无法启动自动更新",
+            Content = $"{error}\n\n可以改用浏览器打开 {UpdateSourcePolicy.GetDisplayName(sourceId)} 发布页手动下载。",
+            PrimaryButtonText = "打开下载页",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
         {
             try
             {
-                if (!vp.HasPendingUpdate)
-                {
-                    await vp.CheckAsync();
-                }
-                if (vp.HasPendingUpdate)
-                {
-                    var ok = await vp.DownloadAsync();
-                    if (ok)
-                    {
-                        vp.ApplyAndRestart();
-                        return;  // 进程即将退出，不继续执行 fallback
-                    }
-                }
-                // 下载失败或没有 pending update，回落到浏览器跳转
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(manualUrl));
             }
             catch (Exception ex)
             {
-                _logService.AddLog($"[velopack] 自动更新失败，回落到手动下载：{ex.GetType().Name}: {ex.Message}");
+                _logService.AddLog($"[更新] 无法打开手动下载页面：{ex.Message}");
             }
         }
+    }
 
-        if (string.IsNullOrWhiteSpace(_downloadUrl)) return;
+    private string GetSelectedUpdateSource()
+    {
+        if (cmbUpdateSource.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+            return UpdateSourcePolicy.Normalize(tag);
+        return UpdateSourcePolicy.Normalize(_settings.UpdateSourceId);
+    }
 
-        try
-        {
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(_downloadUrl));
-        }
-        catch
-        {
-            // 静默忽略
-        }
+    private void UpdateSource_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading || cmbUpdateSource.SelectedItem is not ComboBoxItem item || item.Tag is not string tag) return;
+        SetUpdateSourceSelection(tag);
+        _settings.UpdateSourceId = UpdateSourcePolicy.Normalize(tag);
+        SaveSettings();
+    }
+
+    private void PreferredUpdateSource_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading || cmbPreferredUpdateSource.SelectedItem is not ComboBoxItem item || item.Tag is not string tag) return;
+        SetUpdateSourceSelection(tag);
+        _settings.UpdateSourceId = UpdateSourcePolicy.Normalize(tag);
+        SaveSettings();
     }
 
     // ── 开发者模式 ────────────────────────────────────────────────────────────
@@ -508,6 +517,25 @@ public sealed partial class SettingsPage : Page
             cmbLanguage.SelectedIndex = 0;
     }
 
+    private void SetUpdateSourceSelection(string? sourceId)
+    {
+        var normalized = UpdateSourcePolicy.Normalize(sourceId);
+        SelectComboTag(cmbUpdateSource, normalized);
+        SelectComboTag(cmbPreferredUpdateSource, normalized);
+    }
+
+    private static void SelectComboTag(ComboBox comboBox, string tag)
+    {
+        foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag is string itemTag && string.Equals(itemTag, tag, StringComparison.OrdinalIgnoreCase))
+            {
+                comboBox.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
     private void SaveSettings()
     {
         // 设置页只写入自己管理的全局字段，避免用过期快照覆盖动态自定义配置。
@@ -519,6 +547,7 @@ public sealed partial class SettingsPage : Page
             settings.DeveloperMode = _settings.DeveloperMode;
             settings.DebugMode = _settings.DebugMode;
             settings.BetaChannel = _settings.BetaChannel;
+            settings.UpdateSourceId = UpdateSourcePolicy.Normalize(_settings.UpdateSourceId);
             settings.Language = _settings.Language;
             settings.HomeCacheMaximumMegabytes = _settings.HomeCacheMaximumMegabytes;
             settings.HomeCacheRetentionDays = _settings.HomeCacheRetentionDays;

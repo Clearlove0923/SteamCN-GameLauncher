@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param([string]$InnoCompiler)
+param(
+    [string]$InnoCompiler,
+    [string]$KachinaBuilder,
+    [string[]]$KachinaPreviousPublishDirectory = @()
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -14,7 +18,7 @@ $appInfo = Get-Content -LiteralPath (Join-Path $repoRoot 'AppInfo.cs') -Raw
 $installerScript = Join-Path $repoRoot 'SteamCN-GameLauncher.iss'
 $installerDefinition = Get-Content -LiteralPath $installerScript -Raw
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $repoRoot 'Package.appxmanifest') -Raw
-# v3.0.0 起 AppInfo.Version 不带 v 前缀（Velopack 解析需要 SemVer）。
+# AppInfo.Version 不带 v 前缀；Git tag 和 Release 路径仍使用 v 前缀。
 if ($projectVersion -ne $version -or $appInfo -notmatch ('Version = "' + [regex]::Escape($version) + '"') -or $manifest.Package.Identity.Version -ne "$version.0") {
     throw 'Synchronize version.json, project Version, AppInfo.Version and package Version before publishing.'
 }
@@ -73,51 +77,78 @@ Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\languages\LICENSE.txt') -
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\FFmpeg-GPL-3.0.txt') -Destination $publishDir
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\FFmpeg-SOURCE.txt') -Destination $publishDir
 
-# === Inno Setup 通道（官网下载区主链接，老用户主入口）====================
-# v3.0.0 起 Inno Setup 产物用于：① 官网下载页首次安装 ② 老用户跨代升级
-# 已通过此渠道安装的用户后续小版本仍走 Velopack 自动更新（v3.1.0+）。
+# === Kachina 更新器与在线更新包 =========================================
+# 固定 builder 版本与摘要，避免 release 构建随 latest 漂移。
+$kachinaBuilderVersion = '0.5.1'
+$kachinaBuilderSha256 = 'addaa8e2de08926636f4eabbc9bed4c28e46e92ae55f7cc77d60a34b53bfe8cb'
+if (-not $KachinaBuilder) {
+    $kachinaToolDir = Join-Path $repoRoot ".build\tools\kachina-builder\$kachinaBuilderVersion"
+    $KachinaBuilder = Join-Path $kachinaToolDir 'kachina-builder.exe'
+    if (-not (Test-Path -LiteralPath $KachinaBuilder)) {
+        New-Item -ItemType Directory -Path $kachinaToolDir -Force | Out-Null
+        $kachinaBuilderUrl = "https://github.com/YuehaiTeam/kachina-installer/releases/download/$kachinaBuilderVersion/kachina-builder.exe"
+        Invoke-WebRequest -Uri $kachinaBuilderUrl -OutFile $KachinaBuilder
+    }
+    $actualBuilderHash = (Get-FileHash -LiteralPath $KachinaBuilder -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualBuilderHash -ne $kachinaBuilderSha256) {
+        throw "Kachina builder checksum mismatch: $actualBuilderHash"
+    }
+}
+if (-not (Test-Path -LiteralPath $KachinaBuilder)) {
+    throw "Kachina builder not found: $KachinaBuilder"
+}
+
+$kachinaConfig = Join-Path $repoRoot 'packaging\kachina.config.json'
+$kachinaUpdater = Join-Path $publishDir 'SteamCN-GameLauncher.update.exe'
+& $KachinaBuilder pack -c $kachinaConfig -o $kachinaUpdater `
+    --icon (Join-Path $repoRoot 'Assets\Icons\SteamCN-GameLauncher.ico')
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaUpdater)) {
+    throw "Kachina updater build failed: $LASTEXITCODE"
+}
+
+$kachinaMetadata = Join-Path $runRoot 'kachina.metadata.json'
+$kachinaHashed = Join-Path $runRoot 'kachina-hashed'
+$kachinaGenArgs = @(
+    'gen', '-j', '6',
+    '-i', $publishDir,
+    '-m', $kachinaMetadata,
+    '-o', $kachinaHashed,
+    '-r', 'Clearlove0923/SteamCN-GameLauncher',
+    '-t', $version,
+    '-u', $kachinaUpdater
+)
+foreach ($previousDirectory in $KachinaPreviousPublishDirectory) {
+    if (-not (Test-Path -LiteralPath $previousDirectory -PathType Container)) {
+        throw "Kachina previous publish directory not found: $previousDirectory"
+    }
+    $kachinaGenArgs += '--diff-vers'
+    $kachinaGenArgs += [IO.Path]::GetFullPath($previousDirectory)
+}
+& $KachinaBuilder @kachinaGenArgs
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaMetadata)) {
+    throw "Kachina metadata build failed: $LASTEXITCODE"
+}
+
+$kachinaInstaller = Join-Path $runRoot "SteamCN-GameLauncher.Install.$version.exe"
+& $KachinaBuilder pack -c $kachinaConfig -m $kachinaMetadata -d $kachinaHashed -o $kachinaInstaller
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaInstaller)) {
+    throw "Kachina online package build failed: $LASTEXITCODE"
+}
+
+# === Inno Setup 通道（现有安装入口保持不变）===============================
 & $InnoCompiler "/DMyAppVersion=$version" "/DSourceDir=$publishDir" "/O$runRoot" $installerScript
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
 $installer = Join-Path $runRoot "$assemblyName-v$version-win-x64-setup.exe"
 if (-not (Test-Path -LiteralPath $installer)) { throw 'Installer was not produced.' }
 $checksum = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-[IO.File]::WriteAllText((Join-Path $runRoot 'SHA256SUMS.txt'), "$checksum  $([IO.Path]::GetFileName($installer))`n", [Text.UTF8Encoding]::new($false))
+$kachinaChecksum = (Get-FileHash -LiteralPath $kachinaInstaller -Algorithm SHA256).Hash.ToLowerInvariant()
+$checksumLines = @(
+    "$checksum  $([IO.Path]::GetFileName($installer))"
+    "$kachinaChecksum  $([IO.Path]::GetFileName($kachinaInstaller))"
+) -join "`n"
+[IO.File]::WriteAllText((Join-Path $runRoot 'SHA256SUMS.txt'), "$checksumLines`n", [Text.UTF8Encoding]::new($false))
 Write-Output "Installer: $installer"
 Write-Output "SHA256: $checksum"
-
-# === Velopack 通道（自动更新清单 + Update.exe 子进程）====================
-# 产物：io.steamcn.launcher-Setup.exe（NSIS，首次安装给自动更新用户用）
-#      io.steamcn.launcher-{version}-full.nupkg（全量更新包）
-#      io.steamcn.launcher-{version}-delta.nupkg（差分包，需要 --previousPackDir）
-#      releases.stable.json（更新清单）
-#      RELEASES（legacy 兼容）
-$veloDir = Join-Path $runRoot 'velopack'
-New-Item -ItemType Directory -Path $veloDir -Force | Out-Null
-$veloArgs = @(
-    'pack',
-    '--packId', 'io.steamcn.launcher',
-    '--packVersion', $version,
-    '--packDir', $publishDir,
-    '--mainExe', "$assemblyName.exe",
-    '--packTitle', 'Steam国服游戏启动器',
-    '--icon', (Join-Path $repoRoot 'Assets\Icons\SteamCN-GameLauncher.ico'),
-    '--outputDir', $veloDir
-)
-# 如果上一版本的 RELEASES 存在，自动生成 delta 包（调用方需事先把上一版本产物放到 $runRoot\velopack\RELEASES）。
-$prevReleases = Join-Path $veloDir 'RELEASES'
-if (Test-Path -LiteralPath $prevReleases) {
-    $veloArgs += '--deltaReleases'
-    $veloArgs += $prevReleases
-}
-& vpk @veloArgs
-if ($LASTEXITCODE -ne 0) { throw "vpk pack failed: $LASTEXITCODE" }
-foreach ($required in @('io.steamcn.launcher-Setup.exe', 'io.steamcn.launcher-' + $version + '-full.nupkg', 'releases.stable.json')) {
-    if (-not (Test-Path -LiteralPath (Join-Path $veloDir $required))) {
-        # vpk 在某些版本把 RELEASES.json 命名为 releases.stable.json；个别旧版本叫 releases.json
-        $alt = Join-Path $veloDir 'releases.json'
-        if ($required -eq 'releases.stable.json' -and (Test-Path -LiteralPath $alt)) { continue }
-        throw "Velopack output missing: $required"
-    }
-}
-Write-Output "Velopack artifacts: $veloDir"
-Get-ChildItem -LiteralPath $veloDir | ForEach-Object { Write-Output ("  {0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name) }
+Write-Output "Kachina package: $kachinaInstaller"
+Write-Output "Kachina SHA256: $kachinaChecksum"
+Write-Output 'Upload the identical Kachina package to the v<version> release on both CNB and GitHub.'

@@ -173,40 +173,41 @@ contracts/                      JSON Schema、请求和响应样本
 - 不把 Provider 响应对象直接绑定到 XAML。先转换为统一 DTO，再由 ViewModel 形成展示状态。
 - 不原样复制参考项目中正在迁移或无法编译验证的 API 调用。参考其分层和交互方式时，必须按本项目契约重新实现并通过本项目测试。
 
-## 启动器自动更新（Velopack）
+## 启动器自动更新（Kachina）
 
-v3.0.0 起接入 [Velopack](https://velopack.io) 自动更新框架。Velopack 工具链负责从 GitHub Releases 拉版本清单、后台下载、原子替换、重启应用；现有的 `UpdateService`（GitHub Release API 检测）降级为「启动期轻量检测 → 弹角标」，不再负责下载安装。
+v3.0.0 起使用 [Kachina Installer](https://github.com/YuehaiTeam/kachina-installer) 作为独立更新器。`UpdateService` 通过 GitHub Releases API 做启动期轻量检测并把版本号、Release 正文和下载页交给 UI；只有用户确认后，`KachinaUpdateService` 才启动同目录的 `SteamCN-GameLauncher.update.exe`。禁止强制更新、锁定导航或在用户未确认时下载安装。
 
 ### 版本号格式
 
 - `AppInfo.Version`、`SteamCN-GameLauncher.csproj` `<Version>`、`version.json`、`Package.appxmanifest` Identity.Version 四处一致。
-- 一律使用 **SemVer 格式**（如 `3.0.0`，**不带 `v` 前缀**）。Velopack 解析需要 SemVer。
+- 一律使用 **SemVer 格式**（如 `3.0.0`，**不带 `v` 前缀**）。Kachina 构建元数据使用该版本号。
 - 显示版本号时由代码拼接：`AppInfo.FullVersion = $"v{Version} ({Channel})"`。
 - Git tag 仍带 `v` 前缀（`v3.0.0`），用于 GitHub Release 标识。
 
-### Velopack 关键标识
+### Kachina 关键标识
 
 | 字段 | 值 | 来源 |
 |---|---|---|
-| `packId` | `io.steamcn.launcher` | `Services/Update/VelopackUpdateService.cs` 常量 |
-| GitHub 仓库 | `Clearlove0923/SteamCN-GameLauncher` | 同上 |
-| 安装路径 | `%LocalAppData%\Programs\io.steamcn.launcher` | Inno Setup `DefaultDirName` |
+| 更新器文件 | `SteamCN-GameLauncher.update.exe` | `KachinaUpdateService.UpdaterFileName` |
+| Kachina 资源 ID | `Clearlove0923/SteamCN-GameLauncher` | `scripts/Publish-Release.ps1` |
+| 默认来源 | `cnb` | `packaging/kachina.config.json` 第一项 |
+| 备用来源 | `github` | 同一配置第二项 |
+| 安装路径 | `%LocalAppData%\Programs\SteamCN-GameLauncher` | Inno Setup `DefaultDirName` |
 
-- `packId` **首次发布后不可修改**，改了老用户会被当作另一款软件。
-- 安装路径**禁止再写回** `C:\Program Files`：`Update.exe` 替换文件时普通用户没有写权限，会触发 UAC 或直接失败。
+- `regName`、主程序名、更新器名和安装路径发布后保持稳定。
+- 安装路径禁止无迁移方案地写回 `C:\Program Files`；Kachina 配置使用 `prefer-user`，仅在目录不可写时申请 UAC。
+- `Backgrounds`、`backups`、`GameTime`、`HomeCache`、`logs` 必须列入 `ignoreFolderPath`，更新时不得覆盖或删除。
 
-### 双轨发布产物
+### 发布产物
 
 `scripts/Publish-Release.ps1` 一次发布产出两套：
 
 | 渠道 | 工具 | 产物 | 用途 |
 |---|---|---|---|
-| **Inno Setup 渠道** | `ISCC.exe` | `SteamCN-GameLauncher-v3.0.0-win-x64-setup.exe` | 官网下载区主链接；v3.0.0 老用户首次迁移安装；老用户跨代升级 |
-| **Velopack 渠道** | `vpk pack` | `io.steamcn.launcher-Setup.exe` + `io.steamcn.launcher-3.0.0-full.nupkg` + `io.steamcn.launcher-3.0.0-delta.nupkg`（如有上一版） + `releases.stable.json` + `RELEASES` | GitHub Release 同一页面上传，自动更新链路读取 |
+| **Inno Setup** | `ISCC.exe` | `SteamCN-GameLauncher-v3.0.0-win-x64-setup.exe` | 官网和首次安装继续使用的主安装包 |
+| **Kachina** | 固定版本 `kachina-builder` | `SteamCN-GameLauncher.update.exe`（嵌入 Inno 安装内容）+ `SteamCN-GameLauncher.Install.3.0.0.exe` | CNB 与 GitHub Release 上传同一份在线更新包 |
 
-两份 Setup.exe **命名不同、用途不同**：
-- Inno Setup 的 `SteamCN-GameLauncher-v3.0.0-win-x64-setup.exe` 给官网下载区（用户从浏览器下）
-- Velopack 的 `io.steamcn.launcher-Setup.exe` 给 v3.0.0 起新用户（自动更新用户必须装这个版本才能有 Update.exe）
+`scripts/Publish-Release.ps1` 固定并校验 Kachina builder 版本与 SHA-256。发布时必须把完全相同的 `SteamCN-GameLauncher.Install.<version>.exe` 上传到 CNB 与 GitHub 的 `v<version>` Release；文件名、tag 和配置模板必须一致。可通过 `-KachinaPreviousPublishDirectory` 提供一个或多个旧版 publish 目录生成二进制差分。
 
 ### 老用户迁移路径
 
@@ -214,30 +215,18 @@ v3.0.0 之前的安装路径是 `C:\Program Files\SteamCN-GameLauncher`。迁移
 
 1. 用户在 README 顶部看到迁移提示（已加）。
 2. 卸载旧版本：「设置 → 应用 → 已安装的应用 → 找到「Steam国服游戏启动器」→ 卸载」。
-3. 重新下载新版本安装包（Inno Setup 或 Velopack 均可）安装。
-4. 用户的游戏配置、自定义 Manifest 等设置文件独立于安装目录，**不会丢失**（保存在 `%LOCALAPPDATA%\SteamCN-GameLauncher` 下）。
+3. 重新下载 Inno Setup 安装包安装；安装目录内会带上 Kachina 更新器。
+4. 用户的游戏配置、自定义 Manifest 等设置文件独立于安装目录，**不会丢失**（主要保存在 `%APPDATA%\SteamCN-GameLauncher` 下）；安装目录中的运行数据目录由 Kachina 忽略规则保护。
 
 ### 自动更新触发流程
 
-1. 启动后期（30 秒延迟）`VelopackUpdateService.CheckAsync()` 调用 GitHub Releases API。
-2. 有更新时通过 `UpdateAvailable` 事件通知 UI 层（未来可加独立角标或 InfoBar）。
-3. 用户在「设置」页点「立即下载」→ `BtnDownload_Click` 优先走 Velopack，未安装 Velopack 时 fall back 到打开 GitHub Release 页面。
-4. Velopack 下载完成后 `ApplyAndRestart()` → 主程序退出 → 同目录 `Update.exe` 子进程接管替换 → 启动新版本。
+1. 启动后 `UpdateService.CheckUpdateAsync()` 调用 GitHub Releases API，比较当前版本与最新 Release。
+2. 有更新时弹出非强制 `ContentDialog`，标题显示目标版本，正文以可滚动区域展示 Release 中的新增功能、修复和说明；用户可选择“查看更新”或“稍后”。
+3. 设置页默认选择 CNB，也允许切换 GitHub。点击“立即更新”后执行 `SteamCN-GameLauncher.update.exe -I --source <cnb|github>`。
+4. 更新器成功启动后主程序真正退出而不是缩到托盘，由 Kachina 完成差异下载、替换与重新启动。
+5. 更新器缺失或启动失败时显示原因，并允许打开所选来源的 Release 页面手动下载。
 
-### Velopack 钩子
-
-`Program.Main` 第一行必须是 `VelopackApp.Build().Run()`：
-
-```csharp
-[STAThread]
-private static void Main(string[] args)
-{
-    VelopackApp.Build().Run();   // 必须放最前
-    // ... 其他启动代码
-}
-```
-
-Update.exe 以 `--install` / `--uninstall` / `--update` 等钩子参数调用主程序时，`Run()` 内部处理钩子并立即退出。正常启动时 `Run()` 不做任何事。
+Kachina 的多来源配置按顺序将 CNB 放在第一项、GitHub 放在第二项。当前 `--source` 选择单一来源，不得在文案中声称运行中的 Kachina 会自动跨源重试；CNB 异常时由用户切换 GitHub 备用源。
 
 ## 版本更新官网同步
 

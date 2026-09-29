@@ -2,6 +2,23 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-29 22:05:43 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：`master_prreview`、`master`
+- 推送提交：`release: 发布 v3.1.0`
+- 实现内容：
+  - 自动更新从 Velopack 切换为 Kachina 独立更新器，保留现有 Inno Setup 安装方式和 `%LocalAppData%\Programs\SteamCN-GameLauncher` 安装目录；发布包内置更新器，普通 Inno 安装用户也能进入自动更新流程。
+  - 新增 CNB、GitHub 双更新源与设置页持久化选择，默认 CNB；更新器按所选来源启动，缺失或启动失败时显示错误并提供对应手动下载入口。
+  - 检测到新版本时弹出非强制更新对话框，展示目标版本和 GitHub Release 发布说明中的新增功能、修复问题，允许用户立即查看更新或稍后处理；移除旧强制更新遮罩与导航锁定。
+  - Kachina 更新配置保护 `Backgrounds`、`backups`、`GameTime`、`HomeCache`、`logs`，并使用 `prefer-user` 权限策略，仅在安装目录不可写时请求 UAC。
+  - 版本号统一升级到 `3.1.0`；发布脚本固定并校验 Kachina Builder 0.5.1，生成内置更新器、全量更新包、Inno 安装包和 SHA-256 清单，并预留旧版 publish 目录用于后续差分包。
+- 验证结果：
+  - 主程序按统一 Debug x64 命令构建成功，0 错误；11 个 C# 测试项目共 238 项检查通过，其中首页真实内容端到端检查 10 项通过。
+  - Kachina Builder 0.5.1 下载文件 SHA-256 校验通过；`gen`、`pack`、`extract --list` 最小链路验证通过。
+  - 正式 Windows x64 自包含发布、Kachina 打包和 Inno Setup 编译成功；生成 `SteamCN-GameLauncher.Install.3.1.0.exe`（SHA-256 `1be199ac7f35bb8291ab3eaa402b900a1771c1d8c1320e5630086ac72d6ba4fb`）与 `SteamCN-GameLauncher-v3.1.0-win-x64-setup.exe`（SHA-256 `e928190c87754a294937e0f7238b6af02ab103056ce7733f231a4808bd9429b6`）。
+- 当前限制：应用与安装包尚未进行商业代码签名，Windows SmartScreen 可能在首次运行时提示风险；CNB 与 GitHub 必须上传完全相同的 Kachina 更新包，源站不可用时由用户在设置页切换更新源，本版本不在同一次更新器进程内自动重试另一来源。
+
 ## 2026-09-28 21:48:00 +08:00
 
 - 推送人员：`wonderful-oss`

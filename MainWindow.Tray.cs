@@ -73,6 +73,20 @@ public sealed partial class MainWindow
         Close();
     }
 
+    /// <summary>更新器已成功启动时执行真正退出，避免标题栏关闭逻辑缩到托盘。</summary>
+    public void ExitForUpdate()
+    {
+        if (!DispatcherQueue.HasThreadAccess)
+        {
+            DispatcherQueue.TryEnqueue(ExitForUpdate);
+            return;
+        }
+
+        if (_exitFromTray) return;
+        _exitFromTray = true;
+        Close();
+    }
+
     private void DisposeTrayIcon()
     {
         // 应用退出前撤掉 NotifyIcon，否则通知区域可能留下暂时无法响应的旧图标。

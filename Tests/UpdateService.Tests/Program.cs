@@ -1,5 +1,6 @@
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
+using SteamCNGameLauncher.Services.Update;
 using System.Text.Json;
 
 var checks = 0;
@@ -39,5 +40,18 @@ var apiRelease = JsonSerializer.Deserialize<GitHubReleaseInfo>(
     """{"tag_name":"v2.7.1","html_url":"https://github.com/example/repo/releases/tag/v2.7.1","prerelease":false,"published_at":"2026-09-17T00:00:00Z"}""");
 Check(apiRelease?.TagName == "v2.7.1" && apiRelease.PublishedAt is not null,
     "GitHub Releases API field names deserialize correctly");
+
+Check(UpdateSourcePolicy.Normalize(null) == UpdateSourceIds.Cnb,
+    "CNB is the default update download source");
+Check(UpdateSourcePolicy.Normalize("unknown") == UpdateSourceIds.Cnb,
+    "unknown persisted update source safely falls back to CNB");
+Check(UpdateSourcePolicy.Normalize(UpdateSourceIds.GitHub) == UpdateSourceIds.GitHub,
+    "GitHub update source remains selectable");
+Check(UpdateSourcePolicy.GetManualDownloadUrl(UpdateSourceIds.Cnb)
+        == "https://cnb.cool/Clearlove0923/SteamCN-GameLauncher/-/releases/latest",
+    "CNB manual fallback opens the configured CNB release page");
+Check(UpdateSourcePolicy.GetManualDownloadUrl(UpdateSourceIds.GitHub)
+        == "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest",
+    "GitHub manual fallback opens the configured GitHub release page");
 
 Console.WriteLine($"All {checks} checks passed.");

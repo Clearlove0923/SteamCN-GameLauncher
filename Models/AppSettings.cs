@@ -36,6 +36,8 @@ public class AppSettings
     public bool DeveloperMode { get; set; } = false;
     public bool DebugMode { get; set; } = false;
     public bool BetaChannel { get; set; } = false;
+    /// <summary>Kachina 更新包来源。CNB 为默认源，GitHub 为备用源。</summary>
+    public string UpdateSourceId { get; set; } = "cnb";
     public string Language { get; set; } = "zh-CN";
 
     // ===== 首页内容 Python Worker（v2.7.0 起接入；空字符串 = 用下方默认值）=====

@@ -4,7 +4,6 @@ using Microsoft.Windows.ApplicationModel.DynamicDependency;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using Velopack;
 
 namespace SteamCNGameLauncher;
 
@@ -36,11 +35,6 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        // Velopack 钩子处理：必须放在 Main 最开始。
-        // 当 Update.exe 以 --install / --uninstall / --update 等钩子参数调用主程序时，
-        // Run() 内部会处理钩子并立即退出；正常启动时 Run() 不做任何事，继续往下走。
-        VelopackApp.Build().Run();
-
         WriteEarlyLog("Program.Main.Start", null);
 
         _singleInstanceMutex = new Mutex(true, @"Local\SteamCN-GameLauncher_SingleInstance", out var isFirstInstance);

@@ -1,0 +1,41 @@
+{
+  "source": [
+    {
+      "id": "cnb",
+      "name": "CNB（国内推荐）",
+      "uri": "plugin-github+https://cnb.cool/Clearlove0923/SteamCN-GameLauncher/-/releases/download/v${version}/SteamCN-GameLauncher.Install.${version}.exe#versionRegex=v([0-9]%2B\\.[0-9]%2B\\.[0-9]%2B)&cacheTime=5"
+    },
+    {
+      "id": "github",
+      "name": "GitHub（备用）",
+      "uri": "plugin-github+https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/download/v${version}/SteamCN-GameLauncher.Install.${version}.exe#versionRegex=v([0-9]%2B\\.[0-9]%2B\\.[0-9]%2B)&cacheTime=300"
+    }
+  ],
+  "appName": "Steam国服游戏启动器",
+  "publisher": "Violet0923",
+  "regName": "SteamCN-GameLauncher",
+  "exeName": "SteamCN-GameLauncher.exe",
+  "uninstallName": "SteamCN-GameLauncher.uninst.exe",
+  "updaterName": "SteamCN-GameLauncher.update.exe",
+  "programFilesPath": "SteamCN-GameLauncher",
+  "title": "Steam国服游戏启动器",
+  "description": "通过 CNB 或 GitHub 获取更新",
+  "windowTitle": "Steam国服游戏启动器更新程序",
+  "ignoreFolderPath": [
+    "${INSTALL_PATH}/Backgrounds",
+    "${INSTALL_PATH}/backups",
+    "${INSTALL_PATH}/GameTime",
+    "${INSTALL_PATH}/HomeCache",
+    "${INSTALL_PATH}/logs"
+  ],
+  "userDataPath": [
+    "${INSTALL_PATH}/Backgrounds",
+    "${INSTALL_PATH}/backups",
+    "${INSTALL_PATH}/GameTime",
+    "${INSTALL_PATH}/HomeCache",
+    "${INSTALL_PATH}/logs"
+  ],
+  "extraUninstallPath": [],
+  "uacStrategy": "prefer-user",
+  "needWebView2": true
+}

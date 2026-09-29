@@ -5,19 +5,19 @@ using SteamCNGameLauncher.Models;
 namespace SteamCNGameLauncher.Services;
 
 /// <summary>
-/// 启动期轻量更新检测：拉 GitHub Releases API、比较 tag 版本、弹角标或强制更新遮罩。
+/// 启动期轻量更新检测：拉 GitHub Releases API、比较 tag 版本并通知 UI。
 ///
 /// <para>
-/// 与 <see cref="SteamCNGameLauncher.Services.Update.VelopackUpdateService"/> 的分工：
+/// 与 <see cref="SteamCNGameLauncher.Services.Update.KachinaUpdateService"/> 的分工：
 /// </para>
 /// <list type="bullet">
-/// <item>本服务负责「发现版本」：HTTP 拉清单 → 比较 tag → 通知 UI 显示角标。不下载、不安装。</item>
-/// <item>VelopackUpdateService 负责「交付版本」：用户点按钮后后台下载、重启由 Velopack Update.exe 原子替换。</item>
+/// <item>本服务负责「发现版本」：HTTP 拉清单、比较 tag，并把版本与 Release 正文交给 UI。</item>
+/// <item>KachinaUpdateService 负责「交付版本」：仅在用户确认后启动独立更新器。</item>
 /// </list>
 ///
 /// <para>
-/// Debug 模式下从本地 http://127.0.0.1:9090/version.json 读取，可验证 <c>forceUpdate</c>
-/// 和 <c>availableAfter</c> 时间闸门。
+/// Debug 模式下从本地 http://127.0.0.1:9090/version.json 读取，可验证提示内容和
+/// <c>availableAfter</c> 时间闸门。<c>forceUpdate</c> 为旧契约兼容字段，客户端始终忽略。
 /// </para>
 /// </summary>
 public sealed class UpdateService
@@ -33,12 +33,10 @@ public sealed class UpdateService
         "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases";
     private const string DebugLocalUrl = "http://127.0.0.1:9090/version.json";
 
-    /// <summary>发现新版本时触发。参数：(message, downloadUrl, forceUpdate)。</summary>
-    public event Action<string, string, bool>? UpdateAvailable;
+    /// <summary>发现新版本时触发。正文来自 Release notes，用于展示新增功能和修复。</summary>
+    public event Action<LauncherUpdateInfo>? UpdateAvailable;
 
-    private string? _cachedMessage;
-    private string? _cachedDownloadUrl;
-    private bool _cachedForceUpdate;
+    private LauncherUpdateInfo? _cachedUpdate;
     public bool HasPendingUpdate { get; private set; }
     public DateTimeOffset? PendingGateUntil { get; private set; }
     public bool LastCheckSucceeded { get; private set; }
@@ -66,7 +64,6 @@ public sealed class UpdateService
             string remoteVersion;
             string message;
             string downloadUrl;
-            bool forceUpdate;
 
             if (debug)
             {
@@ -77,7 +74,6 @@ public sealed class UpdateService
                 message = info.Message;
                 downloadUrl = string.IsNullOrWhiteSpace(info.DownloadUrl.Global)
                     ? info.DownloadUrl.Domestic : info.DownloadUrl.Global;
-                forceUpdate = info.ForceUpdate;
 
                 if (!string.IsNullOrWhiteSpace(info.AvailableAfter)
                     && DateTimeOffset.TryParse(info.AvailableAfter, out var gateTime)
@@ -96,18 +92,17 @@ public sealed class UpdateService
                     ? release.Name ?? $"发现新版本 {release.TagName}"
                     : release.Body;
                 downloadUrl = IsValidReleaseUrl(release.HtmlUrl) ? release.HtmlUrl : ReleasesPageUrl;
-                // GitHub Release 没有强制更新字段；线上 Release 一律按普通更新处理。
-                forceUpdate = false;
             }
 
             LastCheckSucceeded = true;
             if (!ReleaseVersionComparer.IsNewer(remoteVersion, AppInfo.FullVersion)) return;
 
-            _cachedMessage = message;
-            _cachedDownloadUrl = downloadUrl;
-            _cachedForceUpdate = forceUpdate;
+            _cachedUpdate = new LauncherUpdateInfo(
+                remoteVersion,
+                string.IsNullOrWhiteSpace(message) ? "本次发布未提供更新说明。" : message.Trim(),
+                downloadUrl);
             HasPendingUpdate = true;
-            UpdateAvailable?.Invoke(message, downloadUrl, forceUpdate);
+            UpdateAvailable?.Invoke(_cachedUpdate);
         }
         catch (Exception ex)
         {
@@ -118,8 +113,8 @@ public sealed class UpdateService
 
     public void ReplayIfPending()
     {
-        if (HasPendingUpdate && _cachedMessage is not null && _cachedDownloadUrl is not null)
-            UpdateAvailable?.Invoke(_cachedMessage, _cachedDownloadUrl, _cachedForceUpdate);
+        if (HasPendingUpdate && _cachedUpdate is not null)
+            UpdateAvailable?.Invoke(_cachedUpdate);
     }
 
     /// <summary>

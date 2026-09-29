@@ -1,10 +1,10 @@
 {
-  "version": "3.0.0",
-  "releaseDate": "2026-09-27",
-  "availableAfter": "2026-09-27T00:00:00+08:00",
-  "message": "3.0.0 全面升级首页体验：接入多家游戏厂商的动态背景、轮播与资讯，内置 Python Worker，新增可靠缓存、流畅视频切换、三种启动方式、外观分页面调节、托盘运行和游戏时长统计。",
+  "version": "3.1.0",
+  "releaseDate": "2026-09-29",
+  "availableAfter": "2026-09-29T00:00:00+08:00",
+  "message": "3.1.0 更新：改用 Kachina 独立更新器，默认从 CNB 下载并可切换 GitHub；发现新版本时展示新增功能与修复说明，由用户决定是否更新。",
   "downloadUrl": {
-    "domestic": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest",
+    "domestic": "https://cnb.cool/Clearlove0923/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"
   },
   "forceUpdate": false

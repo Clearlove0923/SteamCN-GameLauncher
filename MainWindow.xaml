@@ -39,20 +39,6 @@
         <Border x:Name="SidebarBackdrop" Grid.Row="1" Width="68"
                 HorizontalAlignment="Left" Background="Black" IsHitTestVisible="False"/>
 
-        <!-- 强制更新横幅（forceUpdate=true 时显示，占满整行） -->
-        <InfoBar x:Name="forceUpdateBanner"
-                 Grid.Row="0"
-                 Severity="Error"
-                 Title="必须更新才能继续使用"
-                 IsOpen="False"
-                 IsClosable="False"
-                 Margin="0">
-            <InfoBar.ActionButton>
-                <Button Content="前往下载" Click="BtnForceUpdateDownload_Click"
-                        Style="{StaticResource AccentButtonStyle}"/>
-            </InfoBar.ActionButton>
-        </InfoBar>
-
         <NavigationView x:Name="NavView"
                         Grid.Row="1"
                         Canvas.ZIndex="10"
@@ -166,27 +152,5 @@
             </StackPanel>
         </Button>
 
-        <!-- 强制更新全屏遮罩（锁定整个内容区，不影响标题栏） -->
-        <Grid x:Name="forceUpdateOverlay"
-              Grid.Row="0" Grid.RowSpan="2"
-              Visibility="Collapsed"
-              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-              Opacity="0.97">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="480">
-                <FontIcon Glyph="&#xEA6A;" FontSize="48"
-                          Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
-                <TextBlock Text="需要强制更新" FontSize="22" FontWeight="SemiBold"
-                           HorizontalAlignment="Center"/>
-                <TextBlock x:Name="txtForceUpdateMsg"
-                           FontSize="14" TextWrapping="Wrap" TextAlignment="Center"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                <Button x:Name="btnForceDownloadOverlay"
-                        Content="立即下载新版本"
-                        Style="{StaticResource AccentButtonStyle}"
-                        HorizontalAlignment="Center"
-                        Padding="24,8"
-                        Click="BtnForceUpdateDownload_Click"/>
-            </StackPanel>
-        </Grid>
     </Grid>
 </Window>

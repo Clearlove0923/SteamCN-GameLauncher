@@ -12,5 +12,7 @@
     <Compile Include="../../Models/GitHubReleaseInfo.cs" Link="Models/GitHubReleaseInfo.cs" />
     <Compile Include="../../Services/GitHubReleaseSelector.cs" Link="Services/GitHubReleaseSelector.cs" />
     <Compile Include="../../Services/ReleaseVersionComparer.cs" Link="Services/ReleaseVersionComparer.cs" />
+    <Compile Include="../../Services/Update/UpdateSourcePolicy.cs" Link="Services/Update/UpdateSourcePolicy.cs" />
+    <Compile Include="../../Models/UpdateSourceIds.cs" Link="Models/UpdateSourceIds.cs" />
   </ItemGroup>
 </Project>
