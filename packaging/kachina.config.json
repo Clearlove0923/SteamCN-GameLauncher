@@ -3,7 +3,7 @@
     {
       "id": "cnb",
       "name": "CNB（国内推荐）",
-      "uri": "plugin-github+https://cnb.cool/Clearlove0923/SteamCN-GameLauncher/-/releases/download/v${version}/SteamCN-GameLauncher.Install.${version}.exe#versionRegex=v([0-9]%2B\\.[0-9]%2B\\.[0-9]%2B)&cacheTime=5"
+      "uri": "plugin-github+https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/download/v${version}/SteamCN-GameLauncher.Install.${version}.exe#versionRegex=v([0-9]%2B\\.[0-9]%2B\\.[0-9]%2B)&cacheTime=5"
     },
     {
       "id": "github",

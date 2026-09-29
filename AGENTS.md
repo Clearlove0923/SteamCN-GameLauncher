@@ -190,6 +190,7 @@ v3.0.0 起使用 [Kachina Installer](https://github.com/YuehaiTeam/kachina-insta
 |---|---|---|
 | 更新器文件 | `SteamCN-GameLauncher.update.exe` | `KachinaUpdateService.UpdaterFileName` |
 | Kachina 资源 ID | `Clearlove0923/SteamCN-GameLauncher` | `scripts/Publish-Release.ps1` |
+| CNB 仓库 | `SteamCN-GameLauncher/SteamCN-GameLauncher` | `UpdateSourcePolicy.CnbRepositoryPath` |
 | 默认来源 | `cnb` | `packaging/kachina.config.json` 第一项 |
 | 备用来源 | `github` | 同一配置第二项 |
 | 安装路径 | `%LocalAppData%\Programs\SteamCN-GameLauncher` | Inno Setup `DefaultDirName` |

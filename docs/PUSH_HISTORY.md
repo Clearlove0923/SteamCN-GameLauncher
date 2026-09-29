@@ -2,6 +2,20 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-29 23:36:05 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：GitHub `master_prreview`、`master`；CNB `master_prreview`、`master`
+- 推送提交：`release: 发布 v3.1.1`
+- 实现内容：
+  - 将 CNB 国内更新源修正为已创建的 `SteamCN-GameLauncher/SteamCN-GameLauncher` 仓库，GitHub 继续作为备用更新源；同步修正设置页手动下载地址、Kachina 内置源配置和固定测试。
+  - 版本号统一升级到 `3.1.1`，发布说明仅记录本次更新功能与修复问题；Kachina 稳定资源 ID 保持 `Clearlove0923/SteamCN-GameLauncher` 不变，避免破坏已发布版本的更新兼容性。
+  - 正式发布构建使用 v3.1.0 的 publish 目录作为差分基线，同时生成 v3.1.1 Kachina 更新包和 Inno Setup 安装包。
+- 验证结果：
+  - 主程序按统一 Debug x64 命令构建成功，0 警告、0 错误；更新服务 15 项检查全部通过，覆盖 CNB 默认选择、未知来源回退、GitHub 切换及两个手动下载地址。
+  - 正式 Windows x64 自包含发布、Kachina 差分生成和 Inno Setup 编译成功；生成 `SteamCN-GameLauncher.Install.3.1.1.exe`（SHA-256 `fa2803939c90c019b495387fe0bdb2d4a874217a60eea54616a3a76f81a11eea`）与 `SteamCN-GameLauncher-v3.1.1-win-x64-setup.exe`（SHA-256 `570c75ffda08334bb3960c11b886be033da7cc4e8ede3121bf4901bf2ff7d526`）。
+- 当前限制：应用与安装包尚未进行商业代码签名，Windows SmartScreen 可能在首次运行时提示风险；CNB 与 GitHub 必须保留完全相同的 Kachina 更新包，当前更新器按用户所选单一来源工作，不在同一次进程内自动跨源重试。
+
 ## 2026-09-29 22:05:43 +08:00
 
 - 推送人员：`Violet0923`

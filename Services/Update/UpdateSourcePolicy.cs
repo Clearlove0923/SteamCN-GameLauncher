@@ -9,7 +9,7 @@ public static class UpdateSourcePolicy
         "https://github.com/Clearlove0923/SteamCN-GameLauncher";
 
     // CNB 仓库创建后必须保持此路径；公开 Release 附件无需在客户端携带 Token。
-    public const string CnbRepositoryPath = "Clearlove0923/SteamCN-GameLauncher";
+    public const string CnbRepositoryPath = "SteamCN-GameLauncher/SteamCN-GameLauncher";
     public const string CnbRepositoryUrl = "https://cnb.cool/" + CnbRepositoryPath;
 
     public static string Normalize(string? sourceId) => UpdateSourceIds.Normalize(sourceId);

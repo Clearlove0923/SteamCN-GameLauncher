@@ -48,7 +48,7 @@ Check(UpdateSourcePolicy.Normalize("unknown") == UpdateSourceIds.Cnb,
 Check(UpdateSourcePolicy.Normalize(UpdateSourceIds.GitHub) == UpdateSourceIds.GitHub,
     "GitHub update source remains selectable");
 Check(UpdateSourcePolicy.GetManualDownloadUrl(UpdateSourceIds.Cnb)
-        == "https://cnb.cool/Clearlove0923/SteamCN-GameLauncher/-/releases/latest",
+        == "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "CNB manual fallback opens the configured CNB release page");
 Check(UpdateSourcePolicy.GetManualDownloadUrl(UpdateSourceIds.GitHub)
         == "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest",
