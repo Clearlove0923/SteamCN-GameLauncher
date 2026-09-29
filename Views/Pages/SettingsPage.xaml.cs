@@ -346,27 +346,98 @@ public sealed partial class SettingsPage : Page
 
         try
         {
-            await UpdateService.Instance.CheckUpdateAsync().ConfigureAwait(false);
+            await UpdateService.Instance.CheckUpdateAsync();
         }
         finally
         {
             UpdateService.Instance.UpdateAvailable -= LocalHandler;
         }
 
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            btnCheckUpdate.IsEnabled = true;
-            btnCheckUpdate.Content = "检查更新";
+        btnCheckUpdate.IsEnabled = true;
+        btnCheckUpdate.Content = "检查更新";
 
-            var gateUntil = UpdateService.Instance.PendingGateUntil;
-            txtCheckUpdateStatus.Text = !UpdateService.Instance.LastCheckSucceeded
-                ? "无法连接 GitHub Releases，请检查网络后重试。"
-                : hadUpdate
-                    ? "已发现新版本，请查看上方通知。"
-                : gateUntil is not null
-                    ? $"新版本计划于 {gateUntil.Value.LocalDateTime:yyyy-MM-dd HH:mm} 开放更新，请稍后再试。"
-                    : "当前已是最新版本。";
+        if (!UpdateService.Instance.LastCheckSucceeded)
+        {
+            txtCheckUpdateStatus.Text = "自动检查失败，可选择发布源手动查看。";
+            _logService.AddLog($"[更新] 手动检查失败：{UpdateService.Instance.LastCheckError ?? "未知错误"}");
+            await ShowUpdateCheckFailedDialogAsync();
+            return;
+        }
+
+        var gateUntil = UpdateService.Instance.PendingGateUntil;
+        txtCheckUpdateStatus.Text = hadUpdate
+            ? "已发现新版本，请查看上方通知。"
+            : gateUntil is not null
+                ? $"新版本计划于 {gateUntil.Value.LocalDateTime:yyyy-MM-dd HH:mm} 开放更新，请稍后再试。"
+                : "当前已是最新版本。";
+    }
+
+    private async Task ShowUpdateCheckFailedDialogAsync()
+    {
+        var sourceSelector = new ComboBox
+        {
+            Header = "选择发布源",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        sourceSelector.Items.Add(new ComboBoxItem
+        {
+            Content = UpdateSourcePolicy.GetDisplayName(UpdateSourceIds.Cnb),
+            Tag = UpdateSourceIds.Cnb
         });
+        sourceSelector.Items.Add(new ComboBoxItem
+        {
+            Content = UpdateSourcePolicy.GetDisplayName(UpdateSourceIds.GitHub),
+            Tag = UpdateSourceIds.GitHub
+        });
+        SelectComboTag(sourceSelector, GetSelectedUpdateSource());
+
+        var dialog = new ContentDialog
+        {
+            Title = "无法自动检查更新",
+            Content = new StackPanel
+            {
+                Spacing = 10,
+                MaxWidth = 560,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = "当前无法连接版本检查服务。你可以选择一个发布源，手动确认是否有新版本。",
+                        TextWrapping = TextWrapping.Wrap
+                    },
+                    sourceSelector,
+                    new TextBlock
+                    {
+                        Text = "这不会自动下载安装；关闭弹窗后也可以稍后重试。",
+                        TextWrapping = TextWrapping.Wrap,
+                        Opacity = 0.72
+                    }
+                }
+            },
+            PrimaryButtonText = "打开发布页",
+            CloseButtonText = "稍后",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        if (sourceSelector.SelectedItem is not ComboBoxItem item || item.Tag is not string sourceId) return;
+
+        sourceId = UpdateSourcePolicy.Normalize(sourceId);
+        SetUpdateSourceSelection(sourceId);
+        _settings.UpdateSourceId = sourceId;
+        SaveSettings();
+
+        try
+        {
+            await Windows.System.Launcher.LaunchUriAsync(
+                new Uri(UpdateSourcePolicy.GetManualDownloadUrl(sourceId)));
+        }
+        catch (Exception ex)
+        {
+            txtCheckUpdateStatus.Text = "无法打开发布页，请稍后重试。";
+            _logService.AddLog($"[更新] 无法打开 {UpdateSourcePolicy.GetDisplayName(sourceId)} 发布页：{ex.Message}");
+        }
     }
 
     // ── 立即下载 ──────────────────────────────────────────────────────────────

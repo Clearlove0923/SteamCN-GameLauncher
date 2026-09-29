@@ -211,7 +211,49 @@
                         </StackPanel>
                     </Border>
 
-                    <NavigationViewItemSeparator/>
+                </StackPanel>
+            </Border>
+
+            <!-- 语言设置（预留） -->
+            <Border Background="{StaticResource AppearanceCardBackground}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="16">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="语言 / Language" FontSize="16" FontWeight="SemiBold"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="界面语言" FontSize="14" FontWeight="Medium"/>
+                            <TextBlock Text="更改后需要重启应用才能生效（功能开发中）"
+                                       FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                        <ComboBox x:Name="cmbLanguage"
+                                  Grid.Column="1"
+                                  MinWidth="160"
+                                  IsEnabled="False"
+                                  SelectionChanged="Language_SelectionChanged">
+                            <ComboBoxItem Tag="zh-CN" Content="简体中文" IsSelected="True"/>
+                            <ComboBoxItem Tag="en-US" Content="English"/>
+                        </ComboBox>
+                    </Grid>
+                    <InfoBar x:Name="languageInfoBar"
+                             Severity="Informational"
+                             Title="多语言支持正在开发中"
+                             Message="目前仅支持简体中文，其他语言选项将在后续版本中推出。"
+                             IsOpen="True"
+                             IsClosable="False"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 软件更新 -->
+            <Border Background="{StaticResource AppearanceCardBackground}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="16">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="软件更新" FontSize="16" FontWeight="SemiBold"/>
 
                     <!-- 更新下载源 -->
                     <Grid>
@@ -251,40 +293,28 @@
                                       OffContent="" OnContent=""
                                       Toggled="BetaChannel_Toggled"/>
                     </Grid>
-                </StackPanel>
-            </Border>
 
-            <!-- 语言设置（预留） -->
-            <Border Background="{StaticResource AppearanceCardBackground}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="语言 / Language" FontSize="16" FontWeight="SemiBold"/>
+                    <NavigationViewItemSeparator/>
+
+                    <!-- 手动检查更新 -->
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="界面语言" FontSize="14" FontWeight="Medium"/>
-                            <TextBlock Text="更改后需要重启应用才能生效（功能开发中）"
-                                       FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="检查更新" FontSize="14" FontWeight="Medium"/>
+                            <TextBlock x:Name="txtCheckUpdateStatus"
+                                       Text="检查是否有新版本可用"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
-                        <ComboBox x:Name="cmbLanguage"
-                                  Grid.Column="1"
-                                  MinWidth="160"
-                                  IsEnabled="False"
-                                  SelectionChanged="Language_SelectionChanged">
-                            <ComboBoxItem Tag="zh-CN" Content="简体中文" IsSelected="True"/>
-                            <ComboBoxItem Tag="en-US" Content="English"/>
-                        </ComboBox>
+                        <Button x:Name="btnCheckUpdate"
+                                Grid.Column="1"
+                                Content="检查更新"
+                                VerticalAlignment="Center"
+                                Click="BtnCheckUpdate_Click"/>
                     </Grid>
-                    <InfoBar x:Name="languageInfoBar"
-                             Severity="Informational"
-                             Title="多语言支持正在开发中"
-                             Message="目前仅支持简体中文，其他语言选项将在后续版本中推出。"
-                             IsOpen="True"
-                             IsClosable="False"/>
                 </StackPanel>
             </Border>
 
@@ -314,28 +344,6 @@
                             <TextBlock x:Name="txtCopyright" FontSize="12"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
-                    </Grid>
-
-                    <NavigationViewItemSeparator/>
-
-                    <!-- 手动检查更新 -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="检查更新" FontSize="14" FontWeight="Medium"/>
-                            <TextBlock x:Name="txtCheckUpdateStatus"
-                                       Text="检查是否有新版本可用"
-                                       FontSize="12"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        </StackPanel>
-                        <Button x:Name="btnCheckUpdate"
-                                Grid.Column="1"
-                                Content="检查更新"
-                                VerticalAlignment="Center"
-                                Click="BtnCheckUpdate_Click"/>
                     </Grid>
 
                     <NavigationViewItemSeparator/>

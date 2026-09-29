@@ -1,8 +1,8 @@
 {
-  "version": "3.1.1",
-  "releaseDate": "2026-09-29",
-  "availableAfter": "2026-09-29T00:00:00+08:00",
-  "message": "3.1.1 更新：修正 CNB 更新仓库地址，保留 GitHub 备用源和非强制更新提示。",
+  "version": "3.1.2",
+  "releaseDate": "2026-09-30",
+  "availableAfter": "2026-09-30T00:00:00+08:00",
+  "message": "3.1.2 更新：更新设置集中展示，检查失败时可选择 CNB 或 GitHub 发布页。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"

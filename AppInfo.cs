@@ -7,12 +7,12 @@ namespace SteamCNGameLauncher;
 public static class AppInfo
 {
     /// <summary>SemVer 版本号，如 3.0.0（不带 v 前缀，供 Kachina/GitHub Release 直接解析）</summary>
-    public const string Version = "3.1.1";
+    public const string Version = "3.1.2";
 
     /// <summary>发布渠道/阶段，如 Alpha 1 Test、Beta、Release</summary>
     public const string Channel = "Release";
 
-    /// <summary>完整版本字符串，用于界面显示，如 "v3.1.1 (Release)"</summary>
+    /// <summary>完整版本字符串，用于界面显示，如 "v3.1.2 (Release)"</summary>
     public const string FullVersion = $"v{Version} ({Channel})";
 
     /// <summary>窗口标题</summary>
