@@ -9,6 +9,10 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../AppInfo.cs" Link="AppInfo.cs" />
+    <Compile Include="../../Models/LauncherUpdateInfo.cs" Link="Models/LauncherUpdateInfo.cs" />
+    <Compile Include="../../Services/Update/CnbReleasePageParser.cs" Link="Services/Update/CnbReleasePageParser.cs" />
+    <Compile Include="../../Services/Update/KachinaSessionPackage.cs" Link="Services/Update/KachinaSessionPackage.cs" />
     <Compile Include="../../Models/GitHubReleaseInfo.cs" Link="Models/GitHubReleaseInfo.cs" />
     <Compile Include="../../Services/GitHubReleaseSelector.cs" Link="Services/GitHubReleaseSelector.cs" />
     <Compile Include="../../Services/ReleaseVersionComparer.cs" Link="Services/ReleaseVersionComparer.cs" />

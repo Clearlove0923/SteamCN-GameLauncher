@@ -335,132 +335,27 @@ public sealed partial class SettingsPage : Page
 
     private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
     {
-        await ShowUpdateSourceChoiceDialogAsync();
-    }
-
-    private async Task ShowUpdateSourceChoiceDialogAsync()
-    {
-        var dialog = new ContentDialog
+        if (sender is not Button button || !button.IsEnabled) return;
+        button.IsEnabled = false;
+        txtCheckUpdateStatus.Text = "正在检查更新……";
+        var sourceId = GetSelectedUpdateSource();
+        try
         {
-            Title = $"检查更新  {AppInfo.FullVersion}",
-            PrimaryButtonText = "手动下载",
-            CloseButtonText = "取消",
-            DefaultButton = ContentDialogButton.None,
-            XamlRoot = XamlRoot
-        };
-
-        var sourcePanel = new StackPanel
-        {
-            Spacing = 10,
-            MinWidth = 520,
-            MaxWidth = 620
-        };
-        sourcePanel.Children.Add(new TextBlock
-        {
-            Text = "选择一个发布源检查新版本。更新只会在你确认后下载和安装。",
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 4)
-        });
-
-        sourcePanel.Children.Add(CreateUpdateSourceOption(
-            dialog,
-            UpdateSourceIds.Cnb,
-            "CNB 更新服务",
-            "国内推荐，连接速度通常更稳定",
-            useAccentButton: true));
-        sourcePanel.Children.Add(CreateUpdateSourceOption(
-            dialog,
-            UpdateSourceIds.GitHub,
-            "GitHub 更新服务",
-            "备用来源；访问受限时建议改用 CNB",
-            useAccentButton: false));
-
-        sourcePanel.Children.Add(new TextBlock
-        {
-            Text = $"手动下载将打开当前首选来源：{UpdateSourcePolicy.GetDisplayName(GetSelectedUpdateSource())}",
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.68,
-            FontSize = 12,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
-        dialog.Content = sourcePanel;
-
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            await OpenManualUpdatePageAsync(GetSelectedUpdateSource());
-    }
-
-    private Border CreateUpdateSourceOption(
-        ContentDialog dialog,
-        string sourceId,
-        string title,
-        string description,
-        bool useAccentButton)
-    {
-        var actionButton = new Button
-        {
-            Content = "立即检查",
-            MinWidth = 112,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        if (useAccentButton)
-        {
-            actionButton.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Windows.UI.Color.FromArgb(255, 0, 120, 212));
-            actionButton.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Windows.UI.Color.FromArgb(255, 255, 255, 255));
-        }
-
-        actionButton.Click += async (_, _) =>
-        {
-            actionButton.IsEnabled = false;
-            dialog.Hide();
-            await Task.Yield();
-            await SelectSourceAndStartUpdaterAsync(sourceId);
-        };
-
-        var content = new Grid { ColumnSpacing = 16 };
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        content.Children.Add(new StackPanel
-        {
-            Spacing = 3,
-            Children =
+            var update = await UpdateService.Instance.GetLatestUpdateAsync(sourceId, _settings.BetaChannel);
+            if (!ReleaseVersionComparer.IsNewer(update.Version, AppInfo.FullVersion))
             {
-                new TextBlock { Text = title, FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
-                new TextBlock
-                {
-                    Text = description,
-                    TextWrapping = TextWrapping.Wrap,
-                    Opacity = 0.72,
-                    FontSize = 12
-                }
+                txtCheckUpdateStatus.Text = "未发现新版本";
+                return;
             }
-        });
-        Grid.SetColumn(actionButton, 1);
-        content.Children.Add(actionButton);
-
-        return new Border
+            txtCheckUpdateStatus.Text = $"发现新版本 {update.Version}";
+            await StartUpdaterOrOfferManualDownloadAsync(sourceId, update);
+        }
+        catch (Exception ex)
         {
-            Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AppearanceCardBackground"],
-            BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Windows.UI.Color.FromArgb(64, 128, 128, 128)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(14),
-            Child = content
-        };
-    }
-
-    private async Task SelectSourceAndStartUpdaterAsync(string sourceId)
-    {
-        sourceId = UpdateSourcePolicy.Normalize(sourceId);
-        SetUpdateSourceSelection(sourceId);
-        _settings.UpdateSourceId = sourceId;
-        SaveSettings();
-        txtCheckUpdateStatus.Text = $"已选择 {UpdateSourcePolicy.GetDisplayName(sourceId)} 检查更新。";
-
-        await StartUpdaterOrOfferManualDownloadAsync(sourceId);
+            txtCheckUpdateStatus.Text = $"无法连接 {UpdateSourcePolicy.GetDisplayName(sourceId)}，请稍后重试或切换更新源。";
+            _logService.AddLog($"[更新] 手动检查失败：{ex.GetType().Name}: {ex.Message}");
+        }
+        finally { button.IsEnabled = true; }
     }
 
     private async Task OpenManualUpdatePageAsync(string sourceId)
@@ -484,13 +379,10 @@ public sealed partial class SettingsPage : Page
         await StartUpdaterOrOfferManualDownloadAsync(GetSelectedUpdateSource());
     }
 
-    private async Task StartUpdaterOrOfferManualDownloadAsync(string sourceId)
+    private async Task StartUpdaterOrOfferManualDownloadAsync(string sourceId, LauncherUpdateInfo? update = null)
     {
-        if (KachinaUpdateService.Instance.TryStart(sourceId, out var error))
-        {
-            (App.MainWindow as MainWindow)?.ExitForUpdate();
-            return;
-        }
+        var error = await KachinaUpdateService.Instance.ShowAsync(sourceId, update);
+        if (error is null) return;
 
         _logService.AddLog($"[更新] 将回退到手动下载：{error}");
         var manualUrl = UpdateSourcePolicy.GetManualDownloadUrl(sourceId);

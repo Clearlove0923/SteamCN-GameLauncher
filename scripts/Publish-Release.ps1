@@ -99,8 +99,12 @@ if (-not (Test-Path -LiteralPath $KachinaBuilder)) {
 }
 
 $kachinaConfig = Join-Path $repoRoot 'packaging\kachina.config.json'
+$kachinaTheme = Join-Path $runRoot 'kachina-theme.css'
+$themeTemplate = Get-Content -LiteralPath (Join-Path $repoRoot 'packaging\kachina-theme.css') -Raw
+$appImage = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $repoRoot 'Assets\Icons\character-cutout.png')))
+[IO.File]::WriteAllText($kachinaTheme, $themeTemplate.Replace('__APP_IMAGE_BASE64__', $appImage), [Text.UTF8Encoding]::new($false))
 $kachinaUpdater = Join-Path $publishDir 'SteamCN-GameLauncher.update.exe'
-& $KachinaBuilder pack -c $kachinaConfig -o $kachinaUpdater `
+& $KachinaBuilder pack -c $kachinaConfig -t $kachinaTheme -o $kachinaUpdater `
     --icon (Join-Path $repoRoot 'Assets\Icons\SteamCN-GameLauncher.ico')
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaUpdater)) {
     throw "Kachina updater build failed: $LASTEXITCODE"
@@ -130,7 +134,8 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaMetadata)) {
 }
 
 $kachinaInstaller = Join-Path $runRoot "SteamCN-GameLauncher.Install.$version.exe"
-& $KachinaBuilder pack -c $kachinaConfig -m $kachinaMetadata -d $kachinaHashed -o $kachinaInstaller
+& $KachinaBuilder pack -c $kachinaConfig -t $kachinaTheme -m $kachinaMetadata -d $kachinaHashed -o $kachinaInstaller `
+    --icon (Join-Path $repoRoot 'Assets\Icons\SteamCN-GameLauncher.ico')
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaInstaller)) {
     throw "Kachina online package build failed: $LASTEXITCODE"
 }

@@ -108,54 +108,14 @@ public sealed partial class MainWindow : Window
             btnUpdateBadge.Visibility = Visibility.Visible;
             if (_updatePromptShown) return;
             _updatePromptShown = true;
-
-            try
+            // 与手动检查共用 Kachina 窗口；此时不退出应用，也不自动下载安装。
+            var sourceId = update.SourceId ?? new SettingsService().Load().UpdateSourceId;
+            var error = await Services.Update.KachinaUpdateService.Instance.ShowAsync(sourceId, update);
+            if (error is not null)
             {
-                var dialog = new ContentDialog
-                {
-                    Title = $"发现新版本 {update.Version}",
-                    Content = new StackPanel
-                    {
-                        Spacing = 10,
-                        MaxWidth = 560,
-                        Children =
-                        {
-                            new TextBlock
-                            {
-                                Text = "本次更新内容",
-                                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
-                            },
-                            new ScrollViewer
-                            {
-                                MaxHeight = 360,
-                                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                                Content = new TextBlock
-                                {
-                                    Text = update.ReleaseNotes,
-                                    TextWrapping = TextWrapping.Wrap,
-                                    IsTextSelectionEnabled = true
-                                }
-                            },
-                            new TextBlock
-                            {
-                                Text = "更新不会自动安装，你可以现在前往设置更新，或稍后处理。",
-                                TextWrapping = TextWrapping.Wrap,
-                                Opacity = 0.72
-                            }
-                        }
-                    },
-                    PrimaryButtonText = "查看更新",
-                    CloseButtonText = "稍后",
-                    DefaultButton = ContentDialogButton.Primary,
-                    XamlRoot = ((FrameworkElement)Content).XamlRoot
-                };
-                if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-                    NavigateToSettings();
-            }
-            catch (Exception ex)
-            {
-                // 若启动期恰有其他 ContentDialog，保留角标供用户稍后进入设置。
-                LogService.Instance.AddLog($"[更新] 无法显示版本提示弹窗：{ex.GetType().Name}: {ex.Message}");
+                _updatePromptShown = false;
+                LogService.Instance.AddLog($"[更新] 无法打开更新窗口：{error}");
+                // 启动期不叠加错误弹窗，保留设置页角标供用户重试。
             }
         });
     }

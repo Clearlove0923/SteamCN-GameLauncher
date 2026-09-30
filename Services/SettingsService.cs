@@ -13,7 +13,17 @@ public class SettingsService
         "settings.json");
     private readonly string _settingsPath;
 
-    public SettingsService() : this(DefaultSettingsPath) { }
+    public SettingsService() : this(GetDefaultSettingsPath()) { }
+
+    private static string GetDefaultSettingsPath()
+    {
+#if DEBUG
+        // UI 回归只读写独立测试配置；Release 不接受此环境覆盖。
+        var testPath = Environment.GetEnvironmentVariable("STEAMCN_TEST_SETTINGS_PATH");
+        if (!string.IsNullOrWhiteSpace(testPath) && Path.IsPathFullyQualified(testPath)) return testPath;
+#endif
+        return DefaultSettingsPath;
+    }
 
     internal SettingsService(string settingsPath)
     {

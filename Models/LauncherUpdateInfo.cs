@@ -4,4 +4,5 @@ namespace SteamCNGameLauncher.Models;
 public sealed record LauncherUpdateInfo(
     string Version,
     string ReleaseNotes,
-    string DownloadUrl);
+    string DownloadUrl,
+    string? SourceId = null);

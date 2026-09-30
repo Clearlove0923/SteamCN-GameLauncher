@@ -1,0 +1,67 @@
+/* SteamCN update window. Built-in Kachina states remain responsible for progress and launch. */
+.image {
+  background: url("data:image/png;base64,__APP_IMAGE_BASE64__") center center / contain no-repeat;
+  height: 100vh;
+}
+.content {
+  height: 100vh;
+  min-height: 0 !important;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.right {
+  height: 100vh;
+  min-height: 0;
+  padding: 12px 8px 64px 12px !important;
+}
+.title {
+  font-size: 21px !important;
+  line-height: 1.35;
+  flex-shrink: 0;
+}
+.desc {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  max-height: 76px;
+  min-height: 0;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  line-height: 1.5;
+  user-select: text;
+}
+/* Kachina's .main is draggable. Scrollable content must explicitly opt out
+   so WebView receives wheel, selection and scrollbar-drag mouse events. */
+.desc,
+.more {
+  -webkit-app-region: no-drag !important;
+  app-region: no-drag !important;
+  pointer-events: auto;
+}
+.actions {
+  padding-top: 4px !important;
+  min-height: 0;
+}
+.more {
+  padding-top: 4px !important;
+  gap: 4px !important;
+  min-height: 0;
+  max-height: 54px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.btn-install {
+  bottom: 12px !important;
+  right: 8px !important;
+  z-index: 2;
+}
+.right:has(.progress) > .desc,
+.right:has(.finish) > .desc {
+  display: none;
+}
+.finish-text {
+  padding: 24px 8px !important;
+}
+.progress-bar {
+  height: 6px !important;
+}

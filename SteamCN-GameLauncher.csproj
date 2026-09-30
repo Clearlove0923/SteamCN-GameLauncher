@@ -12,7 +12,7 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
     <Nullable>enable</Nullable>
-    <Version>3.1.2</Version>
+    <Version>3.1.3</Version>
     <Product>Steam国服游戏启动器</Product>
     <AssemblyTitle>Steam国服游戏启动器</AssemblyTitle>
     <Description>在 Steam 库中添加和管理国服游戏的启动配置</Description>

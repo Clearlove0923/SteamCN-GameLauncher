@@ -22,4 +22,17 @@ public static class UpdateSourcePolicy
             ? CnbRepositoryUrl + "/-/releases/latest"
             : GitHubRepositoryUrl + "/releases/latest";
 
+    public static string GetPackageUrl(string? sourceId, string tag)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(tag,
+                @"^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$", System.Text.RegularExpressions.RegexOptions.None,
+                TimeSpan.FromSeconds(1)))
+            throw new InvalidDataException("发布版本号格式无效。");
+        var version = tag.TrimStart('v');
+        var prefix = Normalize(sourceId) == UpdateSourceIds.Cnb
+            ? CnbRepositoryUrl + "/-/releases/download/"
+            : GitHubRepositoryUrl + "/releases/download/";
+        return prefix + Uri.EscapeDataString(tag) + "/SteamCN-GameLauncher.Install." + version + ".exe";
+    }
+
 }
