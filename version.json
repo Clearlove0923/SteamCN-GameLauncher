@@ -1,8 +1,8 @@
 {
-  "version": "3.1.3",
+  "version": "3.1.4",
   "releaseDate": "2026-09-30",
   "availableAfter": "2026-09-30T00:00:00+08:00",
-  "message": "3.1.3 更新：CNB/GitHub 双源检查，共用可切换来源、展示下载与安装进度的更新窗口。",
+  "message": "3.1.4 更新：修复鸣潮 3.7 首页动画黑屏与原生崩溃，新增 10-bit H.264 的 60fps 兼容转码。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"

@@ -174,20 +174,44 @@ public sealed partial class MainWindow
         }
 
         var originalPath = videoUri.IsFile ? videoUri.LocalPath : null;
-        if (!UseOriginalHomeVideoForDiagnostics && originalPath is not null
-            && HomeVideoOptimizationService.Instance.FindOptimized(originalPath) is { } optimized)
-            videoUri = new Uri(optimized);
-
         // 远程 URL 充当动画稳定身份：下载完成后地址从 HTTPS 变为本地文件，
         // 不能因此重新启动同一段动画；优化版 MP4 可以更换同一播放器的媒体源。
         var key = state.Background?.VideoUrl ?? videoUri.AbsoluteUri;
+        if (!videoUri.IsFile)
+        {
+            // 媒体缓存完成前只显示当前版本海报。远程 MP4 尚未经过兼容性检测，
+            // 直接交给 Media Foundation 可能在原生解码/合成层导致整个进程崩溃。
+            StopHomeBackdropVideo();
+            ShowHomeBackdropImage(state.Background);
+            HomeBackdropBlack.Visibility = HomeBackdropImage.Visibility == Visibility.Visible
+                ? Visibility.Visible : Visibility.Collapsed;
+            ApplyAppearance();
+            return;
+        }
+
+        if (!UseOriginalHomeVideoForDiagnostics && originalPath is not null)
+        {
+            if (HomeVideoOptimizationService.Instance.FindOptimized(originalPath) is { } optimized)
+            {
+                videoUri = new Uri(optimized);
+            }
+            else if (Path.GetExtension(originalPath).Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+                && !HomeVideoOptimizationService.Instance.IsKnownCompatibleMp4(originalPath))
+            {
+                PrepareHomeMp4Async(originalPath, key);
+                ApplyAppearance();
+                return;
+            }
+        }
+
         var source = videoUri.IsFile ? videoUri.LocalPath : videoUri.AbsoluteUri;
         if ((_activeVideoSlot >= 0 && _videoKeys[_activeVideoSlot] == key && _videoSources[_activeVideoSlot] == source)
             || (_pendingVideoSlot >= 0 && _videoKeys[_pendingVideoSlot] == key && _videoSources[_pendingVideoSlot] == source))
         {
             if (_pendingVideoSlot < 0 && _activeVideoSlot >= 0 && !_homeMediaSuspendedForTray)
                 _videoPlayers[_activeVideoSlot]?.Play();
-            if (!UseOriginalHomeVideoForDiagnostics && originalPath is not null)
+            if (!UseOriginalHomeVideoForDiagnostics && originalPath is not null
+                && Path.GetExtension(originalPath).Equals(".webm", StringComparison.OrdinalIgnoreCase))
                 StartVideoOptimization(originalPath, key);
             ApplyAppearance();
             return;
@@ -195,9 +219,51 @@ public sealed partial class MainWindow
         if (_activeVideoSlot < 0) ShowHomeVideoCover(state.Background);
         else HideHomeVideoCover();
         StageHomeVideo(videoUri, key);
-        if (!UseOriginalHomeVideoForDiagnostics && originalPath is not null)
+        if (!UseOriginalHomeVideoForDiagnostics && originalPath is not null
+            && Path.GetExtension(originalPath).Equals(".webm", StringComparison.OrdinalIgnoreCase))
             StartVideoOptimization(originalPath, key);
         ApplyAppearance();
+    }
+
+    private async void PrepareHomeMp4Async(string source, string key)
+    {
+        if (_videoOptimizationCancellation is { IsCancellationRequested: false }
+            && _optimizingSource == source && _optimizingKey == key) return;
+        _videoOptimizationCancellation?.Cancel();
+        _videoOptimizationCancellation?.Dispose();
+        var cancellation = new CancellationTokenSource();
+        _videoOptimizationCancellation = cancellation;
+        _optimizingSource = source;
+        _optimizingKey = key;
+
+        // 海报覆盖在视频层之上；先显示海报再释放旧播放器，避免两个媒体表面交叠。
+        ShowHomeVideoCover(_homeBackdropState.Background);
+        StopHomeBackdropVideo(cancelOptimization: false, hideCover: false);
+        try
+        {
+            var optimized = await HomeVideoOptimizationService.Instance.OptimizeAsync(source, cancellation.Token);
+            if (cancellation.IsCancellationRequested || _closingHomeMedia) return;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (cancellation.IsCancellationRequested || _closingHomeMedia || !_homeBackdropState.IsActive
+                    || _homeBackdropState.Background?.VideoUrl != key) return;
+                var playable = optimized ?? source;
+                if (optimized is not null)
+                    LogService.Instance.AddLog("[首页背景] 兼容动画已生成，正在启动播放器");
+                StageHomeVideo(new Uri(playable), key);
+            });
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            if (ReferenceEquals(_videoOptimizationCancellation, cancellation))
+            {
+                _videoOptimizationCancellation = null;
+                _optimizingSource = "";
+                _optimizingKey = "";
+                cancellation.Dispose();
+            }
+        }
     }
 
     private async void StartVideoOptimization(string source, string key)
@@ -215,13 +281,22 @@ public sealed partial class MainWindow
         try
         {
             var optimized = await HomeVideoOptimizationService.Instance.OptimizeAsync(source, cancellation.Token);
-            if (optimized is null || cancellation.IsCancellationRequested || _closingHomeMedia) return;
+            if (cancellation.IsCancellationRequested || _closingHomeMedia) return;
+            if (optimized is null) return;
             DispatcherQueue.TryEnqueue(() =>
             {
                 // 转换在后台完成，回到 UI 线程后再次核对游戏身份，防止旧游戏动画覆盖新游戏。
                 if (cancellation.IsCancellationRequested || _closingHomeMedia || !_homeBackdropState.IsActive) return;
                 var slot = _pendingVideoSlot >= 0 ? _pendingVideoSlot : _activeVideoSlot;
-                if (slot < 0 || _videoKeys[slot] != key || _videoSources[slot] == optimized) return;
+                if (slot >= 0)
+                {
+                    if (_videoKeys[slot] != key || _videoSources[slot] == optimized) return;
+                }
+                else if (_homeBackdropState.Background?.VideoUrl != key)
+                {
+                    return;
+                }
+                LogService.Instance.AddLog("[首页背景] 已生成兼容动画副本，正在切换播放器");
                 if (_activeVideoSlot < 0) ShowHomeVideoCover(_homeBackdropState.Background);
                 StageHomeVideo(new Uri(optimized), key);
             });
@@ -321,6 +396,8 @@ public sealed partial class MainWindow
                 var message = args.ErrorMessage;
                 DispatcherQueue.TryEnqueue(() => OnHomeVideoFailed(player, slot, request, message));
             };
+            player.MediaEnded += (_, _) => DispatcherQueue.TryEnqueue(() =>
+                OnHomeVideoFailed(player, slot, request, "动画意外结束，未能继续循环播放。"));
             var element = _videoElements[slot];
             // 新视频始终以完全不透明方式渲染；旧静帧盖在它上方。
             // 避免对正在解码的视频表面执行逐帧透明度动画。
@@ -417,19 +494,27 @@ public sealed partial class MainWindow
 
     private void OnHomeVideoFailed(MediaPlayer player, int slot, int request, string message)
     {
-        if (_closingHomeMedia || request != _videoRequest || _pendingVideoSlot != slot
+        if (_closingHomeMedia || request != _videoRequest
             || !ReferenceEquals(_videoPlayers[slot], player)) return;
-        var sameGame = _activeVideoSlot >= 0 && _videoKeys[_activeVideoSlot] == _videoKeys[slot];
-        CancelPendingVideo();
+        var isPending = _pendingVideoSlot == slot;
+        var isActive = _activeVideoSlot == slot;
+        if (!isPending && !isActive) return;
+        var sameGame = isPending && _activeVideoSlot >= 0
+            && _videoKeys[_activeVideoSlot] == _videoKeys[slot];
+        if (isPending) CancelPendingVideo();
         if (sameGame && _activeVideoSlot >= 0 && !_homeMediaSuspendedForTray)
+        {
             _videoPlayers[_activeVideoSlot]?.Play();
+        }
         else
         {
-            // 不让另一个游戏的静帧无限停留；新动画不可用时执行静态/外观回退。
-            StopHomeBackdropVideo();
+            // 新动画在 MediaOpened/展示之后仍可能因编码不兼容而失败；无论失败发生在
+            // 预热还是已显示阶段，都不能把黑色视频表面永久留在窗口上。
+            StopHomeBackdropVideo(cancelOptimization: false);
             ShowHomeBackdropImage(_homeBackdropState.Background);
             HomeBackdropBlack.Visibility = HomeBackdropImage.Visibility == Visibility.Visible
                 ? Visibility.Visible : Visibility.Collapsed;
+            ApplyAppearance();
         }
         LogService.Instance.AddLog($"[首页背景] 动画播放失败，已使用可用背景：{message}");
     }
@@ -503,13 +588,16 @@ public sealed partial class MainWindow
         return extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
     }
 
-    private void StopHomeBackdropVideo()
+    private void StopHomeBackdropVideo(bool cancelOptimization = true, bool hideCover = true)
     {
-        _videoOptimizationCancellation?.Cancel();
-        _videoOptimizationCancellation?.Dispose();
-        _videoOptimizationCancellation = null;
-        _optimizingSource = "";
-        _optimizingKey = "";
+        if (cancelOptimization)
+        {
+            _videoOptimizationCancellation?.Cancel();
+            _videoOptimizationCancellation?.Dispose();
+            _videoOptimizationCancellation = null;
+            _optimizingSource = "";
+            _optimizingKey = "";
+        }
         CancelPendingVideo();
         FinishVideoTransition();
         if (_activeVideoSlot >= 0)
@@ -517,7 +605,7 @@ public sealed partial class MainWindow
             DisposeVideoSlot(_activeVideoSlot);
             _activeVideoSlot = -1;
         }
-        HideHomeVideoCover();
+        if (hideCover) HideHomeVideoCover();
     }
 
     private void StopHomeBackdrop()
