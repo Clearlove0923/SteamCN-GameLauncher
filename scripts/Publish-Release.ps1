@@ -133,7 +133,7 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaMetadata)) {
     throw "Kachina metadata build failed: $LASTEXITCODE"
 }
 
-$kachinaInstaller = Join-Path $runRoot "SteamCN-GameLauncher.Install.$version.exe"
+$kachinaInstaller = Join-Path $runRoot "SteamCN-GameLauncher.Update.$version.exe"
 & $KachinaBuilder pack -c $kachinaConfig -t $kachinaTheme -m $kachinaMetadata -d $kachinaHashed -o $kachinaInstaller `
     --icon (Join-Path $repoRoot 'Assets\Icons\SteamCN-GameLauncher.ico')
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $kachinaInstaller)) {

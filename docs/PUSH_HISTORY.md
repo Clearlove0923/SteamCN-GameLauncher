@@ -2,6 +2,19 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-30 09:42:27 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：GitHub `master_prreview`、`master`；CNB `master_prreview`、`master`
+- 推送提交：`release: 区分 v3.1.3 自动更新包`
+- 实现内容：
+  - 将 Kachina 自动更新数据包由容易被误认为安装器的 `SteamCN-GameLauncher.Install.<version>.exe` 更名为 `SteamCN-GameLauncher.Update.<version>.exe`；首次安装仍使用带 `setup` 标识的 Inno Setup 安装包。
+  - 同步更新 CNB/GitHub 下载地址、Kachina 多来源配置、发布脚本、固定检查预期和发布规范，确保自动发现、用户选择来源及后续下载均使用新名称。
+- 验证结果：
+  - 按用户要求未追加运行测试；此前 v3.1.3 更新功能的 32 项固定检查、Debug x64 构建及人工 UI 验证结果保持有效。
+  - 正式 Windows x64 自包含发布、Kachina 差分打包和 Inno Setup 编译成功；生成 `SteamCN-GameLauncher.Update.3.1.3.exe`（183085205 字节，SHA-256 `7ca137c900644cbd873d15c12562e3ca1bf040defb3475be1484a92a5b2a4c4f`）与 `SteamCN-GameLauncher-v3.1.3-win-x64-setup.exe`（139645042 字节，SHA-256 `48baf2c7ddf52a6ae39fdb8e1304c79835daf3504c7851a0a104c819635d9521`）。
+- 当前限制：应用与安装包尚未商业代码签名，Windows SmartScreen 可能在首次运行时提示风险；官网本地仓库当前不可用，官网下载配置未能在本次发布中同步。
+
 ## 2026-09-30 09:28:36 +08:00
 
 - 推送人员：`Violet0923`

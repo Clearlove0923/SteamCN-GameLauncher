@@ -67,10 +67,10 @@ Check(UpdateSourcePolicy.GetManualDownloadUrl(UpdateSourceIds.GitHub)
     "GitHub manual fallback opens the configured GitHub release page");
 
 Check(UpdateSourcePolicy.GetPackageUrl("cnb", "v3.1.2") ==
-    "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/download/v3.1.2/SteamCN-GameLauncher.Install.3.1.2.exe",
+    "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/download/v3.1.2/SteamCN-GameLauncher.Update.3.1.2.exe",
     "CNB package is anonymous HTTPS and pinned to the displayed tag");
 Check(UpdateSourcePolicy.GetPackageUrl("github", "v3.2.0-beta.1").EndsWith(
-    "/v3.2.0-beta.1/SteamCN-GameLauncher.Install.3.2.0-beta.1.exe"), "prerelease package keeps its complete tag");
+    "/v3.2.0-beta.1/SteamCN-GameLauncher.Update.3.2.0-beta.1.exe"), "prerelease package keeps its complete tag");
 foreach (var invalid in new[] { "../../evil", "https://evil.test", "v3.1.2/evil", "v3.1.2?token=x" })
 {
     try { UpdateSourcePolicy.GetPackageUrl("cnb", invalid); throw new Exception("accepted unsafe tag"); }

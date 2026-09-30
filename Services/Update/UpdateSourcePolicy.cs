@@ -32,7 +32,7 @@ public static class UpdateSourcePolicy
         var prefix = Normalize(sourceId) == UpdateSourceIds.Cnb
             ? CnbRepositoryUrl + "/-/releases/download/"
             : GitHubRepositoryUrl + "/releases/download/";
-        return prefix + Uri.EscapeDataString(tag) + "/SteamCN-GameLauncher.Install." + version + ".exe";
+        return prefix + Uri.EscapeDataString(tag) + "/SteamCN-GameLauncher.Update." + version + ".exe";
     }
 
 }
