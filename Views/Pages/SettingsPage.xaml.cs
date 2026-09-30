@@ -381,7 +381,7 @@ public sealed partial class SettingsPage : Page
 
     private async Task StartUpdaterOrOfferManualDownloadAsync(string sourceId, LauncherUpdateInfo? update = null)
     {
-        var error = await KachinaUpdateService.Instance.ShowAsync(sourceId, update);
+        var error = await KachinaUpdateUi.ShowAsync(XamlRoot, sourceId, update);
         if (error is null) return;
 
         _logService.AddLog($"[更新] 将回退到手动下载：{error}");

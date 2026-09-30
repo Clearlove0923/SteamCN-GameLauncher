@@ -22,11 +22,17 @@ public sealed class KachinaUpdateService
     private Process? _activeProcess;
     private readonly SemaphoreSlim _launchLock = new(1, 1);
 
-    public async Task<string?> ShowAsync(string? sourceId, LauncherUpdateInfo? update = null)
+    public async Task<string?> ShowAsync(
+        string? sourceId,
+        LauncherUpdateInfo? update = null,
+        IProgress<UpdatePackageDownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
-        await _launchLock.WaitAsync();
+        var lockTaken = false;
         try
         {
+            await _launchLock.WaitAsync(cancellationToken);
+            lockTaken = true;
             if (_activeProcess is { HasExited: false })
             {
                 _activeProcess.Refresh();
@@ -59,7 +65,23 @@ public sealed class KachinaUpdateService
                     LogService.Instance.AddLog($"[更新] 暂时无法读取版本说明：{ex.Message}");
                 }
             }
-            var sessionPath = await KachinaSessionPackage.CreateAsync(updaterPath, update);
+            string sessionPath;
+            if (normalizedSource == UpdateSourceIds.Cnb)
+            {
+                if (update is null)
+                    return "无法确定要下载的 CNB 版本，请重新检查更新。";
+                LogService.Instance.AddLog(
+                    $"[更新] 开始从 CNB 顺序下载完整更新包：{update.Version}");
+                sessionPath = await KachinaFullPackageDownloader.DownloadAsync(
+                    update, progress, cancellationToken).ConfigureAwait(false);
+                LogService.Instance.AddLog(
+                    $"[更新] CNB 完整更新包 SHA-256 校验通过：{update.Version}");
+            }
+            else
+            {
+                sessionPath = await KachinaSessionPackage.CreateAsync(updaterPath, update)
+                    .ConfigureAwait(false);
+            }
             var startInfo = new ProcessStartInfo
             {
                 FileName = sessionPath,
@@ -86,11 +108,19 @@ public sealed class KachinaUpdateService
         }
         catch (Exception ex)
         {
+            if (ex is OperationCanceledException)
+            {
+                LogService.Instance.AddLog("[更新] 已取消下载 CNB 完整更新包。");
+                return "已取消更新。";
+            }
             LogService.Instance.AddLog(
                 $"[更新] Kachina 启动失败：{ex.GetType().Name}: {ex.Message}");
             return ex.Message;
         }
-        finally { _launchLock.Release(); }
+        finally
+        {
+            if (lockTaken) _launchLock.Release();
+        }
     }
 
     private static async Task CleanupSessionAsync(Process process, string path)

@@ -24,15 +24,33 @@ public static class UpdateSourcePolicy
 
     public static string GetPackageUrl(string? sourceId, string tag)
     {
+        var version = NormalizeVersionTag(tag);
+        var prefix = Normalize(sourceId) == UpdateSourceIds.Cnb
+            ? CnbRepositoryUrl + "/-/releases/download/"
+            : GitHubRepositoryUrl + "/releases/download/";
+        return prefix + Uri.EscapeDataString(ToTag(version)) + "/" + GetPackageFileName(version);
+    }
+
+    public static string GetChecksumUrl(string? sourceId, string tag)
+    {
+        var version = NormalizeVersionTag(tag);
+        var prefix = Normalize(sourceId) == UpdateSourceIds.Cnb
+            ? CnbRepositoryUrl + "/-/releases/download/"
+            : GitHubRepositoryUrl + "/releases/download/";
+        return prefix + Uri.EscapeDataString(ToTag(version)) + "/SHA256SUMS.txt";
+    }
+
+    public static string GetPackageFileName(string tag) =>
+        "SteamCN-GameLauncher.Update." + NormalizeVersionTag(tag) + ".exe";
+
+    private static string NormalizeVersionTag(string tag)
+    {
         if (!System.Text.RegularExpressions.Regex.IsMatch(tag,
                 @"^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$", System.Text.RegularExpressions.RegexOptions.None,
                 TimeSpan.FromSeconds(1)))
             throw new InvalidDataException("发布版本号格式无效。");
-        var version = tag.TrimStart('v');
-        var prefix = Normalize(sourceId) == UpdateSourceIds.Cnb
-            ? CnbRepositoryUrl + "/-/releases/download/"
-            : GitHubRepositoryUrl + "/releases/download/";
-        return prefix + Uri.EscapeDataString(tag) + "/SteamCN-GameLauncher.Update." + version + ".exe";
+        return tag.TrimStart('v');
     }
 
+    private static string ToTag(string version) => "v" + version;
 }
