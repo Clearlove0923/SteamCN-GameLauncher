@@ -2,6 +2,21 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-09-30 16:44:17 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：GitHub `master_preview`、`master_prreview`、`master`；CNB `master_preview`、`master_prreview`、`master`
+- 推送提交：`release: 回补 v3.1.4 CNB 单流更新`
+- 实现内容：
+  - 仅基于原始 `v3.1.4` 源码回补 CNB 完整包单流下载、`SHA256SUMS.txt` 校验和本地完整包执行流程；GitHub 来源仍保留 Kachina 原有更新流程。
+  - 覆盖 GitHub 与 CNB `v3.1.4` Release 的安装包、完整更新包和校验文件，并在两端发布说明中标明这是同版本回补。
+  - 按用户最新要求取消 v3.1.3 回补；v3.1.3 Release、附件与 tag 均未修改。
+- 验证结果：
+  - 用户要求跳过测试，本次未运行测试套件；正式 Windows x64 自包含发布、Kachina 差分打包和 Inno Setup 编译成功。
+  - 新 `SteamCN-GameLauncher.Update.3.1.4.exe` 为 183299613 字节，SHA-256 `c9be3abe88873042083429a5bfaf6bbcbcd059ec8b792d5be021ba9b5c41675b`；新 `SteamCN-GameLauncher-v3.1.4-win-x64-setup.exe` 为 139692660 字节，SHA-256 `6039e522e4fc71d14273c8086ae5466d3eb61388c1194e378694278cdaf9cae2`。
+  - GitHub 与 CNB 已覆盖为同名附件，公开下载复核结果见本次发布收尾记录。
+- 当前限制：已安装覆盖前旧版 v3.1.4 的用户不会收到同版本自动更新提示，必须从 v3.1.4 Release 手动重新下载安装一次；v3.1.3 用户需直接手动安装 v3.1.4 回补包或升级到更高版本。官网本地仓库 `F:\my-site` 当前不存在，无法同步官网下载配置。
+
 ## 2026-09-30 15:52:15 +08:00
 
 - 推送人员：`Violet0923`
