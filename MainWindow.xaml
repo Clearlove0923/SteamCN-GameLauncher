@@ -144,7 +144,7 @@
         <!-- 普通更新提示不再占用一整行，在首页内容上方按需浮动显示。 -->
         <Button x:Name="btnUpdateBadge" Grid.RowSpan="2" Canvas.ZIndex="21"
                 Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top"
-                Margin="118,10,0,0" Padding="10,4" Background="#1A2D6B"
+                Margin="118,10,0,0" Padding="10,4" Background="#33D3D3D3"
                 BorderThickness="0" CornerRadius="4" Click="BtnUpdateBadge_Click">
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <FontIcon Glyph="&#xEA6A;" FontSize="13" Foreground="White"/>

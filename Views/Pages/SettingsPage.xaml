@@ -18,10 +18,10 @@
             <!-- 更新通知卡片（默认隐藏，检测到新版本后显示） -->
             <Border x:Name="updateCard"
                     Visibility="Collapsed"
+                    Background="White"
+                    BorderBrush="#33000000"
+                    BorderThickness="1"
                     CornerRadius="8" Padding="16">
-                <Border.Background>
-                    <SolidColorBrush Color="#1A2D6B"/>
-                </Border.Background>
                 <Grid ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -31,10 +31,10 @@
                         <TextBlock x:Name="txtUpdateTitle"
                                    Text="发现新版本"
                                    FontSize="15" FontWeight="SemiBold"
-                                   Foreground="#60CDFF"/>
+                                   Foreground="Black"/>
                         <TextBlock x:Name="txtUpdateMessage"
                                    FontSize="13" TextWrapping="Wrap"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                   Foreground="Black"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
                         <ComboBox x:Name="cmbUpdateSource"
