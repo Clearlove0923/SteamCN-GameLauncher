@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "requestId": "nte-local-contract-1",
+  "providerId": "perfect-world",
+  "fetchedAt": "2026-10-01T00:00:00Z",
+  "content": {
+    "background": {
+      "videoUrl": "https://yhvmg.wmupd.com/webops/yh/yh_bgvideo_20260418.mp4",
+      "imageUrl": "C:\\Games\\NTE\\NTELauncher\\ResFilesM\\1289\\bgimgs\\bg_0.png",
+      "localPath": "C:\\Games\\NTE\\NTELauncher\\ResFilesM\\1289\\bgimgs\\bg.mp4",
+      "variants": []
+    },
+    "banners": [],
+    "news": [],
+    "updateInfo": null
+  },
+  "errors": []
+}

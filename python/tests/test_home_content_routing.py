@@ -38,6 +38,36 @@ class HomeContentRoutingTests(unittest.TestCase):
         create.assert_called_once_with("mihoyo")
         self.assertEqual(captured[0].game_id, "genshin-impact")
         self.assertEqual(captured[0].provider_options["gameBiz"], "hk4e_cn")
+        self.assertEqual(captured[0].install_directory, r"D:\Genshin Impact Game")
+
+    def test_nte_route_preserves_install_directory_for_local_background_discovery(self) -> None:
+        server = importlib.import_module("home_content.server.app")
+        captured = []
+
+        class FakeProvider:
+            async def fetch(self, request):
+                captured.append(request)
+                return HomeContent()
+
+        async def request():
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),
+                                         base_url="http://test") as client:
+                return await client.post("/v1/home-content", json={
+                    "requestId": "route-nte-local", "gameId": "stale",
+                    "providerId": "auto",
+                    "executablePath": r"E:\Games\Neverness to Everness\Neverness To Everness\NTELauncher.exe",
+                    "installDirectory": r"E:\Games\Neverness to Everness\Neverness To Everness",
+                })
+
+        with patch.object(server, "create_provider", return_value=FakeProvider()):
+            response = asyncio.run(request())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["providerId"], "perfect-world")
+        self.assertEqual(captured[0].game_id, "neverness-to-everness")
+        self.assertEqual(
+            captured[0].install_directory,
+            r"E:\Games\Neverness to Everness\Neverness To Everness",
+        )
 
     def test_unknown_paths_return_structured_error(self) -> None:
         server = importlib.import_module("home_content.server.app")

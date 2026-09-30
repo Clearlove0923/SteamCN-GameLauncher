@@ -55,9 +55,9 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
         {
             _memory[key] = new MemoryEntry(DateTimeOffset.UtcNow, cached);
             var expired = DateTimeOffset.UtcNow - cached.CachedAt > _policy.MetadataLifetime;
-            // 元数据可用不代表媒体已齐全；缺失的图片和视频在后台补齐。
-            ScheduleMediaCaching(request, cached.Result);
-            if (expired) ScheduleRefresh(key, request);
+            // 每个新进程首次从磁盘读取该游戏时都检查一次 Provider。先返回缓存，
+            // 所以不会延迟首页；刷新失败时再补齐旧媒体，避免旧下载晚到后覆盖新内容。
+            ScheduleStartupRefresh(key, request, cached.Result);
             return _mediaCache.ResolveAvailable(request, cached.Result) with { IsStale = expired };
         }
 
@@ -97,6 +97,22 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
 
     private void ScheduleRefresh(string key, HomeContentRequest request) =>
         _ = ObserveAsync(GetOrStartRefresh(key, request), "元数据后台刷新");
+
+    private void ScheduleStartupRefresh(
+        string key,
+        HomeContentRequest request,
+        HomeContentResult cachedResult) =>
+        _ = ObserveAsync(RefreshOrCacheExistingMediaAsync(key, request, cachedResult), "启动期元数据后台刷新");
+
+    private async Task RefreshOrCacheExistingMediaAsync(
+        string key,
+        HomeContentRequest request,
+        HomeContentResult cachedResult)
+    {
+        var refreshed = await GetOrStartRefresh(key, request).ConfigureAwait(false);
+        if (!HasUsableContent(refreshed.Content))
+            await CacheMediaAndPublishAsync(request, cachedResult, _lifetime.Token).ConfigureAwait(false);
+    }
 
     private async Task<HomeContentResult> RefreshCoreAsync(
         HomeContentRequest request,

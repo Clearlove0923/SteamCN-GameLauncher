@@ -33,11 +33,11 @@ try
         "first request fetches provider and returns content");
     Check(await disk.GetSizeAsync() > 0, "successful response is persisted to metadata cache");
 
-    var restartedSource = new FakeHomeContentService { Result = Result("should-not-load", null, null) };
+    var restartedSource = new FakeHomeContentService { Result = initial };
     var restarted = new CachedHomeContentService(restartedSource, disk, media, new HomeCachePolicy());
     var fromDisk = await restarted.GetAsync(request);
-    Check(restartedSource.CallCount == 0 && fromDisk.Content.News.Single().Id == "old-news",
-        "fresh disk cache survives service restart and skips provider");
+    Check(restartedSource.CallCount == 1 && fromDisk.Content.News.Single().Id == "old-news",
+        "fresh disk cache is returned immediately while each new process checks the provider once");
 
     var refreshGate = new TaskCompletionSource<HomeContentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
     var refreshingSource = new FakeHomeContentService { PendingResult = refreshGate.Task };
@@ -97,6 +97,8 @@ try
     Check(handler.CallCount == 1 && localPath is not null && File.Exists(localPath)
         && localPath.Contains(Path.Combine("4162040", "media", "images"), StringComparison.OrdinalIgnoreCase),
         "banner image is validated and stored under its game directory");
+    Check(handler.LastUserAgent == $"SteamCN-GameLauncher/{SteamCNGameLauncher.AppInfo.Version}",
+        "all homepage media downloads identify the current launcher version");
     await realMedia.CacheAsync(request, mediaResult);
     Check(handler.CallCount == 1, "existing media file is reused without another download");
 
@@ -106,6 +108,71 @@ try
         && otherLocalized.Content.Banners.Single().LocalPath is { } otherPath
         && otherPath.Contains(Path.Combine("3513350", "media", "images"), StringComparison.OrdinalIgnoreCase),
         "the same URL is isolated into a separate directory for each game");
+
+    var providerVideo = Path.Combine(root, "provider-local", "bg.mp4");
+    var providerBanner = Path.Combine(root, "provider-local", "banner.png");
+    Directory.CreateDirectory(Path.GetDirectoryName(providerVideo)!);
+    await File.WriteAllBytesAsync(providerVideo,
+        [0, 0, 0, 16, (byte)'f', (byte)'t', (byte)'y', (byte)'p', 0, 0, 0, 0]);
+    await File.WriteAllBytesAsync(providerBanner, png);
+    var localPriorityHandler = new CountingHandler(png, "image/png");
+    var localPriorityRoot = Path.Combine(root, "local-priority-cache");
+    var localPriorityCache = new FileHomeMediaCache(localPriorityRoot, new HttpClient(localPriorityHandler),
+        new HomeCachePolicy());
+    var localPriorityResult = new HomeContentResult(new HomeContent
+    {
+        Background = new HomeBackground
+        {
+            VideoUrl = "https://cdn.example/older-background.mp4",
+            LocalPath = providerVideo,
+            ImageUrl = providerBanner,
+            Variants =
+            [
+                new HomeVideoVariant
+                {
+                    Id = "local-variant",
+                    VideoUrl = "https://cdn.example/older-variant.mp4",
+                    LocalPath = providerVideo,
+                },
+            ],
+        },
+        Banners =
+        [
+            new HomeBanner
+            {
+                Id = "local-banner",
+                ImageUrl = "https://cdn.example/older-banner.png",
+                LocalPath = providerBanner,
+            },
+        ],
+    });
+    var localPriorityResolved = await localPriorityCache.CacheAsync(request, localPriorityResult);
+    Check(localPriorityHandler.CallCount == 0
+        && localPriorityResolved.Content.Background?.LocalPath == Path.GetFullPath(providerVideo)
+        && localPriorityResolved.Content.Background?.Variants.Single().LocalPath == Path.GetFullPath(providerVideo)
+        && localPriorityResolved.Content.Banners.Single().LocalPath == Path.GetFullPath(providerBanner),
+        "valid provider local media wins and skips equivalent remote downloads");
+
+    var olderRemoteUrl = localPriorityResult.Content.Background!.VideoUrl!;
+    var remoteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(olderRemoteUrl)));
+    var remoteCacheDirectory = Path.Combine(localPriorityRoot, "4162040", "media", "videos");
+    Directory.CreateDirectory(remoteCacheDirectory);
+    await File.WriteAllBytesAsync(Path.Combine(remoteCacheDirectory, remoteHash + ".mp4"),
+        [0, 0, 0, 16, (byte)'f', (byte)'t', (byte)'y', (byte)'p', 0, 0, 0, 0]);
+    var localOverCachedRemote = localPriorityCache.ResolveAvailable(request, localPriorityResult);
+    Check(localOverCachedRemote.Content.Background?.LocalPath == Path.GetFullPath(providerVideo),
+        "an existing remote cache cannot replace a valid provider local background");
+
+    File.Delete(providerVideo);
+    var missingLocalHandler = new CountingHandler(
+        [0, 0, 0, 16, (byte)'f', (byte)'t', (byte)'y', (byte)'p', 0, 0, 0, 0], "video/mp4");
+    var missingLocalCache = new FileHomeMediaCache(Path.Combine(root, "missing-local-cache"),
+        new HttpClient(missingLocalHandler), new HomeCachePolicy());
+    var missingLocalResolved = await missingLocalCache.CacheAsync(request, localPriorityResult);
+    Check(missingLocalHandler.CallCount == 2
+        && missingLocalResolved.Content.Background?.LocalPath is { } fallbackVideo
+        && fallbackVideo.Contains(Path.Combine("4162040", "media", "videos"), StringComparison.OrdinalIgnoreCase),
+        "missing provider local videos fall back to downloading background and variant URLs");
 
     var namedFolderRequest = request with { CacheFolderName = "Genshin Impact Game" };
     var namedFolderResult = await realMedia.CacheAsync(namedFolderRequest, mediaResult);
@@ -219,10 +286,12 @@ sealed class FakeMediaCache : IHomeMediaCache
 sealed class CountingHandler(byte[] payload, string mediaType) : HttpMessageHandler
 {
     public int CallCount { get; private set; }
+    public string? LastUserAgent { get; private set; }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         CallCount++;
+        LastUserAgent = request.Headers.UserAgent.ToString();
         var content = new ByteArrayContent(payload);
         content.Headers.ContentType = new MediaTypeHeaderValue(mediaType);
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });

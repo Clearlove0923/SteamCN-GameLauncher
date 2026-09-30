@@ -76,8 +76,9 @@
 
 | 上游字段                                       | HomeContent 字段         | 备注 |
 |------------------------------------------------|--------------------------|------|
-| `get_main_bg_image` 视频 URL(默认 `ntevmg.perfectworld.com` / `yhvmg.wmupd.com`) | `HomeBackground.video_url` | 优先于 `providerOptions.backgroundVideoPath` / `backgroundVideoUrl` |
-| `main_bg_image.url` PNG / WebP                | `HomeBackground.image_url` | 视频缺失时回退 |
+| 固定远程视频 URL（`ntevmg.perfectworld.com` / `yhvmg.wmupd.com`） | `HomeBackground.video_url` | 本地资源缺失时的网络兜底及稳定播放标识 |
+| 本地 `config.json.video`                     | `HomeBackground.local_path` | 优先播放的启动器内置视频 |
+| 本地 `config.json.noVideoBg` / `imgs[0].file` | `HomeBackground.image_url` | 视频准备或播放失败时的静态海报 |
 | `lb1_<lang>`/`lb1` banners[].bigpic           | `HomeBanner.image_url`   | 不在白名单的丢弃 |
 | `lb1_<lang>`/`lb1` banners[].link             | `HomeBanner.target_url`   | 非 https / 非白名单 host 时置空 |
 | `lb1_<lang>`/`lb1` banners[].title            | `HomeBanner.title`       | 空串归一为 `None` |
@@ -102,9 +103,9 @@ CN 端 `channelCnName` 已经是中文(`公告` / `新闻` / `活动`),直接透
 
 | 常量 | 值 | 含义 |
 |------|-----|------|
-| `DEFAULT_APP_CODE` | `YDUTE5gscDZ229CW` | Endfield Global 的启动器 appCode |
-| `DEFAULT_LANGUAGE` | `en-us` | 默认语言 |
-| `DEFAULT_REGION` | `os` | 默认区域(影响 banner swiper / news data 的端点 + 背景 URL) |
+| `DEFAULT_APP_CODE` | `YDUTE5gscDZ229CW` | 旧版兼容导出，当前 Provider 不使用 |
+| `DEFAULT_LANGUAGE` | `zh-cn` | 默认语言 |
+| `DEFAULT_REGION` | `cn` | 默认区域(影响 banner swiper / news data 的端点 + 背景 URL) |
 | `DEFAULT_BG_VIDEO_OS` | `https://ntevmg.perfectworld.com/webops/nte/nte_bgvideo_20260418.mp4` | Global 启动器首页背景视频 |
 | `DEFAULT_BG_VIDEO_CN` | `https://yhvmg.wmupd.com/webops/yh/yh_bgvideo_20260418.mp4` | 国服启动器首页背景视频 |
 
@@ -135,13 +136,22 @@ URL scheme 必须是 `http://` 或 `https://`,其它协议直接拒绝。白名�
 
 ## 本地启动器资源
 
-NTE 启动器(QtQuick + CEF)位于 `%LocalAppData%\NTEGame`,游戏本体在 `Neverness To Everness\Client\WindowsNoEditor\HT\`。当前 Provider 不读取安装目录,但 `providerOptions.backgroundVideoPath` / `backgroundImagePath` 暴露了 `bg.mp4` / `bg.jpg` 的本地路径入口,集成方可在 C# 端先用 `LocalLauncherAssetProvider` 探测路径,再喂给本 Provider。
+本机 Worker 使用请求中的 `installDirectory`、`executablePath` 或显式
+`providerOptions.installDir`，只检查这些位置及最多五级父目录下的已知布局：
 
-> 没有自动探测 `installDir` 是因为 AGENTS.md 要求 Provider 与传输解耦 — C# 侧负责发现本地资源,Python 侧只消费 URL/路径。
+```text
+NTELauncher/ResFilesM/<资源版本>/bgimgs/config.json
+```
+
+存在多个资源版本时优先选择版本号较新的目录。Provider 解析配置中的 `video`、
+`noVideoBg`，并在后者缺失时使用 `imgs[0].file`；候选路径必须仍位于同一个
+`bgimgs` 目录且扩展名符合媒体类型。不会递归扫描整个游戏目录，也不会接受配置
+中的目录穿越路径。显式 `backgroundVideoPath` / `backgroundImagePath` 仍拥有最高
+优先级，便于后续适配其他渠道布局。
 
 ## 回退方案
 
-- 网络两端点 503 / 解析失败 → 返回空 banner / 空 news,`HomeBackground` 仍走默认 URL;`envelope.errors` 记录失败。
+- 网络两端点 503 / 解析失败 → 返回空 banner / 空 news；本地背景不受影响，缺少本地背景时仍保留默认远程 URL。
 - 上游 JS 体损坏(`extract_js_payload` 抛 `ValueError`) → 同上,Worker 写入 `envelope.errors`。
 - URL 字段非 https 或不在白名单 → Provider 静默丢弃,**不**抛错。
 
@@ -149,9 +159,9 @@ NTE 启动器(QtQuick + CEF)位于 `%LocalAppData%\NTEGame`,游戏本体在 `Nev
 
 ## 测试
 
-- **Provider 单元测试**:`python/tests/test_perfect_world_hybrid_provider.py`(41 项 pytest,< 0.4s)
-  - 覆盖 JS 提取、allow-list、tab 映射、本地 vs 网络背景、COS URL 相对路径绝对化、providerOptions 覆盖、HTTP 5xx / 非 JSON 响应不抛错
-- **HTTP 端到端**:`Tests/HomeContentE2E.Tests/`(dotnet)— 调 `/v1/home-content` 时用 `providerId=perfect-world-hybrid`(未在 sample 服务中注册,需要在 FastAPI 入口扩展)
+- **Provider 单元测试**:`python/tests/test_perfect_world_hybrid_provider.py`
+  - 覆盖 JS 提取、allow-list、tab 映射、本地最新版资源发现、目录穿越拒绝、本地 vs 网络背景、相对路径绝对化、providerOptions 覆盖、HTTP 5xx / 非 JSON 响应不抛错
+- **HTTP 路由测试**:`python/tests/test_home_content_routing.py`— 验证 `providerId=perfect-world` 并保留本地安装目录；旧 `perfect-world-hybrid` 仍作为兼容别名注册。
 
 ## 已知限制
 
@@ -161,4 +171,5 @@ NTE 启动器(QtQuick + CEF)位于 `%LocalAppData%\NTEGame`,游戏本体在 `Nev
 - **横幅 swiper** OS 端按 `lb1_<lang>` 选择,CN 端取 `lb1`(不按语言)。当 `lb1_<lang>` 缺失时 Provider 会按 `lb1` 兜底(空数组不会触发)。
 - **`start_ts` 没有时间字段**:OS 资讯的 `time` 是 `YYYY-MM-DD` 字符串,精度到天。CN 同样。提供 UTC `datetime` 转换。
 - 所有 CDN / 官方域名都在白名单;新增域名(如未来上的新 CDN)需要更新 `ALLOWED_HOST_SUFFIXES`。
-- MIME / MD5 / 尺寸校验在 Provider 中未做;按 AGENTS.md 要求由 C# 端 `HttpHomeContentTransport` 拉取后的缓存层负责(待办)。
+- **本地布局可能漂移**：当前只接受 `NTELauncher/ResFilesM/<版本>/bgimgs/config.json` 及直接 `bgimgs/config.json`。启动器若改目录、字段名或媒体格式，会安全退回远程资源，但远程 CDN 若仍有防盗链限制，动画会退化为静态图或外观背景。
+- 远程媒体的 MIME / 尺寸 / 文件头校验由 C# 缓存层负责；本地资源只验证存在性、目录边界和扩展名，最终解码兼容性仍由原生播放器决定。

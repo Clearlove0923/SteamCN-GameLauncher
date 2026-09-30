@@ -34,12 +34,15 @@ public sealed class FileHomeMediaCache : IHomeMediaCache
             var variants = background.Variants.Select(item => item with
             {
                 ImageUrl = ResolveUri(request, item.ImageUrl, MediaKind.Image),
-                LocalPath = ResolvePath(request, item.VideoUrl, MediaKind.Video) ?? item.LocalPath,
+                LocalPath = ResolveLocalMediaPath(item.LocalPath, MediaKind.Video)
+                    ?? ResolvePath(request, item.VideoUrl, MediaKind.Video),
             }).ToArray();
             background = background with
             {
-                // 保留远程 URL 作为播放身份；下载结束仅更新本地路径，不重播正在展示的动画。
-                LocalPath = ResolvePath(request, background.VideoUrl, MediaKind.Video) ?? background.LocalPath,
+                // Provider 发现的有效本地资源优先；远程缓存只在本地资源失效时兜底。
+                // 仍保留远程 URL 作为播放身份，避免同一动画在缓存完成后重新启动。
+                LocalPath = ResolveLocalMediaPath(background.LocalPath, MediaKind.Video)
+                    ?? ResolvePath(request, background.VideoUrl, MediaKind.Video),
                 ImageUrl = ResolveUri(request, background.ImageUrl, MediaKind.Image),
                 Variants = variants,
             };
@@ -47,7 +50,8 @@ public sealed class FileHomeMediaCache : IHomeMediaCache
 
         var banners = content.Banners.Select(item => item with
         {
-            LocalPath = ResolvePath(request, item.ImageUrl, MediaKind.Image) ?? item.LocalPath,
+            LocalPath = ResolveLocalMediaPath(item.LocalPath, MediaKind.Image)
+                ?? ResolvePath(request, item.ImageUrl, MediaKind.Image),
         }).ToArray();
         var news = content.News.Select(item => item with
         {
@@ -68,14 +72,21 @@ public sealed class FileHomeMediaCache : IHomeMediaCache
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
         var candidates = new HashSet<(string Url, MediaKind Kind)>();
-        Add(candidates, result.Content.Background?.VideoUrl, MediaKind.Video);
-        Add(candidates, result.Content.Background?.ImageUrl, MediaKind.Image);
-        foreach (var variant in result.Content.Background?.Variants ?? [])
+        var background = result.Content.Background;
+        if (ResolveLocalMediaPath(background?.LocalPath, MediaKind.Video) is null)
+            Add(candidates, background?.VideoUrl, MediaKind.Video);
+        Add(candidates, background?.ImageUrl, MediaKind.Image);
+        foreach (var variant in background?.Variants ?? [])
         {
-            Add(candidates, variant.VideoUrl, MediaKind.Video);
+            if (ResolveLocalMediaPath(variant.LocalPath, MediaKind.Video) is null)
+                Add(candidates, variant.VideoUrl, MediaKind.Video);
             Add(candidates, variant.ImageUrl, MediaKind.Image);
         }
-        foreach (var banner in result.Content.Banners) Add(candidates, banner.ImageUrl, MediaKind.Image);
+        foreach (var banner in result.Content.Banners)
+        {
+            if (ResolveLocalMediaPath(banner.LocalPath, MediaKind.Image) is null)
+                Add(candidates, banner.ImageUrl, MediaKind.Image);
+        }
         foreach (var item in result.Content.News) Add(candidates, item.ImageUrl, MediaKind.Image);
 
         using var throttle = new SemaphoreSlim(3, 3);
@@ -149,8 +160,13 @@ public sealed class FileHomeMediaCache : IHomeMediaCache
         if (!TryGetHttpsUri(url, out var uri)) return null;
         try
         {
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
+            // 部分厂商 CDN 会拒绝没有明确客户端标识的请求。统一使用应用版本，
+            // 不携带用户标识、Cookie 或 Provider 私有凭据。
+            requestMessage.Headers.UserAgent.ParseAdd(
+                $"SteamCN-GameLauncher/{SteamCNGameLauncher.AppInfo.Version}");
             using var response = await _httpClient.SendAsync(
-                new HttpRequestMessage(HttpMethod.Get, uri),
+                requestMessage,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -218,6 +234,42 @@ public sealed class FileHomeMediaCache : IHomeMediaCache
         try { File.SetLastAccessTimeUtc(path, DateTime.UtcNow); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         return path;
+    }
+
+    private static string? ResolveLocalMediaPath(string? source, MediaKind kind)
+    {
+        if (string.IsNullOrWhiteSpace(source)) return null;
+        string path;
+        if (Path.IsPathFullyQualified(source))
+        {
+            path = source;
+        }
+        else if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && uri.IsFile)
+        {
+            path = uri.LocalPath;
+        }
+        else
+        {
+            return null;
+        }
+
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        var expectedKind = extension switch
+        {
+            ".mp4" or ".webm" => MediaKind.Video,
+            ".jpg" or ".jpeg" or ".png" or ".webp" or ".gif" => MediaKind.Image,
+            _ => (MediaKind?)null,
+        };
+        if (expectedKind != kind || !File.Exists(path)) return null;
+        try
+        {
+            var signatureExtension = extension == ".jpeg" ? ".jpg" : extension;
+            return HasExpectedSignature(path, kind, signatureExtension) ? Path.GetFullPath(path) : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private string? FindExisting(HomeContentRequest request, string url, MediaKind kind)

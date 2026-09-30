@@ -186,9 +186,9 @@ def test_build_background_uses_local_path_when_provided() -> None:
         "backgroundImagePath": "C:/Games/NTE/Client/bg.jpg",
     }, region="os")
     assert bg is not None
-    assert bg.video_url == "C:/Games/NTE/Client/bg.mp4"
+    assert bg.video_url == DEFAULT_BG_VIDEO_OS
     assert bg.image_url == "C:/Games/NTE/Client/bg.jpg"
-    assert bg.local_path is None
+    assert bg.local_path == "C:/Games/NTE/Client/bg.mp4"
 
 
 def test_build_background_uses_network_fallback_for_os() -> None:
@@ -523,4 +523,60 @@ async def test_fetch_local_background_path_wins_over_network_url() -> None:
         await client.aclose()
 
     assert result.background is not None
-    assert result.background.video_url == "C:/Games/NTE/Client/bg.mp4"
+    assert result.background.video_url == DEFAULT_BG_VIDEO_CN
+    assert result.background.local_path == "C:/Games/NTE/Client/bg.mp4"
+
+
+@pytest.mark.asyncio
+async def test_fetch_discovers_latest_launcher_background_from_install_directory(tmp_path: Path) -> None:
+    older = tmp_path / "NTELauncher" / "ResFilesM" / "1288" / "bgimgs"
+    latest = tmp_path / "NTELauncher" / "ResFilesM" / "1289" / "bgimgs"
+    older.mkdir(parents=True)
+    latest.mkdir(parents=True)
+    (older / "bg.mp4").write_bytes(b"older-video")
+    (older / "bg_0.png").write_bytes(b"older-image")
+    (older / "config.json").write_text(
+        json.dumps({"video": "bg.mp4", "noVideoBg": "bg_0.png"}),
+        encoding="utf-8",
+    )
+    (latest / "bg.mp4").write_bytes(b"latest-video")
+    (latest / "bg_0.png").write_bytes(b"latest-image")
+    (latest / "config.json").write_text(
+        (SAMPLE_ROOT / "nte-launcher-bg-config.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    provider, client = _build_provider(None, None)
+    request = _request().model_copy(update={"install_directory": str(tmp_path)})
+    try:
+        result = await provider.fetch(request)
+    finally:
+        await client.aclose()
+
+    assert result.background is not None
+    assert result.background.video_url == DEFAULT_BG_VIDEO_CN
+    assert result.background.local_path == str((latest / "bg.mp4").resolve())
+    assert result.background.image_url == str((latest / "bg_0.png").resolve())
+
+
+@pytest.mark.asyncio
+async def test_fetch_rejects_launcher_config_path_traversal(tmp_path: Path) -> None:
+    bg_dir = tmp_path / "NTELauncher" / "ResFilesM" / "1289" / "bgimgs"
+    bg_dir.mkdir(parents=True)
+    outside_video = tmp_path / "outside.mp4"
+    outside_video.write_bytes(b"not-launcher-media")
+    (bg_dir / "config.json").write_text(
+        json.dumps({"video": "../../../../outside.mp4"}),
+        encoding="utf-8",
+    )
+
+    provider, client = _build_provider(None, None)
+    request = _request().model_copy(update={"install_directory": str(tmp_path)})
+    try:
+        result = await provider.fetch(request)
+    finally:
+        await client.aclose()
+
+    assert result.background is not None
+    assert result.background.local_path is None
+    assert result.background.video_url == DEFAULT_BG_VIDEO_CN

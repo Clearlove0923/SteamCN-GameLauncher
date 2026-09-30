@@ -19,5 +19,7 @@
           CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../contracts/samples/game-screenshot-path-v1.json" Link="game-screenshot-path-v1.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../contracts/samples/nte-local-background-envelope.json" Link="nte-local-background-envelope.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

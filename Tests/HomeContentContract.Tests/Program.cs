@@ -25,6 +25,12 @@ Check(pythonVariants.Content.Background?.Variants.Select(item => item.Id).Sequen
         ["3citmgCMOP", "d7eCRqQwNc"]) == true
       && pythonVariants.Content.Background?.Variants.All(item => item.VideoUrl.EndsWith(".webm")) == true,
     "actual Python Pydantic output deserializes as two video-only Genshin variants");
+var nteLocalBackground = HomeContentJson.DeserializeEnvelope(File.ReadAllText(
+    Path.Combine(AppContext.BaseDirectory, "nte-local-background-envelope.json")));
+Check(nteLocalBackground.ProviderId == "perfect-world"
+      && nteLocalBackground.Content.Background?.LocalPath?.EndsWith(@"bgimgs\bg.mp4", StringComparison.OrdinalIgnoreCase) == true
+      && nteLocalBackground.Content.Background?.ImageUrl?.EndsWith(@"bgimgs\bg_0.png", StringComparison.OrdinalIgnoreCase) == true,
+    "Python NTE local video and poster paths deserialize through the shared contract");
 var backdrop = HomeBackdropCoordinator.Instance;
 HomeBackdropState? publishedBackdrop = null;
 void OnBackdropChanged(HomeBackdropState state) => publishedBackdrop = state;

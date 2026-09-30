@@ -1,0 +1,18 @@
+{
+  "imgs": [
+    {
+      "file": "bg_0.png",
+      "tipcolor": "#c0c0c0"
+    }
+  ],
+  "video": "bg.mp4",
+  "noVideoBg": "bg_0.png",
+  "interval": 8000,
+  "duration": 1000,
+  "animation": false,
+  "animationType": 2,
+  "first": -1,
+  "discards": [
+    "bg_0.jpg"
+  ]
+}

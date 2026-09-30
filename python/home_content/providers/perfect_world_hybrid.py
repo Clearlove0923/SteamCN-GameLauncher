@@ -37,12 +37,11 @@ Each banner: ``{title, viceTitle, bigpic, viewpic, link, mlink}``.
 
 ### Local launcher resources
 
-Background video is loaded from the network by default. When
-``providerOptions.backgroundVideoPath`` (or
-``providerOptions.backgroundVideoUrl``) is supplied the provider treats
-the local file path / URL as the canonical background and the network
-URL as a fallback. ``providerOptions.backgroundImagePath`` similarly
-overrides the image fallback.
+The provider first inspects the selected installation for the launcher's
+``NTELauncher/ResFilesM/<version>/bgimgs/config.json``.  The video and
+poster named by that file are returned as local media, while the pinned
+network video remains a fallback.  Explicit ``backgroundVideoPath`` and
+``backgroundImagePath`` options still take precedence.
 
 ### Per-game mapping
 
@@ -69,6 +68,7 @@ import json
 import logging
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 import httpx
@@ -179,7 +179,19 @@ class PerfectWorldHybridProvider(HomeContentProvider):
                 except ValueError as exc:
                     logger.warning("News data payload from %s could not be parsed: %s", news_url, exc)
 
-        background = _build_background(options, region)
+        local_video_path, local_image_path = _discover_local_background(request, options)
+        if local_video_path or local_image_path:
+            logger.info(
+                "Using local NTE launcher background video=%s poster=%s",
+                Path(local_video_path).name if local_video_path else "none",
+                Path(local_image_path).name if local_image_path else "none",
+            )
+        background = _build_background(
+            options,
+            region,
+            discovered_video_path=local_video_path,
+            discovered_image_path=local_image_path,
+        )
         banners = _build_banners(swiper_payload, region, language)
         news_items = _build_news_items(news_payload, region, language)
 
@@ -251,29 +263,149 @@ def _resolve_endpoints(options: dict[str, Any], region: str) -> tuple[Optional[s
     )
 
 
-def _build_background(options: dict[str, Any], region: str) -> Optional[HomeBackground]:
-    video_path = options.get("backgroundVideoPath")
+def _build_background(
+    options: dict[str, Any],
+    region: str,
+    *,
+    discovered_video_path: Optional[str] = None,
+    discovered_image_path: Optional[str] = None,
+) -> Optional[HomeBackground]:
+    video_path = options.get("backgroundVideoPath") or discovered_video_path
     video_url = options.get("backgroundVideoUrl")
-    image_path = options.get("backgroundImagePath")
+    image_path = options.get("backgroundImagePath") or discovered_image_path
     image_url = options.get("backgroundImageUrl")
 
-    video: Optional[str] = None
+    remote_video: Optional[str] = None
     image: Optional[str] = None
 
-    if video_path:
-        video = str(video_path)
-    elif video_url and _allowed(video_url):
-        video = str(video_url)
+    if video_url and _allowed(video_url):
+        remote_video = str(video_url)
     else:
         default = DEFAULT_BG_VIDEO_CN if region == "cn" else DEFAULT_BG_VIDEO_OS
-        video = default
+        remote_video = default
 
     if image_path:
         image = str(image_path)
     elif image_url and _allowed(image_url):
         image = str(image_url)
 
-    return HomeBackground(video_url=video, image_url=image, local_path=None)
+    return HomeBackground(
+        video_url=remote_video,
+        image_url=image,
+        local_path=str(video_path) if video_path else None,
+    )
+
+
+def _discover_local_background(
+    request: HomeContentRequest,
+    options: dict[str, Any],
+) -> tuple[Optional[str], Optional[str]]:
+    """Find the launcher's current background without recursively scanning the game.
+
+    A preset may point at the launcher root, the game executable, or a nested game
+    directory.  Walk only a small number of parents and probe the launcher-owned
+    ``ResFilesM`` layout.  This keeps discovery deterministic and avoids treating
+    unrelated videos in the installation as homepage media.
+    """
+    seeds: list[Path] = []
+    configured_install = options.get("installDir")
+    if isinstance(configured_install, str) and configured_install.strip():
+        seeds.append(Path(configured_install.strip()))
+    if request.install_directory:
+        seeds.append(Path(request.install_directory))
+    if request.executable_path:
+        seeds.append(Path(request.executable_path).parent)
+
+    checked_roots: set[str] = set()
+    for seed in seeds:
+        current = seed
+        for _ in range(6):
+            try:
+                normalized = str(current.resolve(strict=False)).casefold()
+            except (OSError, RuntimeError, ValueError):
+                break
+            if normalized not in checked_roots:
+                checked_roots.add(normalized)
+                discovered = _discover_background_below(current)
+                if discovered != (None, None):
+                    return discovered
+            if current.parent == current:
+                break
+            current = current.parent
+    return None, None
+
+
+def _discover_background_below(root: Path) -> tuple[Optional[str], Optional[str]]:
+    config_candidates = [root / "config.json", root / "bgimgs" / "config.json"]
+    for resources_root in (root / "NTELauncher" / "ResFilesM", root / "ResFilesM"):
+        try:
+            version_directories = [item for item in resources_root.iterdir() if item.is_dir()]
+        except (FileNotFoundError, NotADirectoryError, PermissionError, OSError):
+            continue
+        version_directories.sort(key=_launcher_resource_version_key, reverse=True)
+        config_candidates.extend(item / "bgimgs" / "config.json" for item in version_directories)
+
+    for config_path in config_candidates:
+        result = _read_launcher_background_config(config_path)
+        if result != (None, None):
+            return result
+    return None, None
+
+
+def _launcher_resource_version_key(path: Path) -> tuple[tuple[int, ...], float, str]:
+    numeric_parts = tuple(int(part) for part in re.findall(r"\d+", path.name))
+    try:
+        modified = path.stat().st_mtime
+    except OSError:
+        modified = 0.0
+    return numeric_parts, modified, path.name.casefold()
+
+
+def _read_launcher_background_config(config_path: Path) -> tuple[Optional[str], Optional[str]]:
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8-sig"))
+    except (FileNotFoundError, NotADirectoryError, PermissionError, OSError, UnicodeError, json.JSONDecodeError):
+        return None, None
+    if not isinstance(payload, dict):
+        return None, None
+
+    background_root = config_path.parent
+    video = _resolve_launcher_asset(background_root, payload.get("video"), {".mp4", ".webm"})
+    image_name = payload.get("noVideoBg")
+    if not isinstance(image_name, str):
+        images = payload.get("imgs")
+        if isinstance(images, list):
+            for item in images:
+                if isinstance(item, dict) and isinstance(item.get("file"), str):
+                    image_name = item["file"]
+                    break
+    image = _resolve_launcher_asset(
+        background_root,
+        image_name,
+        {".jpg", ".jpeg", ".png", ".webp"},
+    )
+    return video, image
+
+
+def _resolve_launcher_asset(
+    background_root: Path,
+    value: Any,
+    allowed_extensions: set[str],
+) -> Optional[str]:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        root = background_root.resolve(strict=False)
+        candidate = (root / value.strip()).resolve(strict=False)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    if candidate.suffix.lower() not in allowed_extensions or not candidate.is_file():
+        return None
+    return str(candidate)
 
 
 def _build_banners(
