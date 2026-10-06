@@ -2,6 +2,19 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-10-06 15:21:27 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：GitHub/CNB `master_preview`、`master`
+- 推送提交：`docs: 完成 v3.1.6 双源发布验证`
+- 实现内容：
+  - GitHub 与 CNB 均已公开 `v3.1.6` Release，并上传完全相同的安装包、Kachina 更新包和 `SHA256SUMS.txt`；两个远程仓库的 `master_preview`、`master` 及 `v3.1.6` 标签均指向同一发布代码。
+  - 尝试按官网仓库自带脚本同步 `v3.1.6` 的版本号、日期、140 MB 大小、`version.json` 主下载链接和 `index.html` 兜底链接；本机没有 `F:` 盘，因此改用临时检出执行更新。
+- 验证结果：
+  - 从 GitHub 与 CNB 的公开 Release 地址分别重新下载安装包和更新包；两端安装包均为 139706730 字节、SHA-256 `487a933de1008bf5f92149190f5c65cff2523ef06eda4f797ea0a986b46b4e18`，两端更新包均为 183363992 字节、SHA-256 `d2c3e6d86550f4278ebe5056e5c9a7b04d965d30563ec0e775a2b745fc5ab187`。
+  - 两端公开 `SHA256SUMS.txt` 已重新下载，内容与本地正式构建清单完全一致；GitHub/CNB Release 附件名称和字节数一致。
+- 当前限制：官网仓库 `ZZY-MAX-09/ZZY-MAX-09.github.io` 拒绝当前 GitHub 身份 `Clearlove0923` 推送（HTTP 403），因此官网线上版本仍未同步；需要为当前账号授予该仓库写权限，或由有权限的账号在官网仓库执行 `update-release.sh v3.1.6 --auto` 后推送。主程序 GitHub/CNB Release 与公开下载不受此项影响。
+
 ## 2026-10-06 14:59:40 +08:00
 
 - 推送人员：`Violet0923`
