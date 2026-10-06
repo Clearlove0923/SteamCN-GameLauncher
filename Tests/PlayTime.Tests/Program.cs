@@ -4,6 +4,16 @@ using SteamCNGameLauncher.Services;
 var start = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.FromHours(8));
 var sessions = new List<PlaySession>();
 
+Check(PlayTimeHeatLevelClassifier.Classify(TimeSpan.Zero) == PlayTimeHeatLevel.None,
+    "zero duration keeps the inactive heatmap color");
+Check(PlayTimeHeatLevelClassifier.Classify(TimeSpan.FromMinutes(59)) == PlayTimeHeatLevel.Short,
+    "durations below one hour use the green heatmap level");
+Check(PlayTimeHeatLevelClassifier.Classify(TimeSpan.FromHours(1)) == PlayTimeHeatLevel.Medium &&
+      PlayTimeHeatLevelClassifier.Classify(TimeSpan.FromHours(3) - TimeSpan.FromTicks(1)) == PlayTimeHeatLevel.Medium,
+    "durations from one hour to below three hours use the yellow heatmap level");
+Check(PlayTimeHeatLevelClassifier.Classify(TimeSpan.FromHours(3)) == PlayTimeHeatLevel.Long,
+    "durations from three hours use the red heatmap level");
+
 // An externally launched game is first noticed after it started.
 PlayTimeSessionReconciler.Observe(sessions, "game", 123, start, start.AddMinutes(17), "cn");
 Check(sessions.Count == 1 && sessions[0].StartedAt == start &&
@@ -103,7 +113,7 @@ finally
     if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, recursive: true);
 }
 
-Console.WriteLine("12 play-time checks passed.");
+Console.WriteLine("16 play-time checks passed.");
 
 static void Check(bool condition, string description)
 {

@@ -15,6 +15,7 @@
     <Compile Include="../../Models/Home/SupportedGameRegistry.cs" Link="Models/Home/SupportedGameRegistry.cs" />
     <Compile Include="../../Services/SettingsService.cs" Link="Services/SettingsService.cs" />
     <Compile Include="../../Services/CustomManifestService.cs" Link="Services/CustomManifestService.cs" />
+    <Compile Include="../../Services/ScreenshotCatalogService.cs" Link="Services/ScreenshotCatalogService.cs" />
     <EmbeddedResource Include="../../python/home_content/game_sources.json"
                       LogicalName="SteamCNGameLauncher.Config.home-content-sources.json" />
   </ItemGroup>

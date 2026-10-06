@@ -284,7 +284,7 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
                 var x = labelWidth + week * pitch;
                 var value = _days.GetValueOrDefault(day);
                 var cell = new Border { Width = cellSize, Height = cellSize,
-                    CornerRadius = new CornerRadius(2), Background = HeatBrush(value.TotalHours),
+                    CornerRadius = new CornerRadius(2), Background = HeatBrush(value),
                     Visibility = day > today ? Visibility.Collapsed : Visibility.Visible };
                 Canvas.SetLeft(cell, x);
                 Canvas.SetTop(cell, weekday * pitch);
@@ -304,13 +304,13 @@ internal sealed class PlayTimeStatsDialog : ContentDialog
         return canvas;
     }
 
-    private static SolidColorBrush HeatBrush(double hours) => hours switch
+    private static SolidColorBrush HeatBrush(TimeSpan duration) =>
+        PlayTimeHeatLevelClassifier.Classify(duration) switch
     {
-        <= 0 => Brush(100, 95, 102, 114),
-        < .5 => Brush(64, 66, 112, 168),
-        < 2 => Brush(100, 75, 132, 202),
-        < 5 => Brush(115, 91, 157, 225),
-        _ => Brush(179, 145, 187, 239)
+        PlayTimeHeatLevel.Short => Brush(46, 160, 67),
+        PlayTimeHeatLevel.Medium => Brush(255, 211, 61),
+        PlayTimeHeatLevel.Long => Brush(207, 34, 46),
+        _ => Brush(100, 95, 102, 114),
     };
 
     private static int MondayOffset(DateTime day) => ((int)day.DayOfWeek + 6) % 7;

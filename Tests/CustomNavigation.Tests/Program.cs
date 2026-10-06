@@ -148,9 +148,34 @@ try
     var readded = service.Create("Added again")!;
     Check(service.GetInitialSidebarId() == readded.Id, "game can be added after deleting all games");
     readded.HomeLaunchModeId = HomeLaunchModeIds.DirectCn;
+    readded.ScreenshotDirectoryPath = @"D:\Screenshots\AddedAgain";
     Check(service.Update(readded)
-        && service.GetById(readded.Id)?.HomeLaunchModeId == HomeLaunchModeIds.DirectCn,
-        "home launch mode persists per game");
+        && service.GetById(readded.Id)?.HomeLaunchModeId == HomeLaunchModeIds.DirectCn
+        && service.GetById(readded.Id)?.ScreenshotDirectoryPath == @"D:\Screenshots\AddedAgain",
+        "home launch mode and user-selected screenshot path persist per game");
+
+    var screenshotRoot = Path.Combine(AppContext.BaseDirectory, $"screenshots-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(screenshotRoot);
+    try
+    {
+        var older = Path.Combine(screenshotRoot, "older.jpg");
+        var newer = Path.Combine(screenshotRoot, "newer.png");
+        File.WriteAllBytes(older, [1]);
+        File.WriteAllBytes(newer, [2]);
+        File.WriteAllText(Path.Combine(screenshotRoot, "ignored.txt"), "not an image");
+        File.SetLastWriteTime(older, new DateTime(2026, 1, 1, 12, 0, 0));
+        File.SetLastWriteTime(newer, new DateTime(2026, 1, 2, 12, 0, 0));
+        var catalog = new ScreenshotCatalogService();
+        var newestFirst = await catalog.GetAsync(screenshotRoot, newestFirst: true);
+        var oldestFirst = await catalog.GetAsync(screenshotRoot, newestFirst: false);
+        Check(newestFirst.Select(item => item.FileName).SequenceEqual(new[] { "newer.png", "older.jpg" })
+            && oldestFirst.Select(item => item.FileName).SequenceEqual(new[] { "older.jpg", "newer.png" }),
+            "screenshot catalog filters non-images and honors both sort orders");
+    }
+    finally
+    {
+        Directory.Delete(screenshotRoot, recursive: true);
+    }
     store.Save(new AppSettings
     {
         CurrentCustomManifest = new CustomManifestPreset

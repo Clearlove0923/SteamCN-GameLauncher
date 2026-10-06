@@ -207,6 +207,7 @@ public class CustomManifestPreset
     public string LaunchArguments { get; set; } = "";      // 写入 Steam LaunchOptions 的可选启动参数
     public string LauncherExePath { get; set; } = "";      // 游戏启动器 exe 完整路径（用于直接打开启动器）
     public string ExecutableFileName { get; set; } = "";   // v2.3.0 新增：Steam 占位 exe 文件名
+    public string ScreenshotDirectoryPath { get; set; } = ""; // 用户为该游戏选择的截图目录
     public string Language { get; set; } = "schinese";
     public string HomeLayoutProfileId { get; set; } = HomeLayoutProfile.MihoyoLauncherId;
     public string HomeLaunchModeId { get; set; } = HomeLaunchModeIds.SteamCn;
@@ -227,6 +228,7 @@ public class CustomManifestPreset
         LaunchArguments = LaunchArguments,
         LauncherExePath = LauncherExePath,
         ExecutableFileName = ExecutableFileName,
+        ScreenshotDirectoryPath = ScreenshotDirectoryPath,
         Language = Language,
         HomeLayoutProfileId = HomeLayoutProfileId,
         HomeLaunchModeId = HomeLaunchModeId,

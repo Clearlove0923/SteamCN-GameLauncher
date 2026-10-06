@@ -11,5 +11,6 @@
   <ItemGroup>
     <Compile Include="../../Services/PlayTimeSessionReconciler.cs" Link="PlayTimeSessionReconciler.cs" />
     <Compile Include="../../Services/GameTimeStorage.cs" Link="GameTimeStorage.cs" />
+    <Compile Include="../../Services/PlayTimeHeatLevel.cs" Link="PlayTimeHeatLevel.cs" />
   </ItemGroup>
 </Project>
