@@ -19,10 +19,15 @@
 ```text
 /autoplay
 ```
+- 游戏可执行文件选择：
+```text
+"E:\Games\Neverness to Everness\Neverness To Everness\NTELauncher\NTEGame.exe" %command% /autoplay
+为什么要用NTEGame.exe，因为NTEGame.exe 即是 异环启动器 本体，NTELauncher.exe 是用来启动 启动器 的启动器。后面的/autoplay是用来跳过异环启动器前台显示的，这样steam点开始游戏后启动器会静默加载到系统托盘中，自动开始游戏
+```
 ## 燕云十六声（Where Winds Meet）：
 ### 使用方法
 1. 更新官方启动器和游戏本体
-2. 将 `WhereWindsMeetDirect.exe` 复制到《燕云十六声》安装根目录，即与 `yysls_medium`、`Win32` 同级的目录。不要覆盖 `launcher.exe` 或 `yysls.exe`。
+2. 将 `WhereWindsMeetDirect.exe` 复制到《燕云十六声》安装根目录，即与 `yysls`目录下、`launcher.exe` 同级的目录。不要覆盖 `launcher.exe` 或 `yysls.exe`。
 3. 双击桥接 EXE
 
 ### 可选参数（在终端、快捷方式目标或相应启动配置中追加）：

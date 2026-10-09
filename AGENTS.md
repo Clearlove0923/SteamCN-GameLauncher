@@ -233,9 +233,9 @@ Kachina 的多来源配置按顺序将 CNB 放在第一项、GitHub 放在第二
 
 软件每次发布新版本后，必须同步官网下载网址，否则用户从官网下载到的是旧版本。官网是一个独立仓库，不在本仓库内发布。
 
-- 官网仓库：`ZZY-MAX-09.github.io`（本地目录 `F:\my-site`），线上地址 `https://zzy-max-09.github.io/`。
+- 官网仓库：https://github.com/Clearlove0923/clearlove0923.github.io。
 - 官网下载区由 `version.json` 单一配置驱动，HTML 里的链接只是兜底地址；**不得直接改 HTML 而不改 `version.json`**。
-- 安装包的分发主渠道是 GitHub Release（`Clearlove0923/SteamCN-GameLauncher`），官网只做展示与跳转。
+- 安装包的分发主渠道是CNB和GitHub release，官网只做展示与跳转。
 
 ### 网址的两种形态
 
