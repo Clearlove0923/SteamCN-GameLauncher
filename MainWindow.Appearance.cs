@@ -3,7 +3,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using SteamCNGameLauncher.Services;
@@ -26,17 +25,27 @@ public sealed partial class MainWindow
     private readonly string[] _videoKeys = ["", ""];
     private readonly string[] _videoSources = ["", ""];
     private readonly bool[] _videoReady = new bool[2];
-    private MediaPlayerElement[] _videoElements = null!;
+    private readonly bool[] _videoFrameReady = new bool[2];
+    private readonly int[] _videoFrameCopyQueued = new int[2];
+    private readonly TimeSpan[] _videoLastFramePositions = [TimeSpan.Zero, TimeSpan.Zero];
+    private HomeVideoFrameRenderer? _videoFrameRenderer;
     private int _activeVideoSlot = -1;
     private int _pendingVideoSlot = -1;
     private int _transitionOldSlot = -1;
-    private Storyboard? _videoTransition;
+    private DispatcherTimer? _videoTransitionTimer;
+    private DateTimeOffset _videoTransitionStartedAt;
+    private float _videoTransitionProgress;
+    private DispatcherTimer? _videoTransitionCleanupTimer;
+    private DispatcherTimer? _videoLoopTransitionTimer;
+    private DateTimeOffset _videoLoopTransitionStartedAt;
+    private float _videoLoopTransitionProgress;
     private CancellationTokenSource? _videoOptimizationCancellation;
     private string _optimizingSource = "";
     private string _optimizingKey = "";
     private HomeBackdropState _homeBackdropState = HomeBackdropState.Inactive;
     private int _videoRequest;
     private DispatcherTimer? _pendingVideoTimer;
+    private HomeVideoReadinessGate? _pendingVideoReadiness;
     private bool _closingHomeMedia;
     private bool _homeMediaSuspendedForTray;
     private DispatcherTimer? _trayResumeTimer;
@@ -53,7 +62,7 @@ public sealed partial class MainWindow
         NavView.Resources["NavigationViewBorderThickness"] = new Thickness(0);
         NavView.Resources["NavigationViewContentGridBorderThickness"] = new Thickness(0);
         NavView.Resources["NavigationViewMinimalContentGridBorderThickness"] = new Thickness(0);
-        _videoElements = [HomeBackdropVideo, HomeBackdropVideoNext];
+        _videoFrameRenderer = new HomeVideoFrameRenderer(HomeBackdropVideoFrame);
         _homeBackdrop.Changed += ApplyHomeBackdrop;
         _appearance.Changed += ApplyAppearance;
         WindowRoot.ActualThemeChanged += (_, _) => ApplyAppearance();
@@ -150,11 +159,11 @@ public sealed partial class MainWindow
 
         if (state.IsHolding)
         {
-            // 游戏选择已变化，但新来源尚未返回；停在旧视频的当前帧。
+            // 游戏选择已变化，但新来源尚未返回；旧动画继续播放，避免加载期间看起来卡死。
             CancelPendingVideo();
             FinishVideoTransition();
-            if (_activeVideoSlot >= 0)
-                _videoPlayers[_activeVideoSlot]?.Pause();
+            if (_activeVideoSlot >= 0 && !_homeMediaSuspendedForTray)
+                _videoPlayers[_activeVideoSlot]?.Play();
             return;
         }
 
@@ -236,9 +245,11 @@ public sealed partial class MainWindow
         _optimizingSource = source;
         _optimizingKey = key;
 
-        // 海报覆盖在视频层之上；先显示海报再释放旧播放器，避免两个媒体表面交叠。
-        ShowHomeVideoCover(_homeBackdropState.Background);
-        StopHomeBackdropVideo(cancelOptimization: false, hideCover: false);
+        // 兼容性转换期间保留并继续播放旧动画；首次进入首页时才用当前游戏海报兜底。
+        CancelPendingVideo();
+        FinishVideoTransition();
+        if (_activeVideoSlot < 0)
+            ShowHomeVideoCover(_homeBackdropState.Background);
         try
         {
             var optimized = await HomeVideoOptimizationService.Instance.OptimizeAsync(source, cancellation.Token);
@@ -285,20 +296,18 @@ public sealed partial class MainWindow
             if (optimized is null) return;
             DispatcherQueue.TryEnqueue(() =>
             {
-                // 转换在后台完成，回到 UI 线程后再次核对游戏身份，防止旧游戏动画覆盖新游戏。
                 if (cancellation.IsCancellationRequested || _closingHomeMedia || !_homeBackdropState.IsActive) return;
                 var slot = _pendingVideoSlot >= 0 ? _pendingVideoSlot : _activeVideoSlot;
                 if (slot >= 0)
                 {
-                    if (_videoKeys[slot] != key || _videoSources[slot] == optimized) return;
+                    if (_videoKeys[slot] != key) return;
                 }
                 else if (_homeBackdropState.Background?.VideoUrl != key)
                 {
                     return;
                 }
-                LogService.Instance.AddLog("[首页背景] 已生成兼容动画副本，正在切换播放器");
-                if (_activeVideoSlot < 0) ShowHomeVideoCover(_homeBackdropState.Background);
-                StageHomeVideo(new Uri(optimized), key);
+                // 不在当前播放中途二次切源；优化副本由下一次进入该游戏时直接命中。
+                LogService.Instance.AddLog("[首页背景] 已生成兼容动画副本，下次进入时使用");
             });
         }
         catch (OperationCanceledException) { }
@@ -373,13 +382,15 @@ public sealed partial class MainWindow
         FinishVideoTransition();
         CancelPendingVideo();
         var oldSlot = _activeVideoSlot;
-        if (oldSlot >= 0) _videoPlayers[oldSlot]?.Pause();
         var slot = oldSlot == 0 ? 1 : 0;
         var request = ++_videoRequest;
         _pendingVideoSlot = slot;
         _videoKeys[slot] = key;
         _videoSources[slot] = uri.IsFile ? uri.LocalPath : uri.AbsoluteUri;
         _videoReady[slot] = false;
+        _videoFrameReady[slot] = false;
+        _videoLastFramePositions[slot] = TimeSpan.Zero;
+        _pendingVideoReadiness = new HomeVideoReadinessGate();
         if (UseOriginalHomeVideoForDiagnostics && uri.IsFile &&
             Path.GetExtension(uri.LocalPath).Equals(".webm", StringComparison.OrdinalIgnoreCase))
             LogService.Instance.AddLog("[首页背景] 诊断模式：播放原始 WebM 视频");
@@ -388,9 +399,15 @@ public sealed partial class MainWindow
         {
             var usePlaylist = uri.IsFile && Path.GetExtension(uri.LocalPath)
                 .Equals(".mp4", StringComparison.OrdinalIgnoreCase);
-            var player = new MediaPlayer { IsLoopingEnabled = !usePlaylist, AutoPlay = false };
+            var player = new MediaPlayer
+            {
+                IsLoopingEnabled = !usePlaylist,
+                IsVideoFrameServerEnabled = true,
+                AutoPlay = false,
+            };
             _videoPlayers[slot] = player;
             player.MediaOpened += (_, _) => DispatcherQueue.TryEnqueue(() => OnHomeVideoOpened(player, slot, request));
+            player.VideoFrameAvailable += (_, _) => QueueHomeVideoFrame(player, slot, request);
             player.MediaFailed += (_, args) =>
             {
                 var message = args.ErrorMessage;
@@ -398,14 +415,6 @@ public sealed partial class MainWindow
             };
             player.MediaEnded += (_, _) => DispatcherQueue.TryEnqueue(() =>
                 OnHomeVideoFailed(player, slot, request, "动画意外结束，未能继续循环播放。"));
-            var element = _videoElements[slot];
-            // 新视频始终以完全不透明方式渲染；旧静帧盖在它上方。
-            // 避免对正在解码的视频表面执行逐帧透明度动画。
-            element.Opacity = 1;
-            element.Visibility = Visibility.Visible;
-            Canvas.SetZIndex(element, 1);
-            if (oldSlot >= 0) Canvas.SetZIndex(_videoElements[oldSlot], 2);
-            element.SetMediaPlayer(player);
             if (usePlaylist)
             {
                 // 两个相同播放项让本地 MP4 的下一轮提前预读，避免片尾重新 seek 的停顿。
@@ -432,6 +441,88 @@ public sealed partial class MainWindow
         }
     }
 
+    private void QueueHomeVideoFrame(MediaPlayer player, int slot, int request)
+    {
+        if (Interlocked.Exchange(ref _videoFrameCopyQueued[slot], 1) != 0) return;
+        if (!DispatcherQueue.TryEnqueue(() => CopyAndPresentHomeVideoFrame(player, slot, request)))
+            Interlocked.Exchange(ref _videoFrameCopyQueued[slot], 0);
+    }
+
+    private void CopyAndPresentHomeVideoFrame(MediaPlayer player, int slot, int request)
+    {
+        try
+        {
+            if (_closingHomeMedia || request != _videoRequest
+                || !ReferenceEquals(_videoPlayers[slot], player)) return;
+            var session = player.PlaybackSession;
+            var width = session.NaturalVideoWidth;
+            var height = session.NaturalVideoHeight;
+            if (width == 0 || height == 0 || _videoFrameRenderer is null) return;
+
+            var position = session.Position;
+            var previousPosition = _videoLastFramePositions[slot];
+            var wrapped = slot == _activeVideoSlot
+                && _transitionOldSlot < 0
+                && previousPosition >= TimeSpan.FromSeconds(1)
+                && position + TimeSpan.FromMilliseconds(500) < previousPosition;
+            if (wrapped && _videoFrameRenderer.CaptureLoopHold(slot))
+                BeginLoopFrameTransition();
+
+            if (!_videoFrameRenderer.CopyFrame(player, slot, width, height)) return;
+            _videoFrameReady[slot] = true;
+            _videoLastFramePositions[slot] = position;
+            PresentCurrentHomeVideoFrame();
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.AddLog($"[首页背景] 视频帧复制失败：{ex.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _videoFrameCopyQueued[slot], 0);
+        }
+    }
+
+    private void PresentCurrentHomeVideoFrame()
+    {
+        if (_videoFrameRenderer is null || _activeVideoSlot < 0) return;
+        if (_transitionOldSlot >= 0)
+            _videoFrameRenderer.RenderTransition(
+                _transitionOldSlot, _activeVideoSlot, _videoTransitionProgress);
+        else if (_videoLoopTransitionTimer is not null)
+            _videoFrameRenderer.RenderLoopTransition(_activeVideoSlot, _videoLoopTransitionProgress);
+        else
+            _videoFrameRenderer.RenderSingle(_activeVideoSlot);
+    }
+
+    private void BeginLoopFrameTransition()
+    {
+        _videoLoopTransitionTimer?.Stop();
+        _videoLoopTransitionProgress = 0;
+        _videoLoopTransitionStartedAt = DateTimeOffset.UtcNow;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _videoLoopTransitionTimer = timer;
+        timer.Tick += (_, _) =>
+        {
+            if (!ReferenceEquals(_videoLoopTransitionTimer, timer)) return;
+            var elapsed = (DateTimeOffset.UtcNow - _videoLoopTransitionStartedAt).TotalMilliseconds;
+            _videoLoopTransitionProgress = SmoothStep((float)(elapsed / 300d));
+            PresentCurrentHomeVideoFrame();
+            if (_videoLoopTransitionProgress < 1) return;
+            timer.Stop();
+            _videoLoopTransitionTimer = null;
+            _videoLoopTransitionProgress = 0;
+            PresentCurrentHomeVideoFrame();
+        };
+        timer.Start();
+    }
+
+    private static float SmoothStep(float value)
+    {
+        value = Math.Clamp(value, 0f, 1f);
+        return value * value * (3f - 2f * value);
+    }
+
     private void OnHomeVideoOpened(MediaPlayer player, int slot, int request)
     {
         if (_closingHomeMedia || _pendingVideoSlot != slot || request != _videoRequest
@@ -440,16 +531,36 @@ public sealed partial class MainWindow
         LogService.Instance.AddLog($"[首页背景] 动画已打开：请求={request}");
         if (_homeMediaSuspendedForTray) return;
         _pendingVideoTimer?.Stop();
-        // MediaOpened 只说明媒体已解析；等待首批帧解码，同时旧播放器保持暂停帧。
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        var readiness = _pendingVideoReadiness ??= new HomeVideoReadinessGate();
+        readiness.Start(DateTimeOffset.UtcNow);
+        // MediaOpened 只说明媒体已解析。轮询真实播放进度和自然尺寸，让视频表面先在
+        // 旧动画/海报下方完成首帧解码与 UniformToFill 布局，再进行可见切换。
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _pendingVideoTimer = timer;
         timer.Tick += (_, _) =>
         {
+            if (_closingHomeMedia || request != _videoRequest || _pendingVideoSlot != slot
+                || !ReferenceEquals(_videoPlayers[slot], player))
+            {
+                timer.Stop();
+                if (ReferenceEquals(_pendingVideoTimer, timer)) _pendingVideoTimer = null;
+                return;
+            }
+            var session = player.PlaybackSession;
+            var status = readiness.Observe(
+                DateTimeOffset.UtcNow,
+                session.PlaybackState == MediaPlaybackState.Playing,
+                session.Position,
+                session.NaturalVideoWidth,
+                session.NaturalVideoHeight,
+                _videoFrameReady[slot]);
+            if (status == HomeVideoReadinessStatus.Waiting) return;
             timer.Stop();
             if (ReferenceEquals(_pendingVideoTimer, timer)) _pendingVideoTimer = null;
-            if (_closingHomeMedia || request != _videoRequest || _pendingVideoSlot != slot
-                || !ReferenceEquals(_videoPlayers[slot], player)) return;
-            ActivatePendingVideo(slot, request);
+            if (status == HomeVideoReadinessStatus.Ready)
+                ActivatePendingVideo(slot, request);
+            else
+                OnHomeVideoFailed(player, slot, request, "首帧在限定时间内未稳定，已使用静态背景。");
         };
         timer.Start();
     }
@@ -459,36 +570,54 @@ public sealed partial class MainWindow
         if (_pendingVideoSlot != slot || request != _videoRequest) return;
         var oldSlot = _activeVideoSlot;
         _pendingVideoSlot = -1;
+        _pendingVideoReadiness = null;
         _activeVideoSlot = slot;
         HomeBackdropImage.Visibility = Visibility.Collapsed;
         HideHomeVideoCover();
-        var element = _videoElements[slot];
+        HomeBackdropVideoFrame.Visibility = Visibility.Visible;
         if (oldSlot < 0)
         {
-            element.Opacity = 1;
+            _videoFrameRenderer?.RenderSingle(slot);
+            LogService.Instance.AddLog($"[首页背景] 动画已显示：请求={request}");
+            return;
         }
-        else
+
+        // 两路解码帧都已进入 Win2D 纹理。界面始终只显示同一个 ImageSource，
+        // 切换只在固定输出纹理内混合，不再交接两个原生视频表面。
+        _videoLoopTransitionTimer?.Stop();
+        _videoLoopTransitionTimer = null;
+        _videoPlayers[oldSlot]?.Pause();
+        _transitionOldSlot = oldSlot;
+        _videoTransitionProgress = 0;
+        _videoTransitionStartedAt = DateTimeOffset.UtcNow;
+        var transitionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _videoTransitionTimer = transitionTimer;
+        transitionTimer.Tick += (_, _) =>
         {
-            // 新画面保持不透明，淡出的只有已经暂停的旧静帧。
-            _transitionOldSlot = oldSlot;
-            var oldElement = _videoElements[oldSlot];
-            var fade = new DoubleAnimation
+            if (!ReferenceEquals(_videoTransitionTimer, transitionTimer)) return;
+            var elapsed = (DateTimeOffset.UtcNow - _videoTransitionStartedAt).TotalMilliseconds;
+            _videoTransitionProgress = SmoothStep((float)(elapsed / 500d));
+            PresentCurrentHomeVideoFrame();
+            if (_videoTransitionProgress < 1) return;
+            transitionTimer.Stop();
+            _videoTransitionTimer = null;
+            // 让最后一帧先提交到固定输出纹理，再释放旧解码器。
+            var cleanupTimer = new DispatcherTimer
             {
-                From = 1, To = 0, Duration = new Duration(TimeSpan.FromMilliseconds(300)),
-                EnableDependentAnimation = true
+                Interval = TimeSpan.FromMilliseconds(200),
             };
-            Storyboard.SetTarget(fade, oldElement);
-            Storyboard.SetTargetProperty(fade, "Opacity");
-            var transition = new Storyboard();
-            transition.Children.Add(fade);
-            _videoTransition = transition;
-            transition.Completed += (_, _) =>
+            _videoTransitionCleanupTimer = cleanupTimer;
+            cleanupTimer.Tick += (_, _) =>
             {
-                if (!ReferenceEquals(_videoTransition, transition)) return;
+                cleanupTimer.Stop();
+                if (!ReferenceEquals(_videoTransitionCleanupTimer, cleanupTimer)) return;
+                _videoTransitionCleanupTimer = null;
                 FinishVideoTransition();
             };
-            transition.Begin();
-        }
+            cleanupTimer.Start();
+        };
+        PresentCurrentHomeVideoFrame();
+        transitionTimer.Start();
         LogService.Instance.AddLog($"[首页背景] 动画已显示：请求={request}");
     }
 
@@ -521,17 +650,18 @@ public sealed partial class MainWindow
 
     private void FinishVideoTransition()
     {
-        var transition = _videoTransition;
-        _videoTransition = null;
-        if (_transitionOldSlot >= 0)
-            _videoElements[_transitionOldSlot].Visibility = Visibility.Collapsed;
-        transition?.Stop();
-        if (_activeVideoSlot >= 0) _videoElements[_activeVideoSlot].Opacity = 1;
+        _videoTransitionCleanupTimer?.Stop();
+        _videoTransitionCleanupTimer = null;
+        _videoTransitionTimer?.Stop();
+        _videoTransitionTimer = null;
+        _videoTransitionProgress = 0;
         if (_transitionOldSlot >= 0)
         {
             DisposeVideoSlot(_transitionOldSlot);
             _transitionOldSlot = -1;
         }
+        if (_activeVideoSlot >= 0)
+            _videoFrameRenderer?.RenderSingle(_activeVideoSlot);
     }
 
     private void CancelPendingVideo()
@@ -539,6 +669,7 @@ public sealed partial class MainWindow
         ++_videoRequest;
         _pendingVideoTimer?.Stop();
         _pendingVideoTimer = null;
+        _pendingVideoReadiness = null;
         if (_pendingVideoSlot < 0) return;
         DisposeVideoSlot(_pendingVideoSlot);
         _pendingVideoSlot = -1;
@@ -546,16 +677,15 @@ public sealed partial class MainWindow
 
     private void DisposeVideoSlot(int slot)
     {
-        var element = _videoElements[slot];
-        element.Visibility = Visibility.Collapsed;
-        element.Opacity = 0;
         var player = _videoPlayers[slot];
         _videoPlayers[slot] = null;
         _videoKeys[slot] = "";
         _videoSources[slot] = "";
         _videoReady[slot] = false;
-        try { element.SetMediaPlayer(null); }
-        catch (Exception ex) { LogService.Instance.AddLog($"[首页背景] 解除播放器绑定失败：{ex.Message}"); }
+        _videoFrameReady[slot] = false;
+        _videoLastFramePositions[slot] = TimeSpan.Zero;
+        Interlocked.Exchange(ref _videoFrameCopyQueued[slot], 0);
+        _videoFrameRenderer?.ClearSlot(slot);
         if (player is null) return;
         try { player.Source = null; }
         catch (Exception ex) { LogService.Instance.AddLog($"[首页背景] 清空视频源失败：{ex.Message}"); }
@@ -605,6 +735,11 @@ public sealed partial class MainWindow
             DisposeVideoSlot(_activeVideoSlot);
             _activeVideoSlot = -1;
         }
+        _videoLoopTransitionTimer?.Stop();
+        _videoLoopTransitionTimer = null;
+        _videoLoopTransitionProgress = 0;
+        HomeBackdropVideoFrame.Visibility = Visibility.Collapsed;
+        _videoFrameRenderer?.ClearOutput();
         if (hideCover) HideHomeVideoCover();
     }
 
@@ -629,7 +764,10 @@ public sealed partial class MainWindow
         {
             LogService.Instance.AddLog($"[首页背景] 关闭背景失败：{ex.Message}");
         }
-        // StopHomeBackdrop 已在 XAML 树销毁前解绑并释放两个缓冲播放器。
+        _videoFrameRenderer?.Dispose();
+        _videoFrameRenderer = null;
+        HomeBackdropVideoFrame.Source = null;
+        // StopHomeBackdrop 已在 XAML 树销毁前释放两个解码器与固定输出纹理。
     }
 
     private void SuspendHomeMediaForTray()
@@ -666,10 +804,10 @@ public sealed partial class MainWindow
             _homeMediaSuspendedForTray = false;
             try
             {
+                if (_activeVideoSlot >= 0)
+                    _videoPlayers[_activeVideoSlot]?.Play();
                 if (_pendingVideoSlot >= 0)
                     _videoPlayers[_pendingVideoSlot]?.Play();
-                else if (_activeVideoSlot >= 0 && !_homeBackdropState.IsHolding)
-                    _videoPlayers[_activeVideoSlot]?.Play();
             }
             catch (Exception ex) { LogService.Instance.AddLog($"[首页背景] 托盘恢复动画失败：{ex.Message}"); }
             if (_pendingVideoSlot >= 0 && _videoReady[_pendingVideoSlot]

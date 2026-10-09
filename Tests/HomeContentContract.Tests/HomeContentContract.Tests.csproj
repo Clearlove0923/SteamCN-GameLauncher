@@ -13,6 +13,7 @@
     <Compile Include="../../Models/Home/GameScreenshotPathContracts.cs" Link="Models/Home/GameScreenshotPathContracts.cs" />
     <Compile Include="../../Services/Home/HomeContentJson.cs" Link="Services/Home/HomeContentJson.cs" />
     <Compile Include="../../Services/Home/HomeBackdropCoordinator.cs" Link="Services/Home/HomeBackdropCoordinator.cs" />
+    <Compile Include="../../Services/Home/HomeVideoReadinessGate.cs" Link="Services/Home/HomeVideoReadinessGate.cs" />
     <None Include="../../contracts/samples/home-content-v1.json" Link="home-content-v1.json"
           CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../contracts/samples/hoyoplay-video-variants-envelope.json" Link="hoyoplay-video-variants-envelope.json"

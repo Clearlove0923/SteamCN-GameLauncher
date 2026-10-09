@@ -57,7 +57,7 @@ Python Provider Registry 至少保留下列适配器。Provider 类负责来源�
 | `KuroLauncherProvider` | 库洛，当前已验证《鸣潮》 | 分层 CDN JSON；索引给出动态背景 hash，背景 JSON 给出 MP4、首帧和标语，资讯 JSON 给出活动、公告、新闻和轮播 |
 | `HypergryphBatchProvider` | 鹰角，当前已验证《终末地》 | `batch_proxy` POST 批量返回背景图片、`video_url`、Banner、公告和侧栏内容 |
 | `PerfectWorldHybridProvider` | 完美世界《异环》 | 启动器 HTML、远程 JS Banner 数据与本地启动器资源组合 |
-| `NextJsDataProvider` | 当前用于《无限暖暖》官网 | 从 Next.js `__NEXT_DATA__` 读取首屏媒体、新闻轮播和文章编号 |
+| `NextJsDataProvider` | 《无限暖暖》官网回退来源 | 从 Next.js `__NEXT_DATA__` 读取官网媒体、新闻轮播和文章编号；公司级 `PaperGamesProvider` 的背景优先读取官方启动器本机 WebM 缓存 |
 | `NetEaseStaticCmsProvider` | 《燕云十六声》《无限大》等网易静态站点 | NIE/Vue 静态页面、脚本、媒体资源和独立新闻 HTML |
 | `LocalLauncherAssetProvider` | 必须读取安装目录的启动器 | 解析本地配置、视频、图片及版本清单，输出规范化绝对路径 |
 
@@ -78,7 +78,7 @@ Provider 类名与持久化 `providerId` 分离。`providerId` 一旦写入用�
 
 - 米哈游、当前《鸣潮》以及当前《终末地》已有结构化启动器内容接口，可以优先接入。
 - 《异环》采用混合来源：背景优先读取本地启动器资源，Banner 和资讯来自完美世界网页或 CMS。
-- 《无限暖暖》目前确认的是官网 Next.js 数据，不能描述成已验证的启动器 API。
+- 《无限暖暖》的 Banner 与资讯确认来自官网 Next.js 数据；官方启动器 1.3.1 的当前首页 WebM 本机缓存路径已经实机验证，但远程下发端点仍未确认，不能描述成已验证的启动器 API。
 - 《燕云十六声》目前确认的是网易官网静态 CMS；独立启动器的首页端点仍需通过日志、安装资源或抓包确认。
 - 《无限大》目前只使用官网媒体和新闻；正式 PC 启动器发布后重新发现来源，不能因为同属网易而复用《燕云十六声》的假定接口。
 

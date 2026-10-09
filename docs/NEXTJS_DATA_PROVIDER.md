@@ -1,6 +1,6 @@
 # NextJsDataProvider (无限暖暖)
 
-首页使用公司级 `PaperGamesProvider`（`providerId=papergames`）；`NextJsDataProvider` / `nextjs-data` 保留为旧配置兼容入口。
+首页使用公司级 `PaperGamesProvider`（`providerId=papergames`）；它只复用本 Provider 的 Banner 与资讯结果，背景优先读取官方 Windows 启动器的本机 WebM 缓存。`NextJsDataProvider` / `nextjs-data` 保留为旧配置兼容入口，并继续表示纯官网来源。
 
 `provider_id = "nextjs-data"`. Owns the 无限暖暖 (Infinity Nikki)
 Next.js marketing site for OS (INFOLD PTE. LTD.) and CN (上海暖叠
@@ -18,6 +18,8 @@ paginated `/api/news` JSON endpoint for the tabbed news feed.
 | `pageData.newsbanner[]` | Homepage top carousel — image only, no click-through URL  |
 | `pageData.page.actBannerlist[]` | Runtime activity banners — `{label, value}` where `value` is a JSON string with `bannerimg`, `link`, `starttime`, `endtime` |
 | `GET /api/news?section={0,1,2}&offset=&limit=&locale=` | Paginated news list — 0=新闻, 1=公告, 2=活动 |
+
+官网的 `pc 首屏背景视频` 与官方 Windows 启动器首页不是同一素材。2026-10-08 对官方启动器 1.3.1 实机核对后，公司级 `PaperGamesProvider` 改为从 `%LOCALAPPDATA%\\InfinityNikki Launcher\\cache\\images` 选择修改时间最新、大小在 1 MiB 至 512 MiB 且具有 EBML/WebM 文件头的 `.webm`。找不到有效文件时返回空背景，让 C# 回退到用户的外观背景；不会再把官网视频冒充为启动器动画。远程下发端点尚未确认，因此该能力只描述为“已验证的本机启动器缓存”，不是“已验证的启动器 API”。
 
 ## Network endpoints
 
@@ -126,6 +128,8 @@ Defaults match 无限暖暖 / 叠纸. `providerOptions` accepts:
 | `newsApiBase`   | region default base                      | Override the news API host                           |
 | `pagePath`      | `/home`                                  | Appended to `newsApiBase` when building the home URL |
 | `newsLimit`     | `4`                                      | Per-section page size for `/api/news`                 |
+| `launcherCacheDirectory` | `%LOCALAPPDATA%\\InfinityNikki Launcher\\cache\\images` | `PaperGamesProvider` 的本机启动器缓存覆盖路径；主要用于测试或非默认安装 |
+| `contentRevision` | `launcher-cache-v1`（游戏来源配置） | 进入跨语言缓存键，用于淘汰旧的官网草坪背景缓存 |
 
 ## Verification
 
@@ -166,4 +170,6 @@ total assertion count is **39** (see `python/tests/test_nextjs_data_provider.py`
   API URL only; the provider does not localize category names.
 * CN home page renders an `<video poster=…>` without `src`; the
   provider falls back to `pv_list[pc 首屏背景视频]` in that case.
-  If both fail the background surfaces an empty `HomeBackground`.
+  If both fail the legacy `nextjs-data` background surfaces an empty
+  `HomeBackground`. The company-level `papergames` provider discards this
+  website background and uses only the verified local launcher WebM.

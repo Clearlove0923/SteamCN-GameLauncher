@@ -1,8 +1,8 @@
 {
-  "version": "3.1.6",
-  "releaseDate": "2026-10-06",
-  "availableAfter": "2026-10-06T00:00:00+08:00",
-  "message": "3.1.6 更新：新增按游戏管理截图、日历跳转与回收站删除，优化游戏时长热力图，并修复《异环》及其他游戏首页媒体刷新与本地资源优先级。",
+  "version": "3.1.7",
+  "releaseDate": "2026-10-10",
+  "availableAfter": "2026-10-10T00:00:00+08:00",
+  "message": "3.1.7 更新：重构首页动画渲染架构与循环衔接，修复游戏切换和动画重播时的画面抖动、黑白屏与跳变，并优化《无限暖暖》首页内容来源。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"

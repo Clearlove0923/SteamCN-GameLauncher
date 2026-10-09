@@ -56,6 +56,42 @@ backdrop.Clear(secondOwner);
 Check(publishedBackdrop == HomeBackdropState.Inactive,
     "leaving home clears window-level playback state");
 backdrop.Changed -= OnBackdropChanged;
+
+var readiness = new HomeVideoReadinessGate();
+var warmupStarted = DateTimeOffset.Parse("2026-10-08T00:00:00Z");
+readiness.Start(warmupStarted);
+Check(readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(550), true,
+          TimeSpan.FromMilliseconds(510), 1920, 1080, hasDecodedFrame: false)
+      == HomeVideoReadinessStatus.Waiting,
+    "home video remains hidden until the frame server has copied a real frame");
+readiness.Start(warmupStarted);
+Check(readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(50), true,
+          TimeSpan.FromMilliseconds(50), 1920, 1080) == HomeVideoReadinessStatus.Waiting,
+    "home video does not become visible before playback advances past the first frames");
+Check(readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(350), true,
+          TimeSpan.FromMilliseconds(310), 1920, 1080) == HomeVideoReadinessStatus.Waiting
+      && readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(400), true,
+          TimeSpan.FromMilliseconds(360), 1920, 1080) == HomeVideoReadinessStatus.Waiting
+      && readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(450), true,
+          TimeSpan.FromMilliseconds(410), 1920, 1080) == HomeVideoReadinessStatus.Waiting
+      && readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(500), true,
+          TimeSpan.FromMilliseconds(460), 1920, 1080) == HomeVideoReadinessStatus.Waiting
+      && readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(550), true,
+          TimeSpan.FromMilliseconds(510), 1920, 1080) == HomeVideoReadinessStatus.Ready,
+    "home video becomes visible only after dimensions and playback progress stay stable");
+readiness.Start(warmupStarted);
+readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(350), true,
+    TimeSpan.FromMilliseconds(310), 1920, 1080);
+readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(400), true,
+    TimeSpan.FromMilliseconds(360), 1280, 720);
+Check(readiness.Observe(warmupStarted + TimeSpan.FromMilliseconds(450), true,
+          TimeSpan.FromMilliseconds(410), 1280, 720) == HomeVideoReadinessStatus.Waiting,
+    "a late natural-size change restarts the video stability window");
+readiness.Start(warmupStarted);
+Check(readiness.Observe(warmupStarted + HomeVideoReadinessGate.MaximumWarmup,
+          false, TimeSpan.Zero, 0, 0) == HomeVideoReadinessStatus.TimedOut,
+    "home video warmup times out instead of exposing an unstable surface indefinitely");
+
 Check(envelope.Content.Banners.Single().TargetUrl == "https://example.invalid/activity/1"
       && envelope.Content.News.Single().TargetUrl == "https://example.invalid/news/1",
     "banner and news links deserialize");
