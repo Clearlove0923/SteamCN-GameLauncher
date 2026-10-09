@@ -2,6 +2,20 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-10-10 01:31:24 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.1.7` Release
+- 推送提交：`docs: 完成 v3.1.7 双源发布验证`
+- 实现内容：
+  - GitHub 与 CNB 的 `master_preview`、`master` 和带注释标签 `v3.1.7` 已同步发布代码 `00d60acf50ec1560bcb93f37d390bc776cd6c082`；两个 Release 均已公开且非预发布，并使用经用户审定的同一份中文发布说明。
+  - GitHub 与 CNB Release 均上传同一份 Inno Setup 安装包、Kachina 更新包和 `SHA256SUMS.txt`；官网临时检出已通过仓库脚本把 `version.json`、发布日期、主下载链接和 `index.html` 兜底链接更新到 `v3.1.7`。
+- 验证结果：
+  - 最终安装包 `SteamCN-GameLauncher-v3.1.7-win-x64-setup.exe` 为 140642060 字节，SHA-256 `d43f14414c6d44bb859f8592035090721f86450abc99e6dd5068f926a234c935`；更新包 `SteamCN-GameLauncher.Update.3.1.7.exe` 为 184432643 字节，SHA-256 `a9288c888c0d9bce521eddf744f85f20eedb80597333464cb4ee103803b3bdb5`。
+  - 隔离目录静默安装与卸载均返回 0；安装后的主程序持续运行 6 秒且未提前退出，卸载后仅保留 Kachina 保护的运行数据目录，测试残留随后已清理。
+  - 已分别从 GitHub 和 CNB 匿名公开下载地址重新下载三份附件；两端安装包、更新包和校验文件的字节数与 SHA-256 均与本地正式构建完全一致。
+- 当前限制：官网仓库 `ZZY-MAX-09/ZZY-MAX-09.github.io` 仍拒绝当前 GitHub 身份 `Clearlove0923` 推送（HTTP 403）；v3.1.7 官网同步变更已在临时检出提交为 `c2b01c2`，但线上官网仍未更新，需要为当前身份授予写权限或由有权限的账号推送。自动化测试、安装烟测和哈希复核不能替代不同显卡、缩放比例及厂商素材组合下的人工视觉验收；应用与安装包尚未商业代码签名。
+
 ## 2026-10-10 01:11:18 +08:00
 
 - 推送人员：`Violet0923`
