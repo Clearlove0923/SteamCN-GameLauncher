@@ -16,27 +16,10 @@ public static class KachinaUpdateUi
         if (normalizedSource != UpdateSourceIds.Cnb)
             return await KachinaUpdateService.Instance.ShowAsync(normalizedSource, update);
 
-        var status = new TextBlock
-        {
-            Text = "正在连接 CNB，准备下载完整更新包……",
-            TextWrapping = TextWrapping.Wrap
-        };
-        var progressBar = new ProgressBar
-        {
-            IsIndeterminate = true,
-            Minimum = 0,
-            Maximum = 100
-        };
-        var content = new StackPanel { Spacing = 12 };
-        content.Children.Add(status);
-        content.Children.Add(progressBar);
-        var dialog = new ContentDialog
-        {
-            Title = "正在下载更新",
-            Content = content,
-            CloseButtonText = "取消",
-            XamlRoot = xamlRoot
-        };
+        var visuals = UpdateDialogVisuals.CreateDownloadProgressDialog(xamlRoot);
+        var dialog = visuals.Dialog;
+        var status = visuals.Status;
+        var progressBar = visuals.ProgressBar;
 
         using var cancellation = new CancellationTokenSource();
         var progress = new Progress<UpdatePackageDownloadProgress>(value =>

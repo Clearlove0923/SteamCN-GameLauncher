@@ -315,6 +315,34 @@
                                 VerticalAlignment="Center"
                                 Click="BtnCheckUpdate_Click"/>
                     </Grid>
+
+                    <NavigationViewItemSeparator x:Name="updateUiPreviewSeparator"
+                                                 Visibility="Collapsed"/>
+
+                    <!-- 仅 Debug 构建由代码显示；不执行网络请求或启动更新器。 -->
+                    <Grid x:Name="updateUiPreviewPanel"
+                          Visibility="Collapsed"
+                          ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="更新界面预览" FontSize="14" FontWeight="Medium"/>
+                            <TextBlock Text="仅 Debug 版本可用，不下载文件、不启动更新器"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center">
+                            <Button Content="更新提示"
+                                    Click="PreviewUpdatePrompt_Click"/>
+                            <Button Content="下载进度"
+                                    Click="PreviewUpdateProgress_Click"/>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </Border>
 

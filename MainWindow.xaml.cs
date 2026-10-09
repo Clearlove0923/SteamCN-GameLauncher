@@ -7,6 +7,7 @@ using Windows.Graphics;
 using Windows.UI;
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
+using SteamCNGameLauncher.Services.Update;
 
 namespace SteamCNGameLauncher;
 
@@ -109,26 +110,10 @@ public sealed partial class MainWindow : Window
             if (_updatePromptShown) return;
             _updatePromptShown = true;
             var sourceId = update.SourceId ?? new SettingsService().Load().UpdateSourceId;
-            var notes = new TextBlock
-            {
-                Text = update.ReleaseNotes,
-                TextWrapping = TextWrapping.Wrap,
-                IsTextSelectionEnabled = true
-            };
-            var prompt = new ContentDialog
-            {
-                Title = $"发现新版本 {update.Version}",
-                Content = new ScrollViewer
-                {
-                    Content = notes,
-                    MaxHeight = 420,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto
-                },
-                PrimaryButtonText = "立即更新",
-                CloseButtonText = "稍后",
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = ((FrameworkElement)Content).XamlRoot
-            };
+            var prompt = UpdateDialogVisuals.CreateReleaseDialog(
+                ((FrameworkElement)Content).XamlRoot,
+                update.Version,
+                update.ReleaseNotes);
             if (await prompt.ShowAsync() != ContentDialogResult.Primary)
             {
                 _updatePromptShown = false;

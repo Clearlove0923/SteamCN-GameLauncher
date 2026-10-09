@@ -34,6 +34,11 @@ public sealed partial class SettingsPage : Page
         txtAppVersion.Text = $"版本 {AppInfo.FullVersion}";
         txtCopyright.Text = AppInfo.Copyright;
 
+#if DEBUG
+        updateUiPreviewSeparator.Visibility = Visibility.Visible;
+        updateUiPreviewPanel.Visibility = Visibility.Visible;
+#endif
+
         _settings = _settingsService.Load();
 
         // 加载 Steam 全局配置（v2.2.0 起在此页面统一管理）
@@ -357,6 +362,61 @@ public sealed partial class SettingsPage : Page
         }
         finally { button.IsEnabled = true; }
     }
+
+    private async void PreviewUpdatePrompt_Click(object sender, RoutedEventArgs e)
+    {
+#if DEBUG
+        var dialog = UpdateDialogVisuals.CreateReleaseDialog(
+            XamlRoot,
+            "v3.2.0-preview",
+            "### 更新功能\n\n" +
+            "- 更新弹出提示采用人物装饰双栏布局\n" +
+            "- 下载进度界面同步使用人物装饰\n" +
+            "- 长版本说明可在右侧独立滚动\n\n" +
+            "### 修复问题\n\n" +
+            "- 优化不同显示缩放比例下的内容间距\n" +
+            "- 保留取消下载与稍后更新操作");
+        await dialog.ShowAsync();
+#else
+        await Task.CompletedTask;
+#endif
+    }
+
+    private async void PreviewUpdateProgress_Click(object sender, RoutedEventArgs e)
+    {
+#if DEBUG
+        var visuals = UpdateDialogVisuals.CreateDownloadProgressDialog(XamlRoot);
+        using var cancellation = new CancellationTokenSource();
+        var simulation = SimulateUpdateProgressAsync(
+            visuals.Status, visuals.ProgressBar, cancellation.Token);
+        await visuals.Dialog.ShowAsync();
+        cancellation.Cancel();
+        try { await simulation; }
+        catch (OperationCanceledException) { }
+#else
+        await Task.CompletedTask;
+#endif
+    }
+
+#if DEBUG
+    private static async Task SimulateUpdateProgressAsync(
+        TextBlock status,
+        ProgressBar progressBar,
+        CancellationToken cancellationToken)
+    {
+        const double totalMegabytes = 175.9;
+        progressBar.IsIndeterminate = false;
+        for (var percent = 0; percent <= 100; percent++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var receivedMegabytes = totalMegabytes * percent / 100d;
+            progressBar.Value = percent;
+            status.Text = $"正在从 CNB 顺序下载完整更新包：{receivedMegabytes:F1} / {totalMegabytes:F1} MB（{percent}%）";
+            await Task.Delay(70, cancellationToken);
+        }
+        status.Text = "模拟下载完成；关闭此窗口即可返回设置页。";
+    }
+#endif
 
     private async Task OpenManualUpdatePageAsync(string sourceId)
     {
