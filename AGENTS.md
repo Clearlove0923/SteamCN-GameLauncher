@@ -209,15 +209,8 @@ v3.0.0 起使用 [Kachina Installer](https://github.com/YuehaiTeam/kachina-insta
 | **Kachina** | 固定版本 `kachina-builder` | `SteamCN-GameLauncher.update.exe`（嵌入 Inno 安装内容）+ `SteamCN-GameLauncher.Update.3.0.0.exe` | CNB 与 GitHub Release 上传同一份在线更新包 |
 
 `scripts/Publish-Release.ps1` 固定并校验 Kachina builder 版本与 SHA-256。发布时必须把完全相同的 `SteamCN-GameLauncher.Update.<version>.exe` 上传到 CNB 与 GitHub 的 `v<version>` Release；文件名、tag 和配置模板必须一致。可通过 `-KachinaPreviousPublishDirectory` 提供一个或多个旧版 publish 目录生成二进制差分。
+release tag使用v3.1.7 v3.1.6这种tag，不要加上英文字段
 
-### 老用户迁移路径
-
-v3.0.0 之前的安装路径是 `C:\Program Files\SteamCN-GameLauncher`。迁移步骤：
-
-1. 用户在 README 顶部看到迁移提示（已加）。
-2. 卸载旧版本：「设置 → 应用 → 已安装的应用 → 找到「Steam国服游戏启动器」→ 卸载」。
-3. 重新下载 Inno Setup 安装包安装；安装目录内会带上 Kachina 更新器。
-4. 用户的游戏配置、自定义 Manifest 等设置文件独立于安装目录，**不会丢失**（主要保存在 `%APPDATA%\SteamCN-GameLauncher` 下）；安装目录中的运行数据目录由 Kachina 忽略规则保护。
 
 ### 自动更新触发流程
 
