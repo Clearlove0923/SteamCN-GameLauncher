@@ -104,38 +104,16 @@ Steam（按 AppID 启动）
 
 ## 卡拉彼丘（Calabiyau）：
 ### 下载与使用
-1. 首次使用前，至少通过官方启动器成功进入游戏一次，以建立登录缓存并留下有效的官方启动记录。
-2. 从 [CalabiyauLaunchBridge v1.0](https://github.com/Clearlove0923/GameLaunchBridges/releases/tag/Calabiyau-v1.0) 下载 `CalabiyauLaunchBridge_v1.0.exe`，将其重命名为 `CalabiyauLaunchBridge.exe`。
-   v1.0 文件的 SHA-256 为 `39C6C3780803C91071257014F4727CB8706ACF4CF7CF2579E382CF2035BB3893`。
+1. 首次使用前，通过对应渠道的官方启动器登录并成功进入游戏一次，以建立登录缓存和启动记录。标准版与腾讯版需要分别完成一次。
+2. 从 [CalabiyauLaunchBridge v1.1](https://github.com/Clearlove0923/GameLaunchBridges/releases/tag/Calabiyau-v1.1) 下载 `CalabiyauLaunchBridge_v1.1.exe`，将其重命名为 `CalabiyauLaunchBridge.exe`。
+   v1.1 文件的 SHA-256 为 `A5530C77C51744CAF72AAF0897E0D1FF877C0B938F14A7741BE9DDF71071EA54`。
 3. 把桥接器放到官方 `CalabiYau.exe` 所在的安装根目录，不要覆盖或修改官方启动器、游戏本体、ACE、Tenprotect 或配置文件。
 4. 在 SteamCN-GameLauncher 中把游戏可执行文件设为 `CalabiyauLaunchBridge.exe`。如需手动配置 Steam 启动选项，可使用：
 ```text
 "完整路径\CalabiyauLaunchBridge.exe" %command%
 ```
 5. 运行时可能出现一次 UAC 提示。桥接器会在后台初始化官方 SDK，然后直接启动游戏，无需点击官方启动器的“开始游戏”。
-
-### 运行方式
-- 桥接器从最近一次官方成功启动记录读取路径匹配且名称在白名单内的启动参数，敏感参数值不会写入日志。
-- 官方启动器主窗口会持续隐藏，右下角托盘图标会保留。游戏本体连续消失 3 秒后，桥接器会关闭由它启动的官方入口并退出。
-- 普通权限父进程会持续等待高权限工作进程，使 Steam 能按桥接器的完整生命周期跟踪游戏运行状态和时长。
-- 日志固定写入桥接器同级的 `CalabiyauLaunchBridge-log/CalabiyauLaunchBridge.log`，并只保留最近 7 天的记录。
-
-### 可选参数
-```text
---install-root <目录>
---validate
---dry-run
---attach-only
---startup-timeout-seconds <1-3600>
---exit-delay-seconds <0-300>
---no-dialog
-```
-`--install-root` 用于显式指定安装范围；`--validate` 和 `--dry-run` 只检查发现结果；`--attach-only` 只附着到完整路径匹配的已运行游戏；启动等待默认 180 秒，退出防抖默认 3 秒。
-
-### 游戏更新后的兼容性
-普通资源或版本目录变化通常可由有限递归发现和官方启动记录自动适配，无需重新编译。若官方修改入口文件名、启动参数格式、SDK 或反作弊初始化流程，必须先通过官方启动器更新并成功进入游戏一次，再重新验证桥接器；必要时更新同级的 `CalabiyauLaunchBridge.json` 或等待新版桥接器。
-
-2026-10-10 已在标准版完成直接进入游戏、隐藏官方主窗口、保留托盘宿主、SGuard 运行以及游戏退出后自动清理的完整实机验证。腾讯版已覆盖固定目录发现测试，真实登录、Tenprotect/ACE 初始化和完整生命周期尚未实机验证。
+6. 如需使用 DX11，在官方启动器中取消 DX12，并通过官方启动器成功进入游戏一次；如需切回 DX12，则重新勾选并成功进入游戏一次。桥接器会沿用最近一次官方成功启动时的图形设置。
 
 
 
