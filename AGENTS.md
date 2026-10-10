@@ -183,6 +183,7 @@ v3.0.0 起使用 [Kachina Installer](https://github.com/YuehaiTeam/kachina-insta
 - 一律使用 **SemVer 格式**（如 `3.0.0`，**不带 `v` 前缀**）。Kachina 构建元数据使用该版本号。
 - 显示版本号时由代码拼接：`AppInfo.FullVersion = $"v{Version} ({Channel})"`。
 - Git tag 仍带 `v` 前缀（`v3.0.0`），用于 GitHub Release 标识。
+- release tag使用v3.1.7 v3.1.6这种tag，不要加上英文字段
 
 ### Kachina 关键标识
 
@@ -209,7 +210,7 @@ v3.0.0 起使用 [Kachina Installer](https://github.com/YuehaiTeam/kachina-insta
 | **Kachina** | 固定版本 `kachina-builder` | `SteamCN-GameLauncher.update.exe`（嵌入 Inno 安装内容）+ `SteamCN-GameLauncher.Update.3.0.0.exe` | CNB 与 GitHub Release 上传同一份在线更新包 |
 
 `scripts/Publish-Release.ps1` 固定并校验 Kachina builder 版本与 SHA-256。发布时必须把完全相同的 `SteamCN-GameLauncher.Update.<version>.exe` 上传到 CNB 与 GitHub 的 `v<version>` Release；文件名、tag 和配置模板必须一致。可通过 `-KachinaPreviousPublishDirectory` 提供一个或多个旧版 publish 目录生成二进制差分。
-release tag使用v3.1.7 v3.1.6这种tag，不要加上英文字段
+
 
 
 ### 自动更新触发流程
