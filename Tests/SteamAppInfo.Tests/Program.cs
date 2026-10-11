@@ -52,7 +52,7 @@ var multi = app with
     LaunchOptions = app.LaunchOptions.Concat(new[] { new SteamLaunchInfo("3", "Setup", "Setup.exe", "", "", commonFilter) }).ToList()
 };
 var multiple = SteamAppSelectionService.Select(multi, options);
-Check(multiple.Depots.Count == 2 && multiple.Warnings.Any(w => w.Contains("共同使用")), "multiple depots remain candidates with single-depot limitation");
+Check(multiple.Depots.Count == 2 && multiple.Warnings.Any(w => w.Contains("自动共同写入")), "multiple compatible depots are selected as one install set");
 Check(multiple.Executables.Count == 2, "different EXEs remain separate candidates");
 Check(multiple.Depots.Single(d => d.Depot.Id == "128").Manifest == "555", "each candidate keeps its own manifest");
 var bit32 = new SteamLaunchInfo("4", "32-bit", "Client32.exe", "", "", new("windows", "32", ""));

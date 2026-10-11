@@ -116,6 +116,9 @@ public class AppSettings
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var preset in CustomManifestPresets)
         {
+            if (preset.EnsureSteamDepots())
+                changed = true;
+
             if (string.IsNullOrWhiteSpace(preset.Id) || !ids.Add(preset.Id))
             {
                 do preset.Id = Guid.NewGuid().ToString("N");
@@ -201,6 +204,7 @@ public class CustomManifestPreset
     public string DepotId { get; set; } = "";
     public string BuildId { get; set; } = "";
     public string Manifest { get; set; } = "";
+    public List<SteamDepotConfig> SteamDepots { get; set; } = new();
     public string GameDisplayName { get; set; } = "";
     public string InstallDir { get; set; } = "";
     public string ClientExePath { get; set; } = "";        // 真实游戏 exe 完整路径（用于复制启动命令）
@@ -213,6 +217,26 @@ public class CustomManifestPreset
     public string HomeLaunchModeId { get; set; } = HomeLaunchModeIds.SteamCn;
     public string HomeContentProviderId { get; set; } = ""; // 旧配置兼容；首页现由真实游戏 EXE/目录自动选择 Provider
 
+    /// <summary>Upgrade the legacy single Depot fields without discarding them.</summary>
+    public bool EnsureSteamDepots()
+    {
+        SteamDepots ??= new List<SteamDepotConfig>();
+        if (SteamDepots.Count > 0 || string.IsNullOrWhiteSpace(DepotId) || string.IsNullOrWhiteSpace(Manifest))
+            return false;
+
+        SteamDepots.Add(new SteamDepotConfig { DepotId = DepotId, ManifestId = Manifest });
+        return true;
+    }
+
+    public IReadOnlyList<SteamDepotConfig> GetEffectiveSteamDepots()
+    {
+        if (SteamDepots is { Count: > 0 })
+            return SteamDepots.Select(depot => depot.Clone()).ToList();
+        if (!string.IsNullOrWhiteSpace(DepotId) && !string.IsNullOrWhiteSpace(Manifest))
+            return new[] { new SteamDepotConfig { DepotId = DepotId, ManifestId = Manifest } };
+        return Array.Empty<SteamDepotConfig>();
+    }
+
     public CustomManifestPreset Clone() => new()
     {
         Id = Id,
@@ -222,6 +246,7 @@ public class CustomManifestPreset
         DepotId = DepotId,
         BuildId = BuildId,
         Manifest = Manifest,
+        SteamDepots = (SteamDepots ?? new List<SteamDepotConfig>()).Select(depot => depot.Clone()).ToList(),
         GameDisplayName = GameDisplayName,
         InstallDir = InstallDir,
         ClientExePath = ClientExePath,

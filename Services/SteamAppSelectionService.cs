@@ -19,7 +19,7 @@ public static class SteamAppSelectionService
                 d.Manifests.TryGetValue(options.Branch, out var manifest) && IsId(manifest) ? manifest : ""))
             .ToList();
         if (depots.Count > 1)
-            warnings.Add("检测到多个 Depot，它们可能需要共同使用。当前配置只支持一个 Depot，请核对后选择；选择一个不代表完整安装配置。");
+            warnings.Add($"检测到 {depots.Count} 个适用 Depot；带有 public Manifest 的项目将自动共同写入配置。");
 
         var matchingLaunches = app.LaunchOptions.Where(l => Matches(l.Filter, options)).ToList();
         var supported = matchingLaunches.Where(l => SteamPathValidator.TryValidate(l.Executable, out _, requireExe: true)).ToList();
@@ -46,24 +46,17 @@ public static class SteamAppSelectionService
         || restriction.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Contains(target, StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// 一键更新时优先沿用当前仍有 Manifest 的 Depot；否则只在唯一有效候选时自动切换。
-    /// 多个有效候选保持歧义，不依赖上游返回顺序猜测。
-    /// </summary>
-    public static AutomaticCandidateResult<SteamDepotCandidate> ChooseDepotForAutomaticUpdate(
-        SteamAppSelection selection, string currentDepotId)
+    /// <summary>Return every compatible Depot that has a Manifest for the selected branch.</summary>
+    public static AutomaticDepotSetResult ChooseDepotsForAutomaticUpdate(SteamAppSelection selection)
     {
-        var usable = selection.Depots.Where(candidate => !string.IsNullOrWhiteSpace(candidate.Manifest)).ToList();
-        var current = usable.FirstOrDefault(candidate =>
-            string.Equals(candidate.Depot.Id, currentDepotId.Trim(), StringComparison.OrdinalIgnoreCase));
-        if (current != null) return AutomaticCandidateResult<SteamDepotCandidate>.Success(current);
-        return usable.Count switch
-        {
-            1 => AutomaticCandidateResult<SteamDepotCandidate>.Success(usable[0]),
-            0 => AutomaticCandidateResult<SteamDepotCandidate>.Failure("没有找到带有可用 Manifest 的 Depot。"),
-            _ => AutomaticCandidateResult<SteamDepotCandidate>.Failure(
-                $"找到 {usable.Count} 个带有可用 Manifest 的 Depot，且当前 Depot 不在其中，请先手动选择。")
-        };
+        var usable = selection.Depots
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate.Manifest))
+            .GroupBy(candidate => candidate.Depot.Id, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+        return usable.Count == 0
+            ? AutomaticDepotSetResult.Failure("没有找到带有可用 public Manifest 的兼容 Depot。")
+            : AutomaticDepotSetResult.Success(usable);
     }
 
     /// <summary>占位 EXE 同样优先沿用当前有效值，否则只自动接受唯一候选。</summary>
@@ -83,6 +76,13 @@ public static class SteamAppSelectionService
                 $"找到 {selection.Executables.Count} 个 Steam 启动 EXE，且当前值不在其中，请先手动选择。")
         };
     }
+}
+
+public sealed record AutomaticDepotSetResult(IReadOnlyList<SteamDepotCandidate> Candidates, string Error)
+{
+    public bool IsSuccess => Candidates.Count > 0;
+    public static AutomaticDepotSetResult Success(IReadOnlyList<SteamDepotCandidate> candidates) => new(candidates, "");
+    public static AutomaticDepotSetResult Failure(string error) => new(Array.Empty<SteamDepotCandidate>(), error);
 }
 
 public sealed record AutomaticCandidateResult<T>(T? Candidate, string Error) where T : class

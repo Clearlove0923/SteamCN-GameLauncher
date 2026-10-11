@@ -57,6 +57,21 @@ Check(publishedBackdrop == HomeBackdropState.Inactive,
     "leaving home clears window-level playback state");
 backdrop.Changed -= OnBackdropChanged;
 
+var localVideoPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "ImageCache", "launcher.mp4"));
+var localVideoBackground = new HomeBackground { LocalPath = localVideoPath };
+var localVideoKey = new Uri(localVideoPath).AbsoluteUri;
+Check(HomeVideoIdentity.Create(localVideoBackground) == localVideoKey
+      && HomeVideoIdentity.Matches(localVideoBackground, localVideoKey),
+    "local-only provider video keeps a stable identity after compatibility preflight");
+var remoteVideoBackground = new HomeBackground
+{
+    VideoUrl = "https://cdn.example.test/background.mp4",
+    LocalPath = localVideoPath
+};
+Check(HomeVideoIdentity.Create(remoteVideoBackground) == remoteVideoBackground.VideoUrl
+      && HomeVideoIdentity.Matches(remoteVideoBackground, remoteVideoBackground.VideoUrl),
+    "remote URL remains the stable identity after its cached local path changes");
+
 var readiness = new HomeVideoReadinessGate();
 var warmupStarted = DateTimeOffset.Parse("2026-10-08T00:00:00Z");
 readiness.Start(warmupStarted);

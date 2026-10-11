@@ -35,7 +35,6 @@ public sealed partial class CustomManifestPage
         var request = new CancellationTokenSource();
         _gameInfoRequest = request;
         var presetId = PresetId;
-        var originalDepotId = txtDepotId.Text.Trim();
         var originalExecutable = txtExecutableFileName.Text.Trim();
         var originalBuildId = txtBuildId.Text.Trim();
         // 网络请求期间用户仍可能切换预设或编辑字段；保存快照用于拒绝过期结果，
@@ -64,9 +63,9 @@ public sealed partial class CustomManifestPage
             }
 
             var selection = SteamAppSelectionService.Select(app, options);
-            // 自动更新仅接受可明确确定的候选。存在多个有效 Depot/EXE 时停止写入，
-            // 让用户先在页面中完成选择，避免依赖接口返回顺序猜测目标文件。
-            var depotChoice = SteamAppSelectionService.ChooseDepotForAutomaticUpdate(selection, originalDepotId);
+            // Depot 是一个安装集合：所有通过平台、架构、语言和 DLC 过滤且拥有
+            // public Manifest 的候选都会按上游顺序共同写入。
+            var depotSet = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(selection);
             var executableChoice = SteamAppSelectionService.ChooseExecutableForAutomaticUpdate(selection, originalExecutable);
 
             _applyingGameInfo = true;
@@ -74,18 +73,15 @@ public sealed partial class CustomManifestPage
             {
                 _gameInfoSelection = selection;
                 cmbDepotCandidates.ItemsSource = selection.Depots;
-                cmbDepotCandidates.Visibility = selection.Depots.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+                cmbDepotCandidates.Visibility = Visibility.Collapsed;
                 cmbExecutableCandidates.ItemsSource = selection.Executables;
                 cmbExecutableCandidates.Visibility = selection.Executables.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
                 txtAppId.Text = app.AppId;
                 FillGameInfoField(txtDisplayName, selection.DisplayName, "显示名称");
                 FillGameInfoField(txtInstallDir, selection.InstallDirectory, "安装目录名");
                 FillGameInfoField(txtBuildId, selection.BuildId, "BuildID");
-                if (depotChoice.Candidate != null)
-                {
-                    ApplyDepotCandidate(depotChoice.Candidate);
-                    cmbDepotCandidates.SelectedItem = depotChoice.Candidate;
-                }
+                if (depotSet.IsSuccess)
+                    ApplyDepotCandidates(depotSet.Candidates);
                 if (executableChoice.Candidate != null)
                 {
                     FillGameInfoField(txtExecutableFileName, executableChoice.Candidate.Path, "Steam 占位文件名");
@@ -96,7 +92,7 @@ public sealed partial class CustomManifestPage
 
             var candidateErrors = new[]
                 {
-                    depotChoice.Error,
+                    depotSet.Error,
                     executableChoice.Error,
                     string.IsNullOrWhiteSpace(selection.DisplayName) ? "没有获取到合法的显示名称。" : "",
                     string.IsNullOrWhiteSpace(selection.InstallDirectory) ? "没有获取到合法的安装目录名。" : "",
@@ -132,13 +128,12 @@ public sealed partial class CustomManifestPage
             var acfPath = Path.Combine(steamappsPath, $"appmanifest_{appId}.acf");
             var acfContent = _steamService.GenerateAcfContent(new AcfParameters(
                 AppId: appId,
-                DepotId: depotChoice.Candidate!.Depot.Id,
+                Depots: GetConfiguredDepots(),
                 LauncherPath: Path.Combine(_settings.SteamInstallPath.Trim(), "steam.exe"),
                 DisplayName: txtDisplayName.Text.Trim(),
                 InstallDir: txtInstallDir.Text.Trim(),
                 BuildId: txtBuildId.Text.Trim(),
                 LastOwner: _settings.SteamId.Trim(),
-                Manifest: depotChoice.Candidate.Manifest,
                 Language: SelectedGameLanguage));
 
             // 先验证并创建占位 EXE，再替换 ACF。若占位文件处理失败，现有 Steam
@@ -162,7 +157,7 @@ public sealed partial class CustomManifestPage
                 : $"原配置已备份到：\n{write.BackupPath}";
             var placeholderMessage = placeholder.ExeCreated ? "已创建占位 EXE。" : "占位 EXE 已存在，未覆盖。";
             ShowGameInfoStatus("一键更新完成",
-                $"DepotID：{depotChoice.Candidate.Depot.Id}\nBuildID：{selection.BuildId}\nManifest：{depotChoice.Candidate.Manifest}\n{backupMessage}\n{placeholderMessage}\n请完全重启 Steam。",
+                $"已写入 Depot：{string.Join(", ", depotSet.Candidates.Select(candidate => candidate.Depot.Id))}\nBuildID：{selection.BuildId}\n{backupMessage}\n{placeholderMessage}\n请完全重启 Steam。",
                 InfoBarSeverity.Success);
             await ShowInfoAsync(string.Join("\n", new[]
             {

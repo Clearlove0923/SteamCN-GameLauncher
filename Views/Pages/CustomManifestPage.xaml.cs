@@ -92,7 +92,9 @@ public sealed partial class CustomManifestPage : Page
             btnRenamePreset.IsEnabled = !preset.IsBuiltIn;
             btnDeletePreset.IsEnabled = !preset.IsBuiltIn;
             txtAppId.Text = preset.AppId;
-            txtDepotId.Text = preset.DepotId;
+            var depots = preset.GetEffectiveSteamDepots();
+            SetSelectedDepots(depots);
+            txtDepotId.Text = depots.FirstOrDefault()?.DepotId ?? preset.DepotId;
             txtDisplayName.Text = preset.GameDisplayName;
             txtInstallDir.Text = preset.InstallDir;
             txtClientExePath.Text = preset.ClientExePath;
@@ -100,7 +102,7 @@ public sealed partial class CustomManifestPage : Page
             txtLauncherExePath.Text = preset.LauncherExePath;
             txtExecutableFileName.Text = preset.ExecutableFileName;
             txtBuildId.Text = preset.BuildId;
-            txtManifest.Text = preset.Manifest;
+            txtManifest.Text = depots.FirstOrDefault()?.ManifestId ?? preset.Manifest;
             _selectedHomeLaunchModeId = HomeLaunchModeIds.IsSupported(preset.HomeLaunchModeId)
                 ? preset.HomeLaunchModeId
                 : HomeLaunchModeIds.SteamCn;
@@ -137,15 +139,18 @@ public sealed partial class CustomManifestPage : Page
     {
         var langTag = (cmbLanguageCode.SelectedItem as ComboBoxItem)?.Tag as string ?? "schinese";
         var current = _preset;
+        var depots = GetConfiguredDepots();
+        var primaryDepot = depots.FirstOrDefault();
         return new CustomManifestPreset
         {
             Id = current?.Id ?? PresetId,
             Name = current?.Name is { Length: > 0 } name ? name : "默认",
             IsBuiltIn = current?.IsBuiltIn ?? false,
             AppId = txtAppId.Text.Trim(),
-            DepotId = txtDepotId.Text.Trim(),
+            DepotId = primaryDepot?.DepotId ?? txtDepotId.Text.Trim(),
             BuildId = txtBuildId.Text.Trim(),
-            Manifest = txtManifest.Text.Trim(),
+            Manifest = primaryDepot?.ManifestId ?? txtManifest.Text.Trim(),
+            SteamDepots = depots.Select(depot => depot.Clone()).ToList(),
             GameDisplayName = txtDisplayName.Text.Trim(),
             InstallDir = txtInstallDir.Text.Trim(),
             ClientExePath = txtClientExePath.Text.Trim(),
@@ -453,11 +458,10 @@ public sealed partial class CustomManifestPage : Page
         try
         {
             var appId = txtAppId.Text.Trim();
-            var depotId = txtDepotId.Text.Trim();
             var displayName = txtDisplayName.Text.Trim();
             var installDir = txtInstallDir.Text.Trim();
             var buildId = txtBuildId.Text.Trim();
-            var manifest = txtManifest.Text.Trim();
+            var depots = GetConfiguredDepots();
             var langTag = (cmbLanguageCode.SelectedItem as ComboBoxItem)?.Tag as string ?? "schinese";
 
             var libraryPath = _settings.SteamLibraryPath.Trim();
@@ -486,13 +490,12 @@ public sealed partial class CustomManifestPage : Page
 
             var acfContent = _steamService.GenerateAcfContent(new AcfParameters(
                 AppId: appId,
-                DepotId: depotId,
+                Depots: depots,
                 LauncherPath: launcherPath,
                 DisplayName: displayName,
                 InstallDir: installDir,
                 BuildId: buildId,
                 LastOwner: _settings.SteamId.Trim(),
-                Manifest: manifest,
                 Language: langTag));
 
             if (!Directory.Exists(steamappsPath))
@@ -660,6 +663,7 @@ public sealed partial class CustomManifestPage : Page
         && string.Equals(left.DepotId, right.DepotId, StringComparison.Ordinal)
         && string.Equals(left.BuildId, right.BuildId, StringComparison.Ordinal)
         && string.Equals(left.Manifest, right.Manifest, StringComparison.Ordinal)
+        && SameDepots(left.GetEffectiveSteamDepots(), right.GetEffectiveSteamDepots())
         && string.Equals(left.GameDisplayName, right.GameDisplayName, StringComparison.Ordinal)
         && string.Equals(left.InstallDir, right.InstallDir, StringComparison.Ordinal)
         && string.Equals(left.ClientExePath, right.ClientExePath, StringComparison.Ordinal)
@@ -669,6 +673,12 @@ public sealed partial class CustomManifestPage : Page
         && string.Equals(left.ExecutableFileName, right.ExecutableFileName, StringComparison.Ordinal)
         && string.Equals(left.Language, right.Language, StringComparison.Ordinal)
         && string.Equals(left.HomeLayoutProfileId, right.HomeLayoutProfileId, StringComparison.Ordinal);
+
+    private static bool SameDepots(IReadOnlyList<SteamDepotConfig> left, IReadOnlyList<SteamDepotConfig> right) =>
+        left.Count == right.Count && left.Zip(right).All(pair =>
+            string.Equals(pair.First.DepotId, pair.Second.DepotId, StringComparison.Ordinal)
+            && string.Equals(pair.First.ManifestId, pair.Second.ManifestId, StringComparison.Ordinal)
+            && string.Equals(pair.First.Size, pair.Second.Size, StringComparison.Ordinal));
 
     /// <summary>
     /// 把当前表单按稳定 Id 原子写回；离开页面时由未保存提示决定是否调用。
@@ -724,15 +734,24 @@ public sealed partial class CustomManifestPage : Page
             _logService.AddLog("[自定义页] 错误: AppID 必须为有效的正整数");
             return false;
         }
-        if (string.IsNullOrWhiteSpace(txtDepotId.Text))
+        var depots = GetConfiguredDepots();
+        if (depots.Count == 0)
         {
-            _logService.AddLog("[自定义页] 错误: 请填写 DepotID");
+            _logService.AddLog("[自定义页] 错误: 请至少配置一个 Depot");
             return false;
         }
-        if (!SteamAppInfoService.TryNormalizeAppId(txtDepotId.Text, out _))
+        foreach (var depot in depots)
         {
-            _logService.AddLog("[自定义页] 错误: DepotID 必须为有效的正整数");
-            return false;
+            if (!SteamAppInfoService.TryNormalizeAppId(depot.DepotId, out _))
+            {
+                _logService.AddLog($"[自定义页] 错误: DepotID 必须为有效的正整数：{depot.DepotId}");
+                return false;
+            }
+            if (!ulong.TryParse(depot.ManifestId, out var manifestId) || manifestId == 0)
+            {
+                _logService.AddLog($"[自定义页] 错误: Depot {depot.DepotId} 的 ManifestID 必须为有效的正整数");
+                return false;
+            }
         }
         if (string.IsNullOrWhiteSpace(txtDisplayName.Text))
         {
@@ -757,11 +776,6 @@ public sealed partial class CustomManifestPage : Page
         if (string.IsNullOrWhiteSpace(txtBuildId.Text))
         {
             _logService.AddLog("[自定义页] 错误: 请先获取或填写 BuildID");
-            return false;
-        }
-        if (string.IsNullOrWhiteSpace(txtManifest.Text))
-        {
-            _logService.AddLog("[自定义页] 错误: 请先获取或填写 Manifest");
             return false;
         }
         return true;

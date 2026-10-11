@@ -106,7 +106,7 @@
                                     Click="FetchGameInfo_Click" HorizontalAlignment="Stretch"/>
                         </StackPanel>
                         <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                            <TextBlock Text="DepotID" FontWeight="Medium"/>
+                            <TextBlock Text="主 DepotID" FontWeight="Medium"/>
                             <TextBox x:Name="txtDepotId" PlaceholderText="例如 3513351"/>
                         </StackPanel>
 
@@ -145,7 +145,7 @@
                             <TextBox x:Name="txtBuildId" PlaceholderText="自动获取或手动填入"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Spacing="6">
-                            <TextBlock Text="Manifest" FontWeight="Medium"/>
+                            <TextBlock Text="主 Manifest" FontWeight="Medium"/>
                             <TextBox x:Name="txtManifest" PlaceholderText="自动获取或手动填入"/>
                         </StackPanel>
                     </Grid>
@@ -159,6 +159,14 @@
                               PlaceholderText="请选择 Depot，也可手动填写 DepotID"
                               ItemTemplate="{StaticResource GameInfoCandidateTemplate}" HorizontalAlignment="Stretch"
                               Visibility="Collapsed" SelectionChanged="DepotCandidate_SelectionChanged"/>
+                    <StackPanel x:Name="selectedDepotsPanel" Spacing="6" Visibility="Collapsed">
+                        <TextBlock Text="将写入 ACF 的 Depot" FontWeight="Medium"/>
+                        <ItemsControl x:Name="selectedDepotsList"
+                                      ItemTemplate="{StaticResource GameInfoCandidateTemplate}"/>
+                        <TextBlock Text="自动获取会写入全部兼容 Depot；手动修改上方主 DepotID 或 Manifest 时会回退为单 Depot。"
+                                   TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <HyperlinkButton x:Name="lnkGameConfig" Content="SteamDB 启动配置" IsEnabled="False"/>
                         <HyperlinkButton x:Name="lnkGameDepots" Content="SteamDB Depot 信息" IsEnabled="False"/>

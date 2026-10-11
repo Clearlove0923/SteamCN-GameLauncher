@@ -1,5 +1,17 @@
 [
   {
+    "appId": "1282270",
+    "gameId": "calabiyau",
+    "exeNames": ["CalabiYau.exe", "Calabiyau-Win64-Shipping.exe", "Strinova.exe", "Strinova-Win64-Shipping.exe"],
+    "folderNames": ["CalabiYau", "CalabiyauGame", "卡拉彼丘", "卡拉彼丘_腾讯", "Strinova"],
+    "matchNotes": "2026-10-10 本机核对创梦天地国服启动器 CalabiYau.exe、游戏入口 Calabiyau.exe 与 Calabiyau-Win64-Shipping.exe；启动器当前首页动画缓存于 CalabiYau\\ImageCache\\*.mp4。Steam 国际版入口依据公开 depot 信息保留为别名；国服已升级腾讯 WeGame 3.0 的渠道链路仍可能变化。排除更新器、WebView、反作弊、录制及诊断程序。",
+    "matchSources": ["https://klbq.idreamsky.com/", "https://steamdb.info/app/1282270/config/"],
+    "providerId": "idreamsky",
+    "newsCategoryLabels": { "资讯": "新闻" },
+    "newsCategoryOrder": ["公告", "新闻", "活动"],
+    "providerOptions": { "region": "cn", "contentRevision": "launcher-image-cache-v1" }
+  },
+  {
     "appId": "3513350",
     "gameId": "wuthering-waves",
     "exeNames": ["Client-Win64-Shipping.exe", "Wuthering Waves.exe", "launcher.exe", "launcher_main.exe"],

@@ -68,6 +68,7 @@ class GameSourceRegistryTests(unittest.TestCase):
             (r"D:\Other\BH3.exe", "honkai-impact-3rd"),
             (r"D:\Other\StarRail.exe", "honkai-star-rail"),
             (r"D:\Arknights Endfiled\Endfield.exe", "arknights-endfield"),
+            (r"D:\Other\CalabiYau.exe", "calabiyau"),
         )
         for path, game_id in cases:
             with self.subTest(path=path):
@@ -84,6 +85,7 @@ class GameSourceRegistryTests(unittest.TestCase):
             ("异环", "HTGame.exe", "neverness-to-everness", "perfect-world", None),
             ("无限暖暖", "InfinityNikki.exe", "infinity-nikki", "papergames", None),
             ("燕云十六声", "wwm.exe", "where-winds-meet", "netease", None),
+            ("卡拉彼丘", "CalabiYau.exe", "calabiyau", "idreamsky", None),
         )
         for folder, exe, game_id, provider_id, game_biz in cases:
             with self.subTest(game_id=game_id):

@@ -185,7 +185,7 @@ public sealed partial class MainWindow
         var originalPath = videoUri.IsFile ? videoUri.LocalPath : null;
         // 远程 URL 充当动画稳定身份：下载完成后地址从 HTTPS 变为本地文件，
         // 不能因此重新启动同一段动画；优化版 MP4 可以更换同一播放器的媒体源。
-        var key = state.Background?.VideoUrl ?? videoUri.AbsoluteUri;
+        var key = HomeVideoIdentity.Create(state.Background, videoUri);
         if (!videoUri.IsFile)
         {
             // 媒体缓存完成前只显示当前版本海报。远程 MP4 尚未经过兼容性检测，
@@ -257,7 +257,7 @@ public sealed partial class MainWindow
             DispatcherQueue.TryEnqueue(() =>
             {
                 if (cancellation.IsCancellationRequested || _closingHomeMedia || !_homeBackdropState.IsActive
-                    || _homeBackdropState.Background?.VideoUrl != key) return;
+                    || !HomeVideoIdentity.Matches(_homeBackdropState.Background, key)) return;
                 var playable = optimized ?? source;
                 if (optimized is not null)
                     LogService.Instance.AddLog("[首页背景] 兼容动画已生成，正在启动播放器");
@@ -302,7 +302,7 @@ public sealed partial class MainWindow
                 {
                     if (_videoKeys[slot] != key) return;
                 }
-                else if (_homeBackdropState.Background?.VideoUrl != key)
+                else if (!HomeVideoIdentity.Matches(_homeBackdropState.Background, key))
                 {
                     return;
                 }

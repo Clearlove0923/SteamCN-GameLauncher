@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Models/AppSettings.cs" Link="Models/AppSettings.cs" />
+    <Compile Include="../../Models/SteamDepotConfig.cs" Link="Models/SteamDepotConfig.cs" />
     <Compile Include="../../Models/AppearanceSettings.cs" Link="Models/AppearanceSettings.cs" />
     <Compile Include="../../Models/Home/HomeLayoutProfile.cs" Link="Models/Home/HomeLayoutProfile.cs" />
     <Compile Include="../../Models/Home/SupportedGameRegistry.cs" Link="Models/Home/SupportedGameRegistry.cs" />

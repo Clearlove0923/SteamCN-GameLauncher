@@ -4,20 +4,6 @@ using SteamCNGameLauncher.Models;
 namespace SteamCNGameLauncher.Services;
 
 /// <summary>
-/// 生成 ACF 所需的全部字段。鸣潮页与自定义 Manifest 页共用同一份参数模型。
-/// </summary>
-public sealed record AcfParameters(
-    string AppId,
-    string DepotId,
-    string LauncherPath,
-    string DisplayName,
-    string InstallDir,
-    string BuildId,
-    string LastOwner,
-    string Manifest,
-    string Language = "schinese");
-
-/// <summary>
 /// <see cref="SteamService.EnsureGameDirAndPlaceholder"/> 的结果，供调用方写日志。
 /// </summary>
 public sealed record PlaceholderResult(
@@ -305,57 +291,7 @@ public class SteamService
     /// 参数化 ACF 内容生成。鸣潮页与自定义 Manifest 页共用。
     /// </summary>
     public string GenerateAcfContent(AcfParameters p)
-    {
-        // ACF 中路径需要用双反斜杠转义
-        var escapedLauncherPath = p.LauncherPath.Replace("\\", "\\\\");
-
-        return $@"""AppState""
-{{
-	""appid""		""{p.AppId}""
-	""universe""		""1""
-	""LauncherPath""		""{escapedLauncherPath}""
-	""name""		""{p.DisplayName}""
-	""StateFlags""		""4""
-	""installdir""		""{p.InstallDir}""
-	""LastUpdated""		""0""
-	""LastPlayed""		""0""
-	""SizeOnDisk""		""0""
-	""StagingSize""		""0""
-	""buildid""		""{p.BuildId}""
-	""LastOwner""		""{p.LastOwner}""
-	""DownloadType""		""1""
-	""UpdateResult""		""0""
-	""BytesToDownload""		""0""
-	""BytesDownloaded""		""0""
-	""BytesToStage""		""0""
-	""BytesStaged""		""0""
-	""TargetBuildID""		""0""
-	""AutoUpdateBehavior""		""1""
-	""AllowOtherDownloadsWhileRunning""		""0""
-	""ScheduledAutoUpdate""		""0""
-	""InstalledDepots""
-	{{
-		""{p.DepotId}""
-		{{
-			""manifest""		""{p.Manifest}""
-			""size""		""0""
-		}}
-	}}
-	""SharedDepots""
-	{{
-		""228989""		""228980""
-	}}
-	""UserConfig""
-	{{
-		""language""		""{p.Language}""
-	}}
-	""MountedConfig""
-	{{
-		""language""		""{p.Language}""
-	}}
-}}
-";
-    }
+        => AcfContentBuilder.Build(p);
 
     /// <summary>
     /// 鸣潮页便捷包装：保持原有调用签名不变。
@@ -363,11 +299,10 @@ public class SteamService
     public string GenerateAcfContent(string launcherPath, string buildId, string lastOwner, string manifest)
         => GenerateAcfContent(new AcfParameters(
             AppId: WutheringWavesAppId.ToString(),
-            DepotId: WutheringWavesDepotId.ToString(),
+            Depots: new[] { new SteamDepotConfig { DepotId = WutheringWavesDepotId.ToString(), ManifestId = manifest } },
             LauncherPath: launcherPath,
             DisplayName: "Wuthering Waves",
             InstallDir: "Wuthering Waves",
             BuildId: buildId,
-            LastOwner: lastOwner,
-            Manifest: manifest));
+            LastOwner: lastOwner));
 }

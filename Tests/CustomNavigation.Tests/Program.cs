@@ -68,6 +68,7 @@ try
         (@"D:\异环\HTGame.exe", "neverness-to-everness", "perfect-world", null),
         (@"D:\无限暖暖\InfinityNikki.exe", "infinity-nikki", "papergames", null),
         (@"D:\燕云十六声\wwm.exe", "where-winds-meet", "netease", null),
+        (@"D:\卡拉彼丘\CalabiYau.exe", "calabiyau", "idreamsky", null),
     };
     foreach (var (path, gameId, providerId, gameBiz) in sourceCases)
     {
@@ -96,6 +97,8 @@ try
         == "異環", "localized install folder names the cache");
     Check(SupportedGameRegistry.TryGetProviderId("3513350", out var kuroProvider)
         && kuroProvider == "kuro", "Wuthering Waves AppId resolves to Kuro provider");
+    Check(SupportedGameRegistry.TryGetProviderId("1282270", out var idreamSkyProvider)
+        && idreamSkyProvider == "idreamsky", "Strinova AppId resolves to iDreamSky provider");
     Check(SupportedGameRegistry.TryGetProviderId(" 4162040 ", out var hoyoProvider)
         && hoyoProvider == "mihoyo", "provider lookup trims AppId and resolves miHoYo");
     Check(!SupportedGameRegistry.TryGetProviderId("not-supported", out var unknownProvider)
@@ -181,6 +184,8 @@ try
         CurrentCustomManifest = new CustomManifestPreset
         {
             AppId = "123",
+            DepotId = "124",
+            Manifest = "125",
             GameDisplayName = "Legacy data",
             LaunchArguments = "-dx11"
         }
@@ -190,6 +195,9 @@ try
         "old settings migration preserves data and launch arguments without introducing a default sidebar game");
     Check(service.GetAll().All(p => p.HomeLaunchModeId == HomeLaunchModeIds.SteamCn),
         "old settings default to Steam CN home launch mode");
+    var migratedDepot = service.GetAll().Single(p => p.AppId == "123").SteamDepots.Single();
+    Check(migratedDepot.DepotId == "124" && migratedDepot.ManifestId == "125",
+        "legacy single depot fields migrate to the unified depot collection");
     Check(!store.Load().Appearance.Enabled && store.Load().Appearance.ShowHomeAnimation
         && store.Load().Appearance.ShowHomeNews && store.Load().Appearance.SidebarOpacity == 1d,
         "legacy settings default to original appearance, visible home content, and an opaque sidebar");

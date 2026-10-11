@@ -18,21 +18,41 @@ SteamAppSelection Selection(IReadOnlyList<SteamDepotCandidate> depots,
     IReadOnlyList<SteamExecutableCandidate>? executables = null) =>
     new("Game", "Game", "10", depots, executables ?? new[] { Exe("Game.exe") }, Array.Empty<string>());
 
-var currentDepot = SteamAppSelectionService.ChooseDepotForAutomaticUpdate(
-    Selection(new[] { Depot("1", "11"), Depot("2", "22") }), "2");
-Check(currentDepot.Candidate?.Depot.Id == "2", "current depot wins when its manifest remains usable");
-var soleManifest = SteamAppSelectionService.ChooseDepotForAutomaticUpdate(
-    Selection(new[] { Depot("1", ""), Depot("2", "22") }), "1");
-Check(soleManifest.Candidate?.Depot.Id == "2", "sole depot with manifest is selected automatically");
-var ambiguous = SteamAppSelectionService.ChooseDepotForAutomaticUpdate(
-    Selection(new[] { Depot("1", "11"), Depot("2", "22") }), "3");
-Check(!ambiguous.IsSuccess && ambiguous.Error.Contains("2 个"), "ambiguous usable depots are not guessed");
-var noManifest = SteamAppSelectionService.ChooseDepotForAutomaticUpdate(
-    Selection(new[] { Depot("1", ""), Depot("2", "") }), "1");
+var allCompatible = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(
+    Selection(new[] { Depot("1", "11"), Depot("2", "22") }));
+Check(allCompatible.Candidates.Select(candidate => candidate.Depot.Id).SequenceEqual(new[] { "1", "2" }),
+    "all compatible depots with manifests are selected in source order");
+var soleManifest = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(
+    Selection(new[] { Depot("1", ""), Depot("2", "22") }));
+Check(soleManifest.Candidates.Single().Depot.Id == "2", "depots without manifests are excluded automatically");
+var noManifest = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(
+    Selection(new[] { Depot("1", ""), Depot("2", "") }));
 Check(!noManifest.IsSuccess && noManifest.Error.Contains("没有找到"), "depots without manifests cannot be selected");
 Check(SteamAppSelectionService.ChooseExecutableForAutomaticUpdate(
     Selection(new[] { Depot("1", "11") }, new[] { Exe("A.exe"), Exe("B.exe") }), "b.EXE").Candidate?.Path == "B.exe",
     "current executable is matched case-insensitively");
+
+var acf = AcfContentBuilder.Build(new AcfParameters(
+    "123",
+    new[]
+    {
+        new SteamDepotConfig { DepotId = "1", ManifestId = "11" },
+        new SteamDepotConfig { DepotId = "2", ManifestId = "22", Size = "33" },
+    },
+    @"C:\\Steam\\steam.exe", "Game", "Game", "10", "76561198000000000"));
+var depotOneHeader = "\t\t\"1\"" + Environment.NewLine + "\t\t{";
+var depotTwoHeader = "\t\t\"2\"" + Environment.NewLine + "\t\t{";
+Check(acf.Contains("\"manifest\"\t\t\"11\"") && acf.Contains("\"manifest\"\t\t\"22\"")
+    && acf.IndexOf(depotOneHeader, StringComparison.Ordinal) >= 0
+    && acf.IndexOf(depotOneHeader, StringComparison.Ordinal) < acf.IndexOf(depotTwoHeader, StringComparison.Ordinal),
+    "ACF writes every depot with its own manifest in source order");
+try
+{
+    AcfContentBuilder.Build(new AcfParameters("123", Array.Empty<SteamDepotConfig>(), "steam.exe",
+        "Game", "Game", "10", "1"));
+    throw new Exception("FAILED: empty depot set accepted");
+}
+catch (ArgumentException) { Check(true, "ACF rejects an empty depot set"); }
 
 var root = Path.Combine(Path.GetTempPath(), "manifest-update-" + Guid.NewGuid().ToString("N"));
 var target = Path.Combine(root, "library", "steamapps", "appmanifest_123.acf");

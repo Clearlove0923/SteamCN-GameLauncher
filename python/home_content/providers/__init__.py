@@ -2,6 +2,7 @@
 
 from .hoyoplay_json import HoYoPlayJsonProvider
 from .hypergryph_batch import HypergryphBatchProvider
+from .idreamsky import IDreamSkyProvider
 from .kuro_launcher import KuroLauncherProvider
 from .local_launcher_asset import LocalLauncherAssetProvider
 from .netease_static_cms import NetEaseStaticCmsProvider
@@ -20,6 +21,7 @@ __all__ = [
     "MiHoYoProvider",
     "KuroProvider",
     "HypergryphProvider",
+    "IDreamSkyProvider",
     "PerfectWorldProvider",
     "PaperGamesProvider",
     "NetEaseProvider",

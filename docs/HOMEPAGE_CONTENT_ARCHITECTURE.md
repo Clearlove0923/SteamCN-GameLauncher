@@ -20,6 +20,7 @@ Python Provider Registry
         ├─ PerfectWorldHybridProvider
         ├─ NextJsDataProvider
         ├─ NetEaseStaticCmsProvider
+        ├─ IDreamSkyProvider
         └─ LocalLauncherAssetProvider
 ```
 
@@ -138,6 +139,7 @@ Python 将不同厂商和本地启动器来源转换为同一个 `HomeContent`�
 | `PerfectWorldProvider` | `perfect-world`；旧 `perfect-world-hybrid` |
 | `PaperGamesProvider` | `papergames`；旧 `nextjs-data` |
 | `NetEaseProvider` | `netease`；旧 `netease-static-cms` |
+| `IDreamSkyProvider` | `idreamsky` |
 | `LocalLauncherAssetProvider` | `local-launcher-asset` |
 
 ### 国服默认来源
@@ -153,10 +155,11 @@ SteamCN 内置适配游戏统一使用中国大陆来源。EXE 别名、安装�
 | 无限暖暖 | `papergames` | 官方启动器 `%LOCALAPPDATA%\\InfinityNikki Launcher\\cache\\images` 中最新且格式有效的 WebM；Banner 与资讯使用 `infinitynikki.nuanpaper.com` 国服站点 |
 | 异环 | `perfect-world` | `yh.wanmei.com`、`games.wanmei.com` 和 `wmupd.com` 国服来源 |
 | 明日方舟：终末地 | `hypergryph` | 鹰角国服 launcher，`appCode=6LL0KJuqHBVz33WK`、渠道 `1`、`zh-cn` |
+| 卡拉彼丘 | `idreamsky` | 创梦天地国服启动器安装树中的 `CalabiYau\\ImageCache`，仅采用校验通过的本机 MP4/海报缓存 |
 
 新增内置游戏时配置必须包含 `region=cn`；启动器加载配置时会验证这一约束。国际服来源不能作为 SteamCN 内置游戏的隐式回退。默认区域策略变更时必须同步递增 C# 首页缓存键版本，避免旧的国际服元数据在有效期内继续显示。
 
-匹配名称以用户填写的 EXE 路径和安装目录中的完整游戏目录段为优先，EXE 文件名仅作兜底。字典包含上述游戏的常见中文安装目录名；《无限暖暖》属于叠纸混合来源，背景读取本机官方启动器缓存，Banner 与资讯使用已验证的官网 Next.js 数据。匹配到米哈游游戏后，`mihoyo` 再以该游戏的 `gameBiz` 选择专属首页内容；缺少有效游戏选择时返回错误，避免误显示旗下另一款游戏。目录名中的冒号在 Windows 路径中不可用，例如《崩坏：星穹铁道》使用 `崩坏星穹铁道` 作为目录别名。未匹配的路径不会借用其他游戏的 Provider。
+匹配名称以用户填写的 EXE 路径和安装目录中的完整游戏目录段为优先，EXE 文件名仅作兜底。字典包含上述游戏的常见中文安装目录名；《无限暖暖》属于叠纸混合来源，背景读取本机官方启动器缓存，Banner 与资讯使用已验证的官网 Next.js 数据。《卡拉彼丘》当前仅使用实机验证的国服启动器 `ImageCache` 动画，不把游戏内 `Content\\Movies` 视频或官网宣传片当作启动器背景。匹配到米哈游游戏后，`mihoyo` 再以该游戏的 `gameBiz` 选择专属首页内容；缺少有效游戏选择时返回错误，避免误显示旗下另一款游戏。目录名中的冒号在 Windows 路径中不可用，例如《崩坏：星穹铁道》使用 `崩坏星穹铁道` 作为目录别名。未匹配的路径不会借用其他游戏的 Provider。
 
 `exeNames` 只记录游戏本体、正式启动器或实际承担启动链路的桥接 EXE；不包含崩溃上报、WebView、反作弊服务、SDK、安装器、更新器、备份和诊断程序。来源可以是本机安装链路，也可以是官方资料、发行平台启动配置或公开补丁清单。`matchNotes` 和 `matchSources` 记录版本、证据和未核实范围。多个游戏可使用同名启动器，目录匹配仍优先，脱离已识别目录的同名 EXE 不触发 Provider 选择。新增公司或游戏时按 `AGENTS.md` 的“新增公司或游戏的首页匹配字典”规则补充来源和两端离线测试。
 

@@ -10,6 +10,7 @@ public sealed partial class CustomManifestPage
     private readonly ISteamAppInfoService _appInfoService = new SteamAppInfoService();
     private CancellationTokenSource? _gameInfoRequest;
     private SteamAppSelection? _gameInfoSelection;
+    private List<SteamDepotConfig> _selectedSteamDepots = new();
     private bool _applyingGameInfo;
     private readonly Dictionary<string, string> _gameInfoIssues = new();
     private readonly Dictionary<TextBox, string> _observedGameInfoText = new();
@@ -103,31 +104,39 @@ public sealed partial class CustomManifestPage
             CancelGameInfoRequest();
             ShowGameInfoStatus("获取已取消", "输入已修改，已丢弃本次请求，避免覆盖新输入。请重新获取或手动填写。");
         }
+        if (sender == txtDepotId || sender == txtManifest)
+        {
+            _applyingGameInfo = true;
+            try
+            {
+                if (sender == txtDepotId && _gameInfoSelection != null)
+                {
+                    cmbDepotCandidates.SelectedItem = null;
+                    var candidate = _gameInfoSelection.Depots.FirstOrDefault(d => d.Depot.Id == txtDepotId.Text.Trim());
+                    txtManifest.Text = candidate?.Manifest ?? "";
+                    if (candidate != null) _gameInfoIssues.Remove("DepotID");
+                    else _gameInfoIssues["DepotID"] = "手动 DepotID 未在本次适用候选中找到，请核对";
+                }
+                else if (sender == txtManifest)
+                {
+                    _gameInfoIssues["Manifest"] = "已手动修改，请核对";
+                }
+                UseSingleDepotFromFields();
+            }
+            finally { EndGameInfoUpdate(); }
+            RefreshGameInfoStatus();
+            return;
+        }
         if (_gameInfoSelection == null) return;
 
         _applyingGameInfo = true;
         try
         {
-            if (sender == txtDepotId)
-            {
-                cmbDepotCandidates.SelectedItem = null;
-                var candidate = _gameInfoSelection.Depots.FirstOrDefault(d => d.Depot.Id == txtDepotId.Text.Trim());
-                // Editing the depot always invalidates the previous depot's manifest.
-                txtManifest.Text = candidate?.Manifest ?? "";
-                if (candidate != null) _gameInfoIssues.Remove("DepotID");
-                else _gameInfoIssues["DepotID"] = "手动 DepotID 未在本次适用候选中找到，请核对";
-                if (string.IsNullOrEmpty(candidate?.Manifest))
-                    _gameInfoIssues["Manifest"] = "当前 Depot 无可用 Manifest，已清除旧值，请手动填写";
-                else _gameInfoIssues.Remove("Manifest");
-            }
-            else
-            {
-                var field = sender == txtExecutableFileName ? "Steam 占位文件名"
-                    : sender == txtDisplayName ? "显示名称" : sender == txtInstallDir ? "安装目录名"
-                    : sender == txtBuildId ? "BuildID" : "Manifest";
-                _gameInfoIssues[field] = "已手动修改，请核对";
-                if (sender == txtExecutableFileName) cmbExecutableCandidates.SelectedItem = null;
-            }
+            var field = sender == txtExecutableFileName ? "Steam 占位文件名"
+                : sender == txtDisplayName ? "显示名称" : sender == txtInstallDir ? "安装目录名"
+                : "BuildID";
+            _gameInfoIssues[field] = "已手动修改，请核对";
+            if (sender == txtExecutableFileName) cmbExecutableCandidates.SelectedItem = null;
         }
         finally { EndGameInfoUpdate(); }
         RefreshGameInfoStatus();
@@ -167,6 +176,7 @@ public sealed partial class CustomManifestPage
                 return;
             }
             var selection = SteamAppSelectionService.Select(app, options);
+            var depotSet = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(selection);
             _applyingGameInfo = true;
             try
             {
@@ -176,16 +186,16 @@ public sealed partial class CustomManifestPage
                 FillGameInfoField(txtInstallDir, selection.InstallDirectory, "安装目录名");
                 FillGameInfoField(txtBuildId, selection.BuildId, "BuildID");
                 cmbDepotCandidates.ItemsSource = selection.Depots;
-                cmbDepotCandidates.Visibility = selection.Depots.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+                cmbDepotCandidates.Visibility = Visibility.Collapsed;
                 cmbExecutableCandidates.ItemsSource = selection.Executables;
                 cmbExecutableCandidates.Visibility = selection.Executables.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
 
-                if (selection.Depots.Count == 1)
-                    ApplyDepotCandidate(selection.Depots[0], preserveMissingManifest: true);
+                if (depotSet.IsSuccess)
+                    ApplyDepotCandidates(depotSet.Candidates);
                 else
                 {
-                    _gameInfoIssues["DepotID"] = selection.Depots.Count == 0 ? "未找到适用候选，原值未验证" : "有多个候选，请选择，原值未验证";
-                    _gameInfoIssues["Manifest"] = "尚未确定 Depot，原值未验证";
+                    _gameInfoIssues["DepotID"] = depotSet.Error;
+                    _gameInfoIssues["Manifest"] = "没有可自动写入的 Depot Manifest，原值未验证";
                 }
                 if (selection.Executables.Count == 1)
                     FillGameInfoField(txtExecutableFileName, selection.Executables[0].Path, "Steam 占位文件名");
@@ -228,13 +238,50 @@ public sealed partial class CustomManifestPage
         _gameInfoIssues.Remove(field);
     }
 
-    private void ApplyDepotCandidate(SteamDepotCandidate candidate, bool preserveMissingManifest = false)
+    private void ApplyDepotCandidates(IEnumerable<SteamDepotCandidate> candidates)
     {
-        txtDepotId.Text = candidate.Depot.Id;
+        SetSelectedDepots(candidates.Select(candidate => new SteamDepotConfig
+        {
+            DepotId = candidate.Depot.Id,
+            ManifestId = candidate.Manifest,
+        }));
         _gameInfoIssues.Remove("DepotID");
-        if (string.IsNullOrEmpty(candidate.Manifest) && !preserveMissingManifest)
-            txtManifest.Text = "";
-        FillGameInfoField(txtManifest, candidate.Manifest, "Manifest");
+        _gameInfoIssues.Remove("Manifest");
+    }
+
+    private void SetSelectedDepots(IEnumerable<SteamDepotConfig> depots)
+    {
+        _selectedSteamDepots = depots.Select(depot => depot.Clone()).ToList();
+        selectedDepotsList.ItemsSource = null;
+        selectedDepotsList.ItemsSource = _selectedSteamDepots.Select(depot => depot.Clone()).ToList();
+        selectedDepotsPanel.Visibility = _selectedSteamDepots.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (_selectedSteamDepots.Count > 0)
+        {
+            txtDepotId.Text = _selectedSteamDepots[0].DepotId;
+            txtManifest.Text = _selectedSteamDepots[0].ManifestId;
+        }
+    }
+
+    private void UseSingleDepotFromFields()
+    {
+        var depotId = txtDepotId.Text.Trim();
+        var manifest = txtManifest.Text.Trim();
+        SetSelectedDepots(string.IsNullOrWhiteSpace(depotId) && string.IsNullOrWhiteSpace(manifest)
+            ? Array.Empty<SteamDepotConfig>()
+            : new[] { new SteamDepotConfig { DepotId = depotId, ManifestId = manifest } });
+    }
+
+    private IReadOnlyList<SteamDepotConfig> GetConfiguredDepots()
+    {
+        var depotId = txtDepotId.Text.Trim();
+        var manifest = txtManifest.Text.Trim();
+        if (_selectedSteamDepots.Count > 0
+            && string.Equals(_selectedSteamDepots[0].DepotId, depotId, StringComparison.Ordinal)
+            && string.Equals(_selectedSteamDepots[0].ManifestId, manifest, StringComparison.Ordinal))
+            return _selectedSteamDepots.Select(depot => depot.Clone()).ToList();
+        return string.IsNullOrWhiteSpace(depotId) && string.IsNullOrWhiteSpace(manifest)
+            ? Array.Empty<SteamDepotConfig>()
+            : new[] { new SteamDepotConfig { DepotId = depotId, ManifestId = manifest } };
     }
 
     private void DepotCandidate_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -242,7 +289,7 @@ public sealed partial class CustomManifestPage
         if (_applyingGameInfo || _gameInfoSelection == null
             || cmbDepotCandidates.SelectedItem is not SteamDepotCandidate candidate) return;
         _applyingGameInfo = true;
-        try { ApplyDepotCandidate(candidate); }
+        try { ApplyDepotCandidates(new[] { candidate }); }
         finally { EndGameInfoUpdate(); }
         RefreshGameInfoStatus();
     }

@@ -146,9 +146,9 @@ contracts/                      JSON Schema、请求和响应样本
 
 ### Debug 输出目录
 
-- 后续所有 Debug 主程序产物统一使用 `E:\AI\steamhelper\bin\x64\Debug\net8.0-windows10.0.19041.0`。
+- 后续所有 Debug 主程序产物统一使用 `E:\AI\SteamCN-GameLauncher\bin\x64\Debug\net8.0-windows10.0.19041.0`。
 - Debug 测试产物统一放在上述目录的 `Tests\<测试项目名>` 子目录。
-- 不得在 `E:\AI\steamhelper\bin` 下创建 `x64` 之外的目录，也不得使用各测试项目自身的 `bin` 目录保存 Debug 产物。
+- 不得在 `E:\AI\SteamCN-GameLauncher\bin` 下创建 `x64` 之外的目录，也不得使用各测试项目自身的 `bin` 目录保存 Debug 产物。
 - 主程序统一使用 `dotnet build SteamCN-GameLauncher.sln --configuration Debug -p:Platform=x64` 构建；测试项目必须显式设置 `OutDir` 到统一目录。
 
 - 每个 Provider 使用固定的脱敏响应或页面样本测试，常规测试不访问实时网络。
@@ -165,6 +165,12 @@ contracts/                      JSON Schema、请求和响应样本
 - 每条记录至少包含带时区的时间戳、推送人员、目标分支、实现内容和验证结果；存在尚未完成的接口、运行限制或已知问题时必须一并写明。
 - 推送人员使用当前仓库 `git config user.name` 的值；不得在记录中写入邮箱、用户路径、令牌、Cookie 或其他敏感信息。
 - 功能记录描述最终实现，不记录已放弃的中间方案。仅修改文档时也要记录该次推送的文档范围，不得事后集中补写多次推送记录。
+
+## 发布说明格式
+
+- GitHub、CNB、更新弹窗、`CHANGELOG.md` 及提交给用户审阅的发布说明，其功能、修复、说明和已知问题条目必须使用从 `1.` 开始的有序序号。
+- 发布说明不得使用 `-`、`*` 或 `+` 项目符号列举条目；同一小节中的序号按出现顺序连续递增。
+- 标题和普通说明段落不强制编号；只有需要逐项列举的内容使用有序序号。
 
 ## 实现原则
 

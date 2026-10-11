@@ -2,6 +2,24 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-10-11 11:07:18 +08:00
+
+- 推送人员：`Violet0923`
+- 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.1.8` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
+- 推送提交：`release: 发布 v3.1.8 多 Depot 与卡拉彼丘首页支持`
+- 实现内容：
+  - 自定义 Manifest 从单 Depot 扩展为有序 Depot 集合；AppID 自动获取与一键更新会共同写入全部具有 public Manifest 的兼容 Depot，旧版单 Depot 预设自动迁移，手动修改主 Depot 或 Manifest 时明确回退为单 Depot。
+  - ACF 生成拆分为独立构建器并校验空集合、无效 ID 与重复 Depot；页面新增最终写入列表，文档与固定测试同步更新。
+  - 新增创梦天地 `idreamsky` Provider 与《卡拉彼丘》国服匹配配置，仅读取已验证的启动器 `CalabiYau\\ImageCache` 本地动画或海报并校验格式、大小和路径范围。
+  - 修复仅包含 `LocalPath` 的首页背景缺少稳定视频身份，导致本地动画异步预处理结果被丢弃的问题；仓库规则新增发布说明必须使用有序序号的格式约束。
+  - 四处版本号、`version.json` 与 `CHANGELOG.md` 同步升级为 `3.1.8`，发布说明采用用户审定的中文序号格式。
+- 验证结果：
+  - Debug x64 主程序构建成功，0 警告、0 错误；10 个纯 C# 回归项目共 267 项通过，C#→Python Worker 实时端到端 12 项通过。
+  - Python Provider 离线测试 253 项与 32 个子测试通过，1 项按条件跳过；测试使用独立 Python 3.10 临时环境，未写入正式运行时。
+  - Release x64 自包含构建、基于最终 v3.1.7 publish 的 Kachina 差分生成及 Inno Setup 编译成功；发布目录内嵌 `idreamsky` Provider 导入验证成功，主程序隐藏启动 6 秒未提前退出。
+  - 安装包 `SteamCN-GameLauncher-v3.1.8-win-x64-setup.exe` 为 142049988 字节，SHA-256 `be3b3654410919887624bbe2db7761df7af70bc56ecd54d3dfbe760bcc8f21f0`；更新包 `SteamCN-GameLauncher.Update.3.1.8.exe` 为 185840860 字节，SHA-256 `a2a71d62fae61f3a4fe1cac59b6411e678334fd598c4ac5332a3fe9bd903f62e`；`SHA256SUMS.txt` 为 216 字节，SHA-256 `f5f37e44a9bf2be3cb1abd632d0b2bc96810c044ea214e954b8548787ab4fd7`。
+- 当前限制：自动 Depot 集合来自公开元数据，不能证明用户账号 Package 对全部候选均有授权；私有分支与特殊安装方式仍需人工确认。《卡拉彼丘》当前只提供本机启动器缓存背景，不包含远程 Banner 与资讯。应用与安装包尚未商业代码签名。
+
 ## 2026-10-10 11:10:08 +08:00
 
 - 推送人员：`Violet0923`
