@@ -17,6 +17,18 @@
    3. 安装包 `SteamCN-GameLauncher-v3.1.9-win-x64-setup.exe` 为 142046956 字节，SHA-256 `c6800821613bc3f2bea8182116c7c80aba801475ec1ffa4b483713bfa25e4385`；更新包 `SteamCN-GameLauncher.Update.3.1.9.exe` 为 185724807 字节，SHA-256 `7a15b9119e735c5f93f3de24e5e5a2776c9cbcd90af6ac552a380e8ebb2517f4`；`SHA256SUMS.txt` 为 216 字节，SHA-256 `285830738220c1984fe95f1e2cacb4ed51f56c54647c70f68527a030a903bab7`。
 6. 当前限制：旧版本已经清除背景元数据且本地没有剩余有效缓存时，无法凭空恢复动画，需要等待厂商重新下发背景或重新建立有效缓存；应用与安装包尚未商业代码签名。
 
+## 2026-10-13 20:27:08 +08:00
+
+1. 推送人员：`Violet0923`
+2. 目标分支：GitHub `master`
+3. 推送提交：`docs: update Calabiyau bridge to v1.2`
+4. 实现内容：
+   1. 将《卡拉彼丘》特殊设置说明更新至桥接器 v1.2，并替换下载链接、附件名和 SHA-256。
+   2. 说明 v1.2 为 Windows x64 原生单文件，可直接复制运行，无需安装 .NET、重命名或创建配置。
+   3. 更新 SteamCN-GameLauncher 可执行文件名及手动 Steam 启动选项示例。
+5. 验证结果：文档中的版本、附件名、下载标签和 SHA-256 与 GitHub、CNB v1.2 公开发布附件一致；两端附件下载校验通过。
+6. 当前限制：v1.2 尚未重新完成实机回归；首次使用仍需通过对应渠道官方启动器成功进入游戏一次。
+
 ## 2026-10-11 12:25:39 +08:00
 
 1. 推送人员：`Violet0923`
@@ -53,21 +65,3 @@
   - 合并仅涉及 `AGENTS.md`、`docs/GameSpecialSetting.md` 与 `docs/PUSH_HISTORY.md`，未改变已经构建和验证的 v3.1.8 产品代码与正式产物。
 - 验证结果：逐提交检查远端新增内容并人工解决推送历史的时间顺序冲突；`git diff --check` 无空白错误，发布提交和远端文档历史均保留。
 - 当前限制：应用与安装包尚未商业代码签名。
-
-## 2026-10-11 11:07:18 +08:00
-
-- 推送人员：`Violet0923`
-- 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.1.8` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
-- 推送提交：`release: 发布 v3.1.8 多 Depot 与卡拉彼丘首页支持`
-- 实现内容：
-  - 自定义 Manifest 从单 Depot 扩展为有序 Depot 集合；AppID 自动获取与一键更新会共同写入全部具有 public Manifest 的兼容 Depot，旧版单 Depot 预设自动迁移，手动修改主 Depot 或 Manifest 时明确回退为单 Depot。
-  - ACF 生成拆分为独立构建器并校验空集合、无效 ID 与重复 Depot；页面新增最终写入列表，文档与固定测试同步更新。
-  - 新增创梦天地 `idreamsky` Provider 与《卡拉彼丘》国服匹配配置，仅读取已验证的启动器 `CalabiYau\\ImageCache` 本地动画或海报并校验格式、大小和路径范围。
-  - 修复仅包含 `LocalPath` 的首页背景缺少稳定视频身份，导致本地动画异步预处理结果被丢弃的问题；仓库规则新增发布说明必须使用有序序号的格式约束。
-  - 四处版本号、`version.json` 与 `CHANGELOG.md` 同步升级为 `3.1.8`，发布说明采用用户审定的中文序号格式。
-- 验证结果：
-  - Debug x64 主程序构建成功，0 警告、0 错误；10 个纯 C# 回归项目共 267 项通过，C#→Python Worker 实时端到端 12 项通过。
-  - Python Provider 离线测试 253 项与 32 个子测试通过，1 项按条件跳过；测试使用独立 Python 3.10 临时环境，未写入正式运行时。
-  - Release x64 自包含构建、基于最终 v3.1.7 publish 的 Kachina 差分生成及 Inno Setup 编译成功；发布目录内嵌 `idreamsky` Provider 导入验证成功，主程序隐藏启动 6 秒未提前退出。
-  - 安装包 `SteamCN-GameLauncher-v3.1.8-win-x64-setup.exe` 为 142049988 字节，SHA-256 `be3b3654410919887624bbe2db7761df7af70bc56ecd54d3dfbe760bcc8f21f0`；更新包 `SteamCN-GameLauncher.Update.3.1.8.exe` 为 185840860 字节，SHA-256 `a2a71d62fae61f3a4fe1cac59b6411e678334fd598c4ac5332a3fe9bd903f62e`；`SHA256SUMS.txt` 为 216 字节，SHA-256 `f5f37e44a9bf2be3cb1abd632d0b2bc96810c044ea214e954b8548787ab4fd7`。
-- 当前限制：自动 Depot 集合来自公开元数据，不能证明用户账号 Package 对全部候选均有授权；私有分支与特殊安装方式仍需人工确认。《卡拉彼丘》当前只提供本机启动器缓存背景，不包含远程 Banner 与资讯。应用与安装包尚未商业代码签名。
