@@ -122,10 +122,25 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
         // 全空或失败响应不覆盖最后一次成功缓存。
         if (!HasUsableContent(result.Content)) return result;
 
+        // 厂商会在活动切换期间返回有效的 Banner/资讯，但暂时不下发首页动画。
+        // 这仍是一个“部分成功”响应，不能用 null background 覆盖已验证的旧背景。
+        // 仅补齐缺失的顶层背景；新响应一旦提供背景，始终以新数据为准。
+        var key = HomeCacheKey.Create(request);
+        if (result.Content.Background is null
+            && _memory.TryGetValue(key, out var previous)
+            && previous.Entry.Result.Content.Background is { } cachedBackground)
+        {
+            result = result with
+            {
+                Content = result.Content with { Background = cachedBackground },
+            };
+            LogService.Instance.AddLog("[首页缓存] 新内容未下发背景，已保留上次成功动画");
+        }
+
         await _contentCache.WriteAsync(request, result, cancellationToken).ConfigureAwait(false);
         await _contentCache.CleanupAsync(_policy.Retention, cancellationToken).ConfigureAwait(false);
         var entry = new HomeContentCacheEntry(DateTimeOffset.UtcNow, result with { IsStale = false });
-        _memory[HomeCacheKey.Create(request)] = new MemoryEntry(DateTimeOffset.UtcNow, entry);
+        _memory[key] = new MemoryEntry(DateTimeOffset.UtcNow, entry);
         var resolved = _mediaCache.ResolveAvailable(request, result) with { IsStale = false };
         ContentRefreshed?.Invoke(this, new HomeContentRefreshedEventArgs(request, resolved));
         ScheduleMediaCaching(request, result);

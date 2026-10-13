@@ -1,8 +1,8 @@
 {
-  "version": "3.1.8",
-  "releaseDate": "2026-10-11",
-  "availableAfter": "2026-10-11T00:00:00+08:00",
-  "message": "3.1.8 更新：自定义 Manifest 支持多 Depot 配置与完整集合更新，新增《卡拉彼丘》国服首页背景支持，并修复本地首页视频播放身份判断。",
+  "version": "3.1.9",
+  "releaseDate": "2026-10-14",
+  "availableAfter": "2026-10-14T00:00:00+08:00",
+  "message": "3.1.9 更新：修复厂商暂时不下发背景时，新资讯可能覆盖旧缓存并导致首页动画消失的问题。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"

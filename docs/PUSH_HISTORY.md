@@ -2,6 +2,21 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-10-14 00:29:47 +08:00
+
+1. 推送人员：`Violet0923`
+2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.1.9` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
+3. 推送提交：`release: 发布 v3.1.9 首页动画缓存修复`
+4. 实现内容：
+   1. 修复厂商接口暂时不下发背景时，首页资讯、Banner 与活动数据刷新覆盖旧背景缓存并导致动画消失的问题；部分成功响应现在会保留上一次已验证的背景。
+   2. 更新弹窗识别 Markdown 标题，去除标题前的 `#` 标记并使用更大号粗体文本渲染；GitHub 与 CNB Release 正文继续保留标准 Markdown 标题。
+   3. 仓库开发规则补充更新弹窗与 Release 标题的差异化渲染要求，四处版本号、`version.json` 和 `CHANGELOG.md` 同步升级至 `3.1.9`。
+5. 验证结果：
+   1. Debug x64 主程序构建成功，0 警告、0 错误；首页缓存回归测试 25 项全部通过。
+   2. Release x64 自包含构建、基于 v3.1.8 publish 的 Kachina 差分生成及 Inno Setup 编译成功；发布目录未混入 `GameTime`、`HomeCache` 等用户数据，内嵌 Python 与 HoYoPlay Provider 导入验证成功。
+   3. 安装包 `SteamCN-GameLauncher-v3.1.9-win-x64-setup.exe` 为 142046956 字节，SHA-256 `c6800821613bc3f2bea8182116c7c80aba801475ec1ffa4b483713bfa25e4385`；更新包 `SteamCN-GameLauncher.Update.3.1.9.exe` 为 185724807 字节，SHA-256 `7a15b9119e735c5f93f3de24e5e5a2776c9cbcd90af6ac552a380e8ebb2517f4`；`SHA256SUMS.txt` 为 216 字节，SHA-256 `285830738220c1984fe95f1e2cacb4ed51f56c54647c70f68527a030a903bab7`。
+6. 当前限制：旧版本已经清除背景元数据且本地没有剩余有效缓存时，无法凭空恢复动画，需要等待厂商重新下发背景或重新建立有效缓存；应用与安装包尚未商业代码签名。
+
 ## 2026-10-11 12:25:39 +08:00
 
 1. 推送人员：`Violet0923`
@@ -56,16 +71,3 @@
   - Release x64 自包含构建、基于最终 v3.1.7 publish 的 Kachina 差分生成及 Inno Setup 编译成功；发布目录内嵌 `idreamsky` Provider 导入验证成功，主程序隐藏启动 6 秒未提前退出。
   - 安装包 `SteamCN-GameLauncher-v3.1.8-win-x64-setup.exe` 为 142049988 字节，SHA-256 `be3b3654410919887624bbe2db7761df7af70bc56ecd54d3dfbe760bcc8f21f0`；更新包 `SteamCN-GameLauncher.Update.3.1.8.exe` 为 185840860 字节，SHA-256 `a2a71d62fae61f3a4fe1cac59b6411e678334fd598c4ac5332a3fe9bd903f62e`；`SHA256SUMS.txt` 为 216 字节，SHA-256 `f5f37e44a9bf2be3cb1abd632d0b2bc96810c044ea214e954b8548787ab4fd7`。
 - 当前限制：自动 Depot 集合来自公开元数据，不能证明用户账号 Package 对全部候选均有授权；私有分支与特殊安装方式仍需人工确认。《卡拉彼丘》当前只提供本机启动器缓存背景，不包含远程 Banner 与资讯。应用与安装包尚未商业代码签名。
-
-## 2026-10-11 01:41:00 +08:00
-
-- 推送人员：`Violet0923`
-- 目标分支：GitHub `master`
-- 推送提交：`docs: update Calabiyau bridge to v1.1`
-- 实现内容：
-  - 将《卡拉彼丘》特殊设置说明更新至桥接器 v1.1，并替换下载链接、附件名和 SHA-256。
-  - 精简为首次官方登录、文件放置、SteamCN-GameLauncher 配置、启动方式及 DX11/DX12 切换步骤。
-- 验证结果：
-  - 文档中的版本、附件名、下载标签和 SHA-256 与 v1.1 发布候选一致。
-- 当前限制：
-  - 标准版与腾讯版的登录缓存和启动记录需要分别通过对应渠道的官方启动器生成。

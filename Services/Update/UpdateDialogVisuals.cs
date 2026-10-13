@@ -17,15 +17,9 @@ internal static class UpdateDialogVisuals
         string version,
         string releaseNotes)
     {
-        var notes = new TextBlock
-        {
-            Text = releaseNotes,
-            TextWrapping = TextWrapping.Wrap,
-            IsTextSelectionEnabled = true
-        };
         var notesScroller = new ScrollViewer
         {
-            Content = notes,
+            Content = CreateReleaseNotesView(releaseNotes),
             MaxHeight = 360,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
@@ -40,6 +34,35 @@ internal static class UpdateDialogVisuals
         };
         ApplyDialogWidth(dialog);
         return dialog;
+    }
+
+    private static StackPanel CreateReleaseNotesView(string releaseNotes)
+    {
+        var content = new StackPanel { Spacing = 6 };
+        foreach (var rawLine in releaseNotes.Replace("\r\n", "\n").Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0) continue;
+            var headingLevel = 0;
+            while (headingLevel < line.Length && headingLevel < 6 && line[headingLevel] == '#')
+                headingLevel++;
+            var isHeading = headingLevel > 0
+                && headingLevel < line.Length
+                && char.IsWhiteSpace(line[headingLevel]);
+            var text = isHeading ? line[headingLevel..].Trim() : line;
+            if (text.Length == 0) continue;
+            content.Children.Add(new TextBlock
+            {
+                Text = text,
+                FontSize = isHeading ? 20 : 14,
+                FontWeight = isHeading ? Microsoft.UI.Text.FontWeights.SemiBold
+                    : Microsoft.UI.Text.FontWeights.Normal,
+                Margin = isHeading ? new Thickness(0, 8, 0, 2) : new Thickness(0),
+                TextWrapping = TextWrapping.Wrap,
+                IsTextSelectionEnabled = true
+            });
+        }
+        return content;
     }
 
     public static (ContentDialog Dialog, TextBlock Status, ProgressBar ProgressBar)

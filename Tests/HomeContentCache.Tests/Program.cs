@@ -56,8 +56,13 @@ try
         "memory reuse preserves stale state and does not duplicate an active refresh");
     refreshGate.SetResult(Result("new-news", null, null));
     var refreshed = await refreshedEvent.Task.WaitAsync(TimeSpan.FromSeconds(5));
-    Check(refreshed.Content.News.Single().Id == "new-news",
-        "background refresh publishes updated content without reopening page");
+    Check(refreshed.Content.News.Single().Id == "new-news"
+        && refreshed.Content.Background?.VideoUrl == "https://cdn.example/background.mp4",
+        "partial refresh publishes new content while preserving the cached background");
+    var mergedOnDisk = await disk.ReadAsync(request);
+    Check(mergedOnDisk?.Result.Content.News.Single().Id == "new-news"
+        && mergedOnDisk.Result.Content.Background?.VideoUrl == "https://cdn.example/background.mp4",
+        "partial refresh cannot overwrite a valid cached background with null");
 
     var failingSource = new FakeHomeContentService
     {
