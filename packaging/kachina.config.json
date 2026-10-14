@@ -26,6 +26,7 @@
     "${INSTALL_PATH}/backups",
     "${INSTALL_PATH}/GameTime",
     "${INSTALL_PATH}/HomeCache",
+    "${INSTALL_PATH}/HomeState",
     "${INSTALL_PATH}/logs"
   ],
   "userDataPath": [
@@ -33,6 +34,7 @@
     "${INSTALL_PATH}/backups",
     "${INSTALL_PATH}/GameTime",
     "${INSTALL_PATH}/HomeCache",
+    "${INSTALL_PATH}/HomeState",
     "${INSTALL_PATH}/logs"
   ],
   "extraUninstallPath": [],

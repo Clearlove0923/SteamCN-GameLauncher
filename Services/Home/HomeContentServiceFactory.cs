@@ -7,7 +7,9 @@ public sealed class HomeContentServiceFactory
 {
     public static HomeContentServiceFactory Instance { get; } = new();
     public static string PreferredCacheRoot { get; } = Path.Combine(AppContext.BaseDirectory, "HomeCache");
+    public static string PreferredStateRoot { get; } = Path.Combine(AppContext.BaseDirectory, "HomeState");
     public static string CacheRoot { get; } = ResolveWritableCacheRoot();
+    public static string StateRoot { get; } = ResolveWritableStateRoot();
     public static HomeVideoVariantSelector VideoSelector { get; } = new(CacheRoot);
     public static string MetadataCacheRoot => CacheRoot;
     public static string MediaCacheRoot => CacheRoot;
@@ -34,11 +36,32 @@ public sealed class HomeContentServiceFactory
         }
     }
 
+    private static string ResolveWritableStateRoot()
+    {
+        try
+        {
+            Directory.CreateDirectory(PreferredStateRoot);
+            var probe = Path.Combine(PreferredStateRoot, $".write-test-{Guid.NewGuid():N}");
+            using (File.Create(probe)) { }
+            File.Delete(probe);
+            return PreferredStateRoot;
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            var fallback = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SteamCN-GameLauncher", "State", "Home");
+            LogService.Instance.AddLog($"[首页缓存] 软件目录不可写，背景历史改用用户状态目录：{fallback}");
+            return fallback;
+        }
+    }
+
     private readonly object _sync = new();
     private string _configurationKey = "";
     private IHomeContentService? _service;
     private FileHomeContentCache? _contentCache;
     private FileHomeMediaCache? _mediaCache;
+    private FileHomeBackgroundHistoryStore? _backgroundHistory;
 
     private HomeContentServiceFactory() { }
 
@@ -70,10 +93,12 @@ public sealed class HomeContentServiceFactory
                 };
                 _contentCache = new FileHomeContentCache(MetadataCacheRoot);
                 _mediaCache = new FileHomeMediaCache(MediaCacheRoot, mediaClient, policy);
+                _backgroundHistory = new FileHomeBackgroundHistoryStore(StateRoot);
                 _service = new CachedHomeContentService(
                     new FastApiHomeContentService(new HttpHomeContentTransport(transportClient, endpoint)),
                     _contentCache,
                     _mediaCache,
+                    _backgroundHistory,
                     policy);
                 _configurationKey = key;
                 return _service;

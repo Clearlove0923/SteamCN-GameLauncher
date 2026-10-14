@@ -207,7 +207,7 @@ v3.0.0 起使用 [Kachina Installer](https://github.com/YuehaiTeam/kachina-insta
 
 - `regName`、主程序名、更新器名和安装路径发布后保持稳定。
 - 安装路径禁止无迁移方案地写回 `C:\Program Files`；Kachina 配置使用 `prefer-user`，仅在目录不可写时申请 UAC。
-- `Backgrounds`、`backups`、`GameTime`、`HomeCache`、`logs` 必须列入 `ignoreFolderPath`，更新时不得覆盖或删除。
+- `Backgrounds`、`backups`、`GameTime`、`HomeCache`、`HomeState`、`logs` 必须列入 `ignoreFolderPath`，更新时不得覆盖或删除。`HomeState` 保存按游戏隔离的最后有效背景索引，普通首页缓存清理不得删除。
 
 ### 发布产物
 

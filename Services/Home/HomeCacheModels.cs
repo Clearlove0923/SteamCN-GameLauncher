@@ -36,6 +36,21 @@ public interface IHomeMediaCache
     Task ClearAsync(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// 在 HomeCache 之外按游戏保存最后一次已验证的远程背景。
+/// 清理媒体缓存时保留该索引，以便在 Provider 暂时不下发背景时重新下载。
+/// </summary>
+public interface IHomeBackgroundHistoryStore
+{
+    Task<HomeBackground?> ReadAsync(
+        HomeContentRequest request,
+        CancellationToken cancellationToken = default);
+    Task WriteAsync(
+        HomeContentRequest request,
+        HomeBackground background,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IHomeContentRefreshSource
 {
     event EventHandler<HomeContentRefreshedEventArgs>? ContentRefreshed;

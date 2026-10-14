@@ -25,8 +25,9 @@ try
     var initial = Result("old-news", "https://cdn.example/background.mp4", "https://cdn.example/banner.png");
     var disk = new FileHomeContentCache(root);
     var media = new FakeMediaCache();
+    var history = new FileHomeBackgroundHistoryStore(Path.Combine(root, "state"));
     var source = new FakeHomeContentService { Result = initial };
-    var service = new CachedHomeContentService(source, disk, media, new HomeCachePolicy());
+    var service = new CachedHomeContentService(source, disk, media, history, new HomeCachePolicy());
 
     var first = await service.GetAsync(request);
     Check(source.CallCount == 1 && first.Content.News.Single().Id == "old-news",
@@ -34,14 +35,14 @@ try
     Check(await disk.GetSizeAsync() > 0, "successful response is persisted to metadata cache");
 
     var restartedSource = new FakeHomeContentService { Result = initial };
-    var restarted = new CachedHomeContentService(restartedSource, disk, media, new HomeCachePolicy());
+    var restarted = new CachedHomeContentService(restartedSource, disk, media, history, new HomeCachePolicy());
     var fromDisk = await restarted.GetAsync(request);
     Check(restartedSource.CallCount == 1 && fromDisk.Content.News.Single().Id == "old-news",
         "fresh disk cache is returned immediately while each new process checks the provider once");
 
     var refreshGate = new TaskCompletionSource<HomeContentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
     var refreshingSource = new FakeHomeContentService { PendingResult = refreshGate.Task };
-    var staleService = new CachedHomeContentService(refreshingSource, disk, media,
+    var staleService = new CachedHomeContentService(refreshingSource, disk, media, history,
         new HomeCachePolicy { MetadataLifetime = TimeSpan.Zero });
     var refreshedEvent = new TaskCompletionSource<HomeContentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
     staleService.ContentRefreshed += (_, e) =>
@@ -71,7 +72,7 @@ try
             new HomeContentError { Code = "offline", Message = "offline", Recoverable = true },
         ]),
     };
-    var fallbackService = new CachedHomeContentService(failingSource, disk, media,
+    var fallbackService = new CachedHomeContentService(failingSource, disk, media, history,
         new HomeCachePolicy { MetadataLifetime = TimeSpan.Zero });
     var fallback = await fallbackService.GetAsync(request);
     await Task.Delay(100);
@@ -83,7 +84,7 @@ try
     var coalesceRoot = Path.Combine(root, "coalesce");
     var coalesceGate = new TaskCompletionSource<HomeContentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
     var coalesceSource = new FakeHomeContentService { PendingResult = coalesceGate.Task };
-    var coalesced = new CachedHomeContentService(coalesceSource, new FileHomeContentCache(coalesceRoot), media,
+    var coalesced = new CachedHomeContentService(coalesceSource, new FileHomeContentCache(coalesceRoot), media, history,
         new HomeCachePolicy());
     var call1 = coalesced.GetAsync(request);
     var call2 = coalesced.GetAsync(request);
@@ -92,10 +93,58 @@ try
     coalesceGate.SetResult(initial);
     await Task.WhenAll(call1, call2);
 
+    var historicalBackground = new HomeBackground
+    {
+        VideoUrl = "https://cdn.example/last-valid-background.webm",
+        ImageUrl = "https://cdn.example/last-valid-poster.webp",
+    };
+    await history.WriteAsync(request, historicalBackground);
+    Check((await history.ReadAsync(request))?.VideoUrl == historicalBackground.VideoUrl,
+        "last valid background index is stored outside the media cache");
+    Check(await history.ReadAsync(request with { GameId = "3513350" }) is null,
+        "last valid background index is isolated by game");
+
+    var recoveryRoot = Path.Combine(root, "deleted-home-cache");
+    var recoveryDisk = new FileHomeContentCache(recoveryRoot);
+    var recoverySource = new FakeHomeContentService { Result = Result("latest-news", null, null) };
+    var recoveryService = new CachedHomeContentService(
+        recoverySource, recoveryDisk, media, history, new HomeCachePolicy());
+    var recoveredFromHistory = await recoveryService.GetAsync(request);
+    Check(recoveredFromHistory.Content.Background?.VideoUrl == historicalBackground.VideoUrl
+        && recoveredFromHistory.Content.News.Single().Id == "latest-news",
+        "empty provider background recovers the same game's last validated source after HomeCache deletion");
+    await recoveryDisk.ClearAsync();
+    Check((await history.ReadAsync(request))?.VideoUrl == historicalBackground.VideoUrl,
+        "clearing HomeCache metadata does not delete the independent background index");
+
     var png = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0 };
     var handler = new CountingHandler(png, "image/png");
     var realMedia = new FileHomeMediaCache(Path.Combine(root, "media-test"), new HttpClient(handler),
         new HomeCachePolicy());
+
+    var recoveryVideoHandler = new CountingHandler([0x1A, 0x45, 0xDF, 0xA3], "video/webm");
+    var recoveryMedia = new FileHomeMediaCache(Path.Combine(root, "history-recovery-media"),
+        new HttpClient(recoveryVideoHandler), new HomeCachePolicy());
+    var recoveryDownloadService = new CachedHomeContentService(
+        new FakeHomeContentService { Result = Result("download-news", null, null) },
+        new FileHomeContentCache(Path.Combine(root, "history-recovery-metadata")),
+        recoveryMedia,
+        history,
+        new HomeCachePolicy());
+    var recoveryDownloaded = new TaskCompletionSource<HomeContentResult>(
+        TaskCreationOptions.RunContinuationsAsynchronously);
+    recoveryDownloadService.ContentRefreshed += (_, e) =>
+    {
+        if (!string.IsNullOrWhiteSpace(e.Result.Content.Background?.LocalPath))
+            recoveryDownloaded.TrySetResult(e.Result);
+    };
+    var recoveryImmediate = await recoveryDownloadService.GetAsync(request);
+    var recoveryLocalized = await recoveryDownloaded.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    Check(recoveryImmediate.Content.Background?.VideoUrl == historicalBackground.VideoUrl
+        && recoveryVideoHandler.CallCount == 2
+        && File.Exists(recoveryLocalized.Content.Background?.LocalPath),
+        "recovered background history redownloads and validates the deleted video cache");
+
     var mediaResult = Result("media", null, "https://cdn.example/banner.png");
     var localized = await realMedia.CacheAsync(request, mediaResult);
     var localPath = localized.Content.Banners.Single().LocalPath;
@@ -157,6 +206,26 @@ try
         && localPriorityResolved.Content.Background?.Variants.Single().LocalPath == Path.GetFullPath(providerVideo)
         && localPriorityResolved.Content.Banners.Single().LocalPath == Path.GetFullPath(providerBanner),
         "valid provider local media wins and skips equivalent remote downloads");
+
+    var localOnlyRequest = request with { GameId = "local-only-game" };
+    var localOnlyHistory = new FileHomeBackgroundHistoryStore(Path.Combine(root, "local-only-state"));
+    var localOnlyService = new CachedHomeContentService(
+        new FakeHomeContentService { Result = localPriorityResult },
+        new FileHomeContentCache(Path.Combine(root, "local-only-metadata")),
+        localPriorityCache,
+        localOnlyHistory,
+        new HomeCachePolicy());
+    var localOnlyMediaFinished = new TaskCompletionSource(
+        TaskCreationOptions.RunContinuationsAsynchronously);
+    var localOnlyEvents = 0;
+    localOnlyService.ContentRefreshed += (_, _) =>
+    {
+        if (Interlocked.Increment(ref localOnlyEvents) >= 2) localOnlyMediaFinished.TrySetResult();
+    };
+    await localOnlyService.GetAsync(localOnlyRequest);
+    await localOnlyMediaFinished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    Check(await localOnlyHistory.ReadAsync(localOnlyRequest) is null,
+        "provider-local media does not mark an untested remote URL as validated history");
 
     var olderRemoteUrl = localPriorityResult.Content.Background!.VideoUrl!;
     var remoteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(olderRemoteUrl)));

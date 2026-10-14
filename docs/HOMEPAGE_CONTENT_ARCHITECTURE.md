@@ -21,6 +21,7 @@ Python Provider Registry
         ├─ NextJsDataProvider
         ├─ NetEaseStaticCmsProvider
         ├─ IDreamSkyProvider
+        ├─ TencentProvider
         └─ LocalLauncherAssetProvider
 ```
 
@@ -140,6 +141,7 @@ Python 将不同厂商和本地启动器来源转换为同一个 `HomeContent`�
 | `PaperGamesProvider` | `papergames`；旧 `nextjs-data` |
 | `NetEaseProvider` | `netease`；旧 `netease-static-cms` |
 | `IDreamSkyProvider` | `idreamsky` |
+| `TencentProvider` | `tencent` |
 | `LocalLauncherAssetProvider` | `local-launcher-asset` |
 
 ### 国服默认来源
@@ -156,6 +158,7 @@ SteamCN 内置适配游戏统一使用中国大陆来源。EXE 别名、安装�
 | 异环 | `perfect-world` | `yh.wanmei.com`、`games.wanmei.com` 和 `wmupd.com` 国服来源 |
 | 明日方舟：终末地 | `hypergryph` | 鹰角国服 launcher，`appCode=6LL0KJuqHBVz33WK`、渠道 `1`、`zh-cn` |
 | 卡拉彼丘 | `idreamsky` | 创梦天地国服启动器安装树中的 `CalabiYau\\ImageCache`，仅采用校验通过的本机 MP4/海报缓存 |
+| 洛克王国：世界 | `tencent` | 腾讯国服启动器固定路径中校验通过的本地 MP4/PNG；Banner 与资讯尝试解析 `rocom.qq.com` 官方站点，失败时保留本地背景 |
 
 新增内置游戏时配置必须包含 `region=cn`；启动器加载配置时会验证这一约束。国际服来源不能作为 SteamCN 内置游戏的隐式回退。默认区域策略变更时必须同步递增 C# 首页缓存键版本，避免旧的国际服元数据在有效期内继续显示。
 
@@ -210,7 +213,11 @@ SteamCN 内置适配游戏统一使用中国大陆来源。EXE 别名、安装�
       ├─ images\<URL-SHA256>.<ext>
       └─ videos\<URL-SHA256>.<ext>
 
+<软件目录>\HomeState
+└─ backgrounds\<gameId>\<providerId>\<locale>-<来源参数摘要>.json
+
 回退：%LOCALAPPDATA%\SteamCN-GameLauncher\Cache\Home
+状态回退：%LOCALAPPDATA%\SteamCN-GameLauncher\State\Home
 ```
 
 - 同一请求在内存中复用 30 秒；JSON 元数据默认 20 分钟内视为新鲜。每个新进程首次命中某个游戏的磁盘缓存时，先立即展示缓存，再在后台检查一次 Provider；因此每次打开软件都能发现新的本地资源目录或远程 URL，而不阻塞首页。启动期不并发下载旧元数据中的缺失媒体；Provider 检查失败时才补齐旧媒体，避免旧下载晚到后覆盖新内容。
@@ -219,7 +226,8 @@ SteamCN 内置适配游戏统一使用中国大陆来源。EXE 别名、安装�
 - 媒体文件在每个稳定 gameId 子目录中按 URL 哈希去重。下载使用临时文件，完成 MIME、大小和文件签名校验后原子发布。
 - 图片单文件默认上限 20 MB，视频单文件默认上限 300 MB；媒体总容量默认 1 GB，默认最长保留 30 天。
 - `HomeContent` 磁盘副本保留远程 URL。返回 UI 前由媒体缓存把已有文件映射成 `file:` URI 或 Banner `localPath`，因此清理媒体后仍可回退远端资源。
-- 缓存容量、保留天数和手动清理入口位于设置页；清理首页缓存不得影响用户导入的 `Backgrounds` 图片。
+- 远程背景通过实际下载、MIME、大小和文件签名校验后，将最后有效 URL 写入独立 `HomeState`。索引按 `gameId`、`providerId`、语言及来源参数摘要隔离，不包含本地媒体文件；Provider 暂时不下发背景且 `HomeCache` 已被删除时，可据此重新下载同一游戏的最后有效动画。
+- 缓存容量、保留天数和手动清理入口位于设置页；清理首页缓存不得影响用户导入的 `Backgrounds` 图片，也不得删除 `HomeState`。只有明确的“重置首页内容记录”操作才允许同时删除最后有效背景索引。
 - 所有远程媒体下载统一携带 `SteamCN-GameLauncher/<AppInfo.Version>` User-Agent，满足拒绝匿名客户端的 CDN，同时不发送用户标识、Cookie 或 Provider 私有凭据；需要 Referer、签名或鉴权的来源仍由对应 Provider 单独适配。
 - Provider 返回的有效本地媒体路径优先于同一项目的远程媒体缓存；本地文件缺失、类型不符或文件头校验失败时才回退到远程缓存或下载远程 URL。该优先级统一适用于背景、背景变体和 Banner，不为单个游戏写特判。
 

@@ -12,6 +12,7 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
     private readonly IHomeContentService _inner;
     private readonly IHomeContentCache _contentCache;
     private readonly IHomeMediaCache _mediaCache;
+    private readonly IHomeBackgroundHistoryStore _backgroundHistory;
     private readonly HomeCachePolicy _policy;
     private readonly ConcurrentDictionary<string, MemoryEntry> _memory = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Lazy<Task<HomeContentResult>>> _refreshes = new(StringComparer.Ordinal);
@@ -23,15 +24,18 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
         IHomeContentService inner,
         IHomeContentCache contentCache,
         IHomeMediaCache mediaCache,
+        IHomeBackgroundHistoryStore backgroundHistory,
         HomeCachePolicy policy)
     {
         ArgumentNullException.ThrowIfNull(inner);
         ArgumentNullException.ThrowIfNull(contentCache);
         ArgumentNullException.ThrowIfNull(mediaCache);
+        ArgumentNullException.ThrowIfNull(backgroundHistory);
         ArgumentNullException.ThrowIfNull(policy);
         _inner = inner;
         _contentCache = contentCache;
         _mediaCache = mediaCache;
+        _backgroundHistory = backgroundHistory;
         _policy = policy;
     }
 
@@ -55,10 +59,13 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
         {
             _memory[key] = new MemoryEntry(DateTimeOffset.UtcNow, cached);
             var expired = DateTimeOffset.UtcNow - cached.CachedAt > _policy.MetadataLifetime;
+            var resolved = _mediaCache.ResolveAvailable(request, cached.Result) with { IsStale = expired };
+            await RememberValidatedBackgroundAsync(request, cached.Result, resolved, cancellationToken)
+                .ConfigureAwait(false);
             // 每个新进程首次从磁盘读取该游戏时都检查一次 Provider。先返回缓存，
             // 所以不会延迟首页；刷新失败时再补齐旧媒体，避免旧下载晚到后覆盖新内容。
             ScheduleStartupRefresh(key, request, cached.Result);
-            return _mediaCache.ResolveAvailable(request, cached.Result) with { IsStale = expired };
+            return resolved;
         }
 
         return await GetOrStartRefresh(key, request)
@@ -126,15 +133,27 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
         // 这仍是一个“部分成功”响应，不能用 null background 覆盖已验证的旧背景。
         // 仅补齐缺失的顶层背景；新响应一旦提供背景，始终以新数据为准。
         var key = HomeCacheKey.Create(request);
-        if (result.Content.Background is null
-            && _memory.TryGetValue(key, out var previous)
-            && previous.Entry.Result.Content.Background is { } cachedBackground)
+        if (result.Content.Background is null)
         {
-            result = result with
+            HomeBackground? fallbackBackground = null;
+            if (_memory.TryGetValue(key, out var previous))
+                fallbackBackground = previous.Entry.Result.Content.Background;
+            if (fallbackBackground is null)
             {
-                Content = result.Content with { Background = cachedBackground },
-            };
-            LogService.Instance.AddLog("[首页缓存] 新内容未下发背景，已保留上次成功动画");
+                fallbackBackground = await _backgroundHistory.ReadAsync(request, cancellationToken)
+                    .ConfigureAwait(false);
+                if (fallbackBackground is not null)
+                    LogService.Instance.AddLog("[首页缓存] 新内容未下发背景，已从独立历史索引恢复动画来源");
+            }
+            else
+            {
+                LogService.Instance.AddLog("[首页缓存] 新内容未下发背景，已保留上次成功动画");
+            }
+            if (fallbackBackground is not null)
+                result = result with
+                {
+                    Content = result.Content with { Background = fallbackBackground },
+                };
         }
 
         await _contentCache.WriteAsync(request, result, cancellationToken).ConfigureAwait(false);
@@ -156,6 +175,8 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
         CancellationToken cancellationToken)
     {
         var localized = await _mediaCache.CacheAsync(request, rawResult, cancellationToken).ConfigureAwait(false);
+        await RememberValidatedBackgroundAsync(request, rawResult, localized, cancellationToken)
+            .ConfigureAwait(false);
         await _mediaCache.CleanupAsync(cancellationToken).ConfigureAwait(false);
         ContentRefreshed?.Invoke(this, new HomeContentRefreshedEventArgs(request, localized));
     }
@@ -172,6 +193,62 @@ public sealed class CachedHomeContentService : IHomeContentService, IHomeContent
         || content.Banners.Count > 0
         || content.News.Count > 0
         || content.UpdateInfo is not null;
+
+    private async Task RememberValidatedBackgroundAsync(
+        HomeContentRequest request,
+        HomeContentResult rawResult,
+        HomeContentResult localizedResult,
+        CancellationToken cancellationToken)
+    {
+        var raw = rawResult.Content.Background;
+        var localized = localizedResult.Content.Background;
+        if (raw is null || localized is null) return;
+
+        var validatedVariants = raw.Variants
+            .Select(item => (Raw: item, Localized: localized.Variants.FirstOrDefault(local => local.Id == item.Id)))
+            .Where(item => IsDownloadedRemoteMedia(item.Raw.LocalPath, item.Localized?.LocalPath))
+            .Select(item => item.Raw with
+            {
+                ImageUrl = HasValidatedLocalUri(item.Localized?.ImageUrl) ? item.Raw.ImageUrl : null,
+            })
+            .ToArray();
+        var validatedMain = !string.IsNullOrWhiteSpace(raw.VideoUrl)
+            && IsDownloadedRemoteMedia(raw.LocalPath, localized.LocalPath);
+        if (!validatedMain && validatedVariants.Length == 0) return;
+
+        await _backgroundHistory.WriteAsync(request, raw with
+        {
+            VideoUrl = validatedMain ? raw.VideoUrl : null,
+            ImageUrl = HasValidatedLocalUri(localized.ImageUrl) ? raw.ImageUrl : null,
+            LocalPath = null,
+            Variants = validatedVariants,
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool HasValidatedLocalUri(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && uri.IsFile
+        && File.Exists(uri.LocalPath);
+
+    private static bool IsDownloadedRemoteMedia(string? providerLocalPath, string? localizedPath)
+    {
+        if (string.IsNullOrWhiteSpace(localizedPath)) return false;
+        if (string.IsNullOrWhiteSpace(providerLocalPath)) return true;
+        try
+        {
+            var providerPath = Uri.TryCreate(providerLocalPath, UriKind.Absolute, out var providerUri)
+                && providerUri.IsFile
+                    ? providerUri.LocalPath
+                    : providerLocalPath;
+            return !Path.GetFullPath(providerPath).Equals(
+                Path.GetFullPath(localizedPath),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is IOException or NotSupportedException or ArgumentException)
+        {
+            return false;
+        }
+    }
 
     private sealed record MemoryEntry(DateTimeOffset StoredAt, HomeContentCacheEntry Entry);
 }

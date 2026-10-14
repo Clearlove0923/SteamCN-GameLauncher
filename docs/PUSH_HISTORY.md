@@ -2,6 +2,21 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-10-14 23:26:36 +08:00
+
+1. 推送人员：`Violet0923`
+2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.2.0` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
+3. 推送提交：`release: 发布 v3.2.0 首页动画状态修复`
+4. 实现内容：
+   1. 修复手动删除首页内容缓存后，厂商接口暂时未下发背景时无法重新恢复首页动画的问题。
+   2. 将最后一次验证成功的背景来源保存到独立 `HomeState` 目录，按游戏、Provider、区域、语言和来源参数隔离；普通首页缓存清理与软件更新均保留该状态。
+   3. 四处版本号、`version.json` 与 `CHANGELOG.md` 同步升级至 `3.2.0`，并补充独立状态目录的架构、打包和仓库规则。
+5. 验证结果：
+   1. Debug x64 主程序构建成功，0 警告、0 错误；首页缓存回归测试 31 项全部通过。
+   2. Release x64 自包含构建、基于 v3.1.9 publish 的 Kachina 差分生成及 Inno Setup 编译成功；发布目录未混入 `HomeState`、`HomeCache`、`GameTime` 等用户数据，内嵌 Python 与 FFmpeg 导入验证成功，且未包含尚未提交的腾讯 Provider。
+   3. 安装包 `SteamCN-GameLauncher-v3.2.0-win-x64-setup.exe` 为 142021686 字节，SHA-256 `30ea2eb33e21f479b32299b0edd470e71334602d952b75308d42ad311f526d9e`；更新包 `SteamCN-GameLauncher.Update.3.2.0.exe` 为 185847371 字节，SHA-256 `d65a2b085589f4cdb1ccc76e852e85fe0eca640051f613cfac7c26ac05defa79`。
+6. 当前限制：厂商当前未下发背景且用户在升级前已同时删除旧背景元数据与媒体文件时，无法凭空恢复动画；应用与安装包尚未商业代码签名。
+
 ## 2026-10-14 00:29:47 +08:00
 
 1. 推送人员：`Violet0923`
@@ -54,14 +69,3 @@
    1. 从 GitHub 与 CNB 匿名公开地址分别重新下载三份附件，两端安装包 SHA-256 均为 `be3b3654410919887624bbe2db7761df7af70bc56ecd54d3dfbe760bcc8f21f0`，更新包均为 `a2a71d62fae61f3a4fe1cac59b6411e678334fd598c4ac5332a3fe9bd903f62e`，校验文件均为 `f5f37e44a9bf2be3cb1abd632d0b2bc96810c044ea214e954b8548787ab4fd7`。
    2. 公开官网已返回 `v3.1.8`、`2026-10-11` 和正确的版本化下载直链，首页兜底文案与 `version.json` 一致。
 6. 当前限制：移动网络下的官网访问与下载体验仍需人工实测；应用与安装包尚未商业代码签名。
-
-## 2026-10-11 11:08:55 +08:00
-
-- 推送人员：`Violet0923`
-- 目标分支：GitHub `master_preview`、`master`
-- 推送提交：`merge: 同步 master 文档并完成 v3.1.8 分支发布`
-- 实现内容：
-  - 在 v3.1.8 发布提交上合并远端 `master` 构建期间新增的 4 个文档提交，保留《卡拉彼丘》桥接器 v1.1 下载、校验值、使用步骤及 Release tag 命名规则。
-  - 合并仅涉及 `AGENTS.md`、`docs/GameSpecialSetting.md` 与 `docs/PUSH_HISTORY.md`，未改变已经构建和验证的 v3.1.8 产品代码与正式产物。
-- 验证结果：逐提交检查远端新增内容并人工解决推送历史的时间顺序冲突；`git diff --check` 无空白错误，发布提交和远端文档历史均保留。
-- 当前限制：应用与安装包尚未商业代码签名。

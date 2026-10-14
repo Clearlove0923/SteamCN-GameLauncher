@@ -32,6 +32,26 @@ internal static class HomeCacheKey
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 
+    public static string CreateBackgroundHistoryKey(HomeContentRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var options = request.ProviderOptions
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        // 历史背景按游戏、Provider、语言和来源参数隔离，但不绑定安装路径，
+        // 避免游戏迁移目录后丢失已验证的官方下载来源。
+        var canonical = JsonSerializer.Serialize(new
+        {
+            historyKeyVersion = "1",
+            request.SchemaVersion,
+            gameId = request.GameId.Trim(),
+            providerId = request.ProviderId.Trim(),
+            locale = request.Locale.Trim(),
+            providerOptions = options,
+        }, HomeContentJson.Options);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+
     public static string SafeSegment(string? value, string fallback)
     {
         var candidate = new string((value ?? string.Empty)

@@ -1,8 +1,8 @@
 {
-  "version": "3.1.9",
+  "version": "3.2.0",
   "releaseDate": "2026-10-14",
   "availableAfter": "2026-10-14T00:00:00+08:00",
-  "message": "3.1.9 更新：修复厂商暂时不下发背景时，新资讯可能覆盖旧缓存并导致首页动画消失的问题。",
+  "message": "3.2.0 更新：修复删除首页内容缓存后，厂商暂时未下发背景时无法重新恢复首页动画的问题。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"

@@ -22,7 +22,7 @@ $installerDefinition = Get-Content -LiteralPath $installerScript -Raw
 if ($projectVersion -ne $version -or $appInfo -notmatch ('Version = "' + [regex]::Escape($version) + '"') -or $manifest.Package.Identity.Version -ne "$version.0") {
     throw 'Synchronize version.json, project Version, AppInfo.Version and package Version before publishing.'
 }
-foreach ($userDataDirectory in @('GameTime', 'HomeCache')) {
+foreach ($userDataDirectory in @('GameTime', 'HomeCache', 'HomeState')) {
     if ($installerDefinition -notmatch ('(?im)^Name:\s*"\{app\}\\' + [regex]::Escape($userDataDirectory) + '";[^\r\n]*Flags:\s*uninsneveruninstall')) {
         throw "Installer must preserve $userDataDirectory during upgrades and uninstall."
     }
@@ -63,7 +63,7 @@ foreach ($localeDir in Get-ChildItem -LiteralPath $resolvedPublish -Directory) {
 foreach ($required in @("$assemblyName.exe", "$assemblyName.dll", "$assemblyName.deps.json", "$assemblyName.runtimeconfig.json", "$assemblyName.pri", 'coreclr.dll', 'Microsoft.UI.Xaml.dll')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishDir $required))) { throw "Publish output missing: $required" }
 }
-foreach ($userDataDirectory in @('GameTime', 'HomeCache')) {
+foreach ($userDataDirectory in @('GameTime', 'HomeCache', 'HomeState')) {
     $publishedUserData = Join-Path $publishDir $userDataDirectory
     if (Test-Path -LiteralPath $publishedUserData) {
         $unexpectedFiles = @(Get-ChildItem -LiteralPath $publishedUserData -Recurse -File -ErrorAction Stop)
