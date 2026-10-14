@@ -6,7 +6,7 @@
 
 1. 推送人员：`Violet0923`
 2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.2.0` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
-3. 推送提交：`release: 发布 v3.2.0 首页动画状态修复`
+3. 推送提交：`merge: 同步 master 文档并完成 v3.2.0 分支发布`
 4. 实现内容：
    1. 修复手动删除首页内容缓存后，厂商接口暂时未下发背景时无法重新恢复首页动画的问题。
    2. 将最后一次验证成功的背景来源保存到独立 `HomeState` 目录，按游戏、Provider、区域、语言和来源参数隔离；普通首页缓存清理与软件更新均保留该状态。
@@ -16,6 +16,18 @@
    2. Release x64 自包含构建、基于 v3.1.9 publish 的 Kachina 差分生成及 Inno Setup 编译成功；发布目录未混入 `HomeState`、`HomeCache`、`GameTime` 等用户数据，内嵌 Python 与 FFmpeg 导入验证成功，且未包含尚未提交的腾讯 Provider。
    3. 安装包 `SteamCN-GameLauncher-v3.2.0-win-x64-setup.exe` 为 142021686 字节，SHA-256 `30ea2eb33e21f479b32299b0edd470e71334602d952b75308d42ad311f526d9e`；更新包 `SteamCN-GameLauncher.Update.3.2.0.exe` 为 185847371 字节，SHA-256 `d65a2b085589f4cdb1ccc76e852e85fe0eca640051f613cfac7c26ac05defa79`。
 6. 当前限制：厂商当前未下发背景且用户在升级前已同时删除旧背景元数据与媒体文件时，无法凭空恢复动画；应用与安装包尚未商业代码签名。
+
+## 2026-10-14 15:36:11 +08:00
+
+1. 推送人员：`Violet0923`
+2. 目标分支：GitHub `master`
+3. 推送提交：`docs: update Calabiyau bridge to v1.3`
+4. 实现内容：
+   1. 将《卡拉彼丘》特殊设置说明更新至桥接器 v1.3，并替换下载链接、附件名和 SHA-256。
+   2. 说明桥接器可放在游戏安装目录内任意位置，由程序自动向上识别安装根目录。
+   3. 更新 SteamCN-GameLauncher 可执行文件名及手动 Steam 启动选项示例。
+5. 验证结果：GitHub 与 CNB v1.3 公开附件重新下载后的 SHA-256 均为 `D1B60016B6FA490C0348D15C538A45CA22B8A0B8880787A02215340D63717EDD`；文档版本、附件名和链接一致。
+6. 当前限制：v1.3 尚未完成真实标准版、腾讯版或 Steam 客户端回归；首次使用仍需通过对应渠道官方启动器成功进入游戏一次。
 
 ## 2026-10-14 00:29:47 +08:00
 
@@ -55,17 +67,3 @@
    3. 本次已按新规则删除第 6 次及更早的历史记录。
 5. 验证结果：`docs/PUSH_HISTORY.md` 共保留 5 个时间戳记录区块；`git diff --check` 无空白错误。
 6. 当前限制：无。
-
-## 2026-10-11 11:54:13 +08:00
-
-1. 推送人员：`Violet0923`
-2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.1.8` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
-3. 推送提交：`docs: 记录 v3.1.8 正式发布验证`
-4. 实现内容：
-   1. GitHub 与 CNB 的 `master_preview`、`master` 和 `v3.1.8` 标签已同步到提交 `6680052`，两端 Release 均使用审定的中文有序序号发布说明。
-   2. GitHub 与 CNB Release 均上传相同的 Inno Setup 安装包、Kachina 更新包和 `SHA256SUMS.txt`；CNB Release 已设为 latest，GitHub Release 已设为正式 latest 版本。
-   3. 官网 `version.json` 与 `index.html` 已同步 `v3.1.8`、发布日期 `2026-10-11` 和版本化 GitHub 下载直链，官网提交为 `737c849`。
-5. 验证结果：
-   1. 从 GitHub 与 CNB 匿名公开地址分别重新下载三份附件，两端安装包 SHA-256 均为 `be3b3654410919887624bbe2db7761df7af70bc56ecd54d3dfbe760bcc8f21f0`，更新包均为 `a2a71d62fae61f3a4fe1cac59b6411e678334fd598c4ac5332a3fe9bd903f62e`，校验文件均为 `f5f37e44a9bf2be3cb1abd632d0b2bc96810c044ea214e954b8548787ab4fd7`。
-   2. 公开官网已返回 `v3.1.8`、`2026-10-11` 和正确的版本化下载直链，首页兜底文案与 `version.json` 一致。
-6. 当前限制：移动网络下的官网访问与下载体验仍需人工实测；应用与安装包尚未商业代码签名。

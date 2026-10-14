@@ -105,12 +105,12 @@ Steam（按 AppID 启动）
 ## 卡拉彼丘（Calabiyau）：
 ### 下载与使用
 1. 首次使用前，通过对应渠道的官方启动器登录并成功进入游戏一次，以建立登录缓存和启动记录。标准版与腾讯版需要分别完成一次。
-2. 从 [CalabiyauLaunchBridge v1.2](https://github.com/Clearlove0923/GameLaunchBridges/releases/tag/Calabiyau-v1.2) 下载 `CalabiyauLaunchBridge_v1.2.exe`；该版本是 Windows x64 原生单文件，无需安装 .NET，也无需重命名或创建配置。
-   v1.2 文件的 SHA-256 为 `10FAD615AA28A1E01CE62F070BAF8A7DD64234322427170BF85CA049CCDF653C`。
-3. 把桥接器放到官方 `CalabiYau.exe` 所在的安装根目录，不要覆盖或修改官方启动器、游戏本体、ACE、Tenprotect 或配置文件。
-4. 在 SteamCN-GameLauncher 中把游戏可执行文件设为 `CalabiyauLaunchBridge_v1.2.exe`。如需手动配置 Steam 启动选项，可使用：
+2. 从 [CalabiyauLaunchBridge v1.3](https://github.com/Clearlove0923/GameLaunchBridges/releases/tag/Calabiyau-v1.3) 下载 `CalabiyauLaunchBridge_v1.3.exe`；该版本是 Windows x64 原生单文件，无需安装 .NET，也无需重命名或创建配置。
+   v1.3 文件的 SHA-256 为 `D1B60016B6FA490C0348D15C538A45CA22B8A0B8880787A02215340D63717EDD`。
+3. 把桥接器放到《卡拉彼丘》游戏安装目录内的任意位置。桥接器会自动向上识别安装根目录；不要覆盖或修改官方启动器、游戏本体、ACE、Tenprotect 或配置文件。
+4. 在 SteamCN-GameLauncher 中把游戏可执行文件设为 `CalabiyauLaunchBridge_v1.3.exe`。如需手动配置 Steam 启动选项，可使用：
 ```text
-"完整路径\CalabiyauLaunchBridge_v1.2.exe" %command%
+"完整路径\CalabiyauLaunchBridge_v1.3.exe" %command%
 ```
 5. 运行时可能出现一次 UAC 提示。桥接器会在后台初始化官方 SDK，然后直接启动游戏，无需点击官方启动器的“开始游戏”。
 6. 如需使用 DX11，在官方启动器中取消 DX12，并通过官方启动器成功进入游戏一次；如需切回 DX12，则重新勾选并成功进入游戏一次。桥接器会沿用最近一次官方成功启动时的图形设置。
