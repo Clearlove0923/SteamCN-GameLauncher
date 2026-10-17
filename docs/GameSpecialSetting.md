@@ -14,106 +14,109 @@
 ```text
 -SkipSplash
 ```
-## 异环（Neverness to Everness）：
-- 启动器静默自动启动，跳过启动器前台显示并在后台自动启动游戏：
+- 使用高清材质包：
 ```text
-/autoplay
+-krqlv=uhd
 ```
-- 游戏可执行文件选择：
+## 异环（Neverness to Everness）：
+- 需要使用桥接器实现绕过官方启动器启动游戏本体
 ```text
-"E:\Games\Neverness to Everness\Neverness To Everness\NTELauncher\NTEGame.exe" %command% /autoplay
-为什么要用NTEGame.exe，因为NTEGame.exe 即是 异环启动器 本体，NTELauncher.exe 是用来启动 启动器 的启动器。后面的/autoplay是用来跳过异环启动器前台显示的，这样steam点开始游戏后启动器会静默加载到系统托盘中，自动开始游戏
+桥接器仓库，仓库有多个游戏的桥接器，认准对应游戏的的安装包
+https://github.com/Clearlove0923/GameLaunchBridges
+使用方法：
+推荐将游戏相关文件放到一个目录下（启动器文件+游戏本体文件）
+将桥接器放到游戏本体的安装目录下作为启动游戏的可执行文件
+```
+- DX12/DX11启用方法
+```text
+在官方启动器中勾选DX11选项就是启用DX11，不勾选默认DX12，桥接器会沿用官方启动器设置
+```
+## 明日方舟终末地（ArknightsEndfield）：
+- 需要使用桥接器实现绕过官方启动器启动游戏本体
+```text
+桥接器仓库，仓库有多个游戏的桥接器，认准对应游戏的的安装包
+https://github.com/Clearlove0923/GameLaunchBridges
+使用方法：
+推荐将游戏相关文件放到一个目录下（启动器文件+游戏本体文件）
+将桥接器放到游戏本体的安装目录下作为启动游戏的可执行文件
+```
+- DX12/DX11启用方法
+```text
+在官方启动器中勾选DX11选项就是启用DX11，不勾选默认DX12，桥接器会沿用官方启动器设置
 ```
 ## 燕云十六声（Where Winds Meet）：
-### 使用方法
-1. 更新官方启动器和游戏本体
-2. 将 `WhereWindsMeetDirect.exe` 复制到《燕云十六声》安装根目录，即与 `yysls`目录下、`launcher.exe` 同级的目录。不要覆盖 `launcher.exe` 或 `yysls.exe`。
-3. 双击桥接 EXE
-
-### 可选参数（在终端、快捷方式目标或相应启动配置中追加）：
-只跟踪已启动或随后由官方启动器启动的游戏，不主动直启本体。未发现游戏时默认等待最多 180 秒。
+- 需要使用桥接器实现绕过官方启动器启动游戏本体
 ```text
+桥接器仓库，仓库有多个游戏的桥接器，认准对应游戏的的安装包
+https://github.com/Clearlove0923/GameLaunchBridges
+使用方法：
+推荐将游戏相关文件放到一个目录下（启动器文件+游戏本体文件）
+将桥接器放到游戏本体的安装目录下作为启动游戏的可执行文件
+```
+- DX12/DX11启用方法
+```text
+在官方启动器中勾选DX11选项就是启用DX11，不勾选默认DX12，桥接器会沿用官方启动器设置
+```
+
+- 桥接器可选参数（在Steam国服游戏启动器中的特殊启动参数中追加）：
+
+```text
+只跟踪已启动或随后由官方启动器启动的游戏，不主动直启本体。未发现游戏时默认等待最多 180 秒。
 --attach-only
 ```
-设置 --attach-only 等待游戏出现的最长时间，范围 1–1800 秒。
 ```text
+设置 --attach-only 等待游戏出现的最长时间，范围 1–1800 秒。
 --startup-timeout-seconds N 
 ```
-游戏进程消失后的延时退出时间，范围 0–300 秒，默认 10 秒。
 ```text
+游戏进程消失后的延时退出时间，范围 0–300 秒，默认 10 秒。
 --exit-delay-seconds N
 ```
-"路径"显式指定安装根目录；默认从桥接 EXE 所在目录向上查找。
 ```text
+"路径"显式指定安装根目录；默认从桥接 EXE 所在目录向上查找。
 --install-root 
 ```
-直启时指定本体目录；默认优先 Win64r，再尝试 Win64rh。
+
 ```text
+直启时指定本体目录；默认优先 Win64r，再尝试 Win64rh。
 --variant Win64r/ --variant Win64rh 
 ```
-只输出识别到的安装目录、工作目录和将使用的启动命令，不启动游戏。
 ```text
+只输出识别到的安装目录、工作目录和将使用的启动命令，不启动游戏。
 --dry-run
 ```
-出错时不显示弹窗；诊断信息仍写入日志。
 ```text
+出错时不显示弹窗；诊断信息仍写入日志。
 --no-dialog
 ```
-### 实现原理
-- 桥接程序从自身目录或 `--install-root` 指定目录向上寻找同时含有 `yysls_medium` 和 `Win32\deploy` 的安装根目录。它只识别该根目录下 `yysls_medium\Engine\Binaries\Win64r\yysls.exe` 或 `Win64rh\yysls.exe`。
-- 若游戏未运行且未设置 `--attach-only`，使用游戏 EXE 所在目录作为工作目录，以管理员权限尝试启动本体，参数为 `--launch-type=launcher`。该参数来自捕获的一次官方启动器启动命令，并非网易承诺长期兼容的公开接口。
-- 每 500 毫秒检查一次 `yysls.exe`，并核实进程完整路径属于当前安装目录；同名但来自其他目录的进程不会被当作目标。已经运行的游戏不会被重复启动。
-- 检测到目标游戏退出后，等待设定的延时时间再结束桥接进程。
-### 游戏更新后何时需要维护
-普通资源或本体版本更新不一定影响桥接程序；它不绑定 `yysls.exe` 的版本号或文件哈希。
-但以下变化需要重新检查，必要时修改并重新发布桥接 EXE：
-1. 安装根目录结构、`yysls.exe` 名称或 `Win64r` / `Win64rh` 路径变化：更新路径发现和进程匹配规则。
-2. 官方启动器改用新的命令行参数、工作目录、环境变量、登录令牌或反作弊初始化流程：重新捕获官方启动命令；直启可能不再可用，此时优先使用 `--attach-only` 配合官方启动器。
-3. 游戏启动时出现短暂的中间进程、多个本体进程或进程名变化：重新验证进程监控与退出防抖逻辑。
-4. 游戏更新清理了安装目录中的非官方文件：检查桥接 EXE 是否仍在原位，必要时从保留的构建文件重新复制；不要覆盖官方文件。
-5. 游戏 EXE 的图标更新：当前桥接 EXE 内嵌的是制作时提取的图标，不会自动同步，需要重新提取图标并构建。
-每次大版本更新后，应先让官方启动器完成更新并确认其能正常启动游戏，再测试桥接 EXE 的直启或附着、游戏退出后的延时退出，以及（如使用）Steam 跟踪状态。
 
 ## 无限暖暖（Infinity Nikki）：
-### 使用方法
-- 将InfinityNikkiLaunchBridge.exe放在游戏安装目录下作为可执行文件去运行
-### 跳过启动器界面
-基础命令：
+- 需要使用桥接器实现绕过官方启动器启动游戏本体
 ```text
--skiplauncher
+桥接器仓库，仓库有多个游戏的桥接器，认准对应游戏的的安装包
+https://github.com/Clearlove0923/GameLaunchBridges
+使用方法：
+推荐将游戏相关文件放到一个目录下（启动器文件+游戏本体文件）
+将桥接器放到游戏本体的安装目录下作为启动游戏的可执行文件
 ```
-### 实现原理
-Windows 版《无限暖暖》不是单一 EXE 启动。当前观察到的官方启动链为：
+- DX12/DX11启用方法
 ```text
-launcher.exe
-  └─ <版本目录>\xstarter.exe
-       └─ InfinityNikki.exe
-            └─ X6Game-Win64-Shipping.exe
+在官方启动器中勾选DX11选项就是启用DX11，不勾选默认DX12，桥接器会沿用官方启动器设置
 ```
-直接运行 `InfinityNikki.exe` 或 `X6Game-Win64-Shipping.exe` 通常不可作为可靠方案：游戏可能要求启动器生成的令牌，并依赖官方链路初始化 ACE 反作弊。
-`xstarter.exe` 支持 `-skiplauncher`，可以跳过第一层启动器界面并继续使用官方后端启动链。
-解决 `xstarter.exe` 提前退出的方法是让 Steam直接启动一个独立的保活桥接进程：
-```text
-Steam（按 AppID 启动）
-  └─ SteamLaunchBridge.exe
-       ├─ 启动 xstarter.exe -skiplauncher
-       ├─ 等待 X6Game-Win64-Shipping.exe 出现
-       └─ 游戏退出后才结束自身
-```
-桥接进程本身不伪造 Steam 在线状态。它只是作为 Steam直接启动且生命周期稳定的进程存在，使 Steam可以自然地保持对应 AppID 的运行状态和时长统计。
 
 ## 卡拉彼丘（Calabiyau）：
-### 下载与使用
-1. 首次使用前，通过对应渠道的官方启动器登录并成功进入游戏一次，以建立登录缓存和启动记录。标准版与腾讯版需要分别完成一次。
-2. 从 [CalabiyauLaunchBridge v1.3](https://github.com/Clearlove0923/GameLaunchBridges/releases/tag/Calabiyau-v1.3) 下载 `CalabiyauLaunchBridge_v1.3.exe`；该版本是 Windows x64 原生单文件，无需安装 .NET，也无需重命名或创建配置。
-   v1.3 文件的 SHA-256 为 `D1B60016B6FA490C0348D15C538A45CA22B8A0B8880787A02215340D63717EDD`。
-3. 把桥接器放到《卡拉彼丘》游戏安装目录内的任意位置。桥接器会自动向上识别安装根目录；不要覆盖或修改官方启动器、游戏本体、ACE、Tenprotect 或配置文件。
-4. 在 SteamCN-GameLauncher 中把游戏可执行文件设为 `CalabiyauLaunchBridge_v1.3.exe`。如需手动配置 Steam 启动选项，可使用：
+- 需要使用桥接器实现绕过官方启动器启动游戏本体
 ```text
-"完整路径\CalabiyauLaunchBridge_v1.3.exe" %command%
+桥接器仓库，仓库有多个游戏的桥接器，认准对应游戏的的安装包
+https://github.com/Clearlove0923/GameLaunchBridges
+使用方法：
+推荐将游戏相关文件放到一个目录下（启动器文件+游戏本体文件）
+将桥接器放到游戏本体的安装目录下作为启动游戏的可执行文件
 ```
-5. 运行时可能出现一次 UAC 提示。桥接器会在后台初始化官方 SDK，然后直接启动游戏，无需点击官方启动器的“开始游戏”。
-6. 如需使用 DX11，在官方启动器中取消 DX12，并通过官方启动器成功进入游戏一次；如需切回 DX12，则重新勾选并成功进入游戏一次。桥接器会沿用最近一次官方成功启动时的图形设置。
+- DX12/DX11启用方法
+```text
+在官方启动器中勾选DX11选项就是启用DX11，不勾选默认DX12，桥接器会沿用官方启动器设置
+```
 
 
 
