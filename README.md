@@ -1,83 +1,40 @@
 # SteamCN-GameLauncher
 
-> ⚠️ **v3.0.0 老用户迁移提示**
->
-> 本次更新启用了 Kachina 自动更新链路，安装路径从
-> `C:\Program Files\SteamCN-GameLauncher` 迁移到
-> `%LocalAppData%\Programs\SteamCN-GameLauncher`（用户目录）。
->
-> - 如果你之前装在 Program Files 下，请先**卸载旧版本**，再安装新版。
-> - 你的游戏配置、自定义 Manifest 等设置文件独立于安装目录，**不会丢失**。
-> - 卸载方法：开始菜单 → 设置 → 应用 → 已安装的应用 → 找到「Steam国服游戏启动器」→ 卸载。
-> - 检测到新版本后会展示新增功能和修复内容；只有你确认后才会启动更新，不会强制安装。
-> - 自动更新默认使用 CNB，遇到下载问题可切换到 GitHub 备用源。
+- **功能一**：一站式在本地管理所有游戏，并本地化记录时长同时生成时长报表
+- **功能二**：通过本软件进行配置，实现在Steam管理所有已经上线Steam的国服游戏，不用下载国际服，只需下载一份国服游戏即可将时长记录在Steam账户
+- 更多介绍请前往项目官网：https://clearlove0923.github.io/
+- B站演示和教程视频：https://www.bilibili.com/video/BV1rBbT6hEaE/?share_source=copy_web&vd_source=3720cfce9d328332195c58a83eefdabf
+- 小黑盒文本教程：https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?h_camp=link&h_src=YXBwX3NoYXJl&link_id=cd36726760b4
+## 软件特性介绍
+- **快捷配置，一键更新**：配置过程只需填写AppID，其他信息会自动填写。游戏有更新时，支持一键更新配置
+- **启动器级首页动画展示**：可以展示已经适配的游戏启动器动画，目前已经适配绝大多数主流游戏
+  <img width="1898" height="1067" alt="image" src="https://github.com/user-attachments/assets/86da7616-8cdc-4732-b901-5cdd8e5e3383" />
 
-不用下载国际服，不用繁琐的配置流程，只需几步即可在steam游玩国服二游并且享受steam的相关功能
+- **时长记录**：本地记录时长，可视化报表展示
+  <img width="1898" height="1067" alt="image" src="https://github.com/user-attachments/assets/3d0d53c0-e0c9-4954-88d6-eee50d37fa42" />
 
-## 主要功能
-
-- **打开一个steam即可统一管理。**： 想象一下，当你同时玩多公司的游戏，那么你在玩不同游戏的时候需要打开......米哈游启动器+库洛的启动器+异环的启动器，那我要是还玩steam平台的游戏呢？再开一个steam！
-- **时长记录**：一般二游都没有时长记录的功能，我个人比较在意这个时长，因为可以知道我的时间花到哪里去了（为什么打游戏的时间总是不够啊喂！）
-- **享受steam游戏内覆盖的功能**：意味着可以使用steam的快捷键进行截图，并且可以直接分享到steam社区。更重要的是steam好友可以看见你正在游玩某某游戏。
-- **只需下载一份国服游戏即可实现**：以鸣潮为例，以往也有古法可以实现同样功能的功能。但是这需要在电脑上分别下载国服和国际服的游戏本体才行，并且遇到更新两份文件都要更新！！！
-- **支持多个游戏配置**
-- **从助手开始游戏（测试）**：在侧边栏选择「开始游戏（测试）」，由 Steam 按 AppID 启动已配置的游戏。启动前会检查 Steam 是否运行并登录、真实游戏 EXE 及 ACF 是否存在。
-
-## 一键更新
-
-已有配置可在预设区域点击「一键更新」：助手会重新获取元数据，将全部具有 public Manifest 的兼容 Depot 按上游顺序共同写入，并优先沿用当前仍有效的占位 EXE；存在多个不同启动 EXE 且当前值失效时仍需手动选择。内容变化时，原 ACF 会备份到软件安装目录的 `backups\<AppID>`；每个 AppID 最多保留最近 2 份且最长 30 天，相同内容不产生备份。安装器会为该目录设置普通用户写入权限。
-
-### 根据 AppID 自动填充
-
-在自定义页面填写 AppID，点击「自动获取游戏信息」，即可通过 steamcmd.net 获取显示名称、安装目录、Steam 占位 EXE、DepotID 以及公开分支的 BuildID / Manifest。名称优先使用页面所选语言，安装目录保留 Steam 登记值。真实游戏 EXE / 启动器位置仍需本地选择。
-
-全部具有 public Manifest 且通过 Windows、架构、语言和 DLC 过滤的 Depot 会自动组成安装集合；页面显示实际将写入 ACF 的 Depot及各自 Manifest。多个启动 EXE 仍显示候选列表，同一个 EXE 的不同启动参数会合并展示。手动修改主 DepotID 或主 Manifest 会明确回退为单 Depot配置。
-
-网络失败或缺失字段会保留原值并标明未验证。请求期间修改输入、切换语言、切换预设或离开页面，会丢弃过期结果。获取不会直接写入 Steam 文件，配置保存继续沿用现有按钮及离开页面时的自动保存流程。
-
-扩展设计、边界和验收说明见 [AppID 自动填充需求](APPID_AUTO_FILL_REQUIREMENTS.md)。开发验证方式见 [回归检查说明](Tests/SteamAppInfo.Tests/README.md)。
-
-## 启动器资源探测
-
-首页内容（背景视频 / 背景图 / Banner / 资讯）按数据源分为两层：
-
-- **网络 Provider**：拉取各游戏官方营销站点的 `__NEXT_DATA__`、JS 数据端点、`/api/news` 等。具体矩阵见 [docs/HOMEPAGE_CONTENT_ARCHITECTURE.md](docs/HOMEPAGE_CONTENT_ARCHITECTURE.md) 与各 Provider 文档（[HOYOPLAY](docs/HOYOPLAY_PROVIDER.md) / [KURO](docs/KURO_PROVIDER.md) / [HYPERGRYPH](docs/HYPERGRYPH_BATCH_PROVIDER.md) / [PERFECT_WORLD](docs/PERFECT_WORLD_HYBRID_PROVIDER.md) / [NEXTJS_DATA](docs/NEXTJS_DATA_PROVIDER.md) / [NETEASE_STATIC_CMS](docs/NETEASE_STATIC_CMS_PROVIDER.md)）。
-- **本地启动器资源**（`LocalLauncherAssetProvider`，`provider_id="local-launcher-asset"`）：当网络 Provider 返回的背景不够清晰或与启动器内置视频不一致时，由 C# 侧探测 launcher 安装目录，把绝对路径传入 `providerOptions.installDir`，Python 端按 `bg.mp4` / `bg.webm` / `bg.jpg` / `bg.png` / `config.json` 顺序查找并以 `file://` URI 回填。`config.json` 中的 `version` / `downloadUrl` 会顺手填到 `update_info`，UI 端可以据此弹出"新版本可用"提示。
-
-配合示例（C# 端）：先用一个网络 Provider 拿到首屏，再用本地启动器资源覆盖背景视频，二者字段合并后再下发到 XAML 控件。
-
-```csharp
-var request = new HomeContentRequest {
-    ProviderId = "local-launcher-asset",
-    ProviderOptions = new Dictionary<string, object> {
-        ["installDir"] = launcherInstallDir.Value,
-        ["videoFileNames"] = new[] { "bg.mp4", "bg.webm" },
-        ["configFileName"] = "config.json",
-    },
-};
-```
-
-详细字段映射、跨平台路径处理与限制见 [docs/LOCAL_LAUNCHER_ASSET_PROVIDER.md](docs/LOCAL_LAUNCHER_ASSET_PROVIDER.md)。
+- **享受steam游戏内覆盖的功能**：意味着可以使用steam的快捷键进行截图，并且可以直接分享到steam社区，同时steam好友可以看见你正在游玩某某游戏。
+- **只需下载一份国服游戏即可实现**：本质用Steam玩国服，所以只需下载一个国服即可
+- **支持任意上线Steam的游戏**：任意上线Steam的游戏都能通过本软件让Steam以为已经安装，也就说可以做到在Steam点击开始CSGO，实际启动的却是原神
 
 ## 系统要求
 - Windows 操作系统（Windows 10/11）基于x64
 - 官方安装包包含 .NET 和 Windows App SDK 运行库
 - 已安装 Steam 客户端
 - Steam 游戏库内已入库对应游戏
-## 技术说明
-
-开发环境使用 .NET 8 SDK、Windows SDK 和支持 WinUI 3 的 Visual Studio。
-安装包构建方式见 [发布说明](packaging/README.md)。
-
-实现原理：通过自动化配置游戏的acf文件欺骗steam已经下载游戏本体，随后通过启动命令诱导启动国服游戏本体
+  
+## 免责声明
+- **本软件不会修改游戏文件，更不会修改内存数据**
+- **欺骗Steam的过程只是修改了Steam官方识别的ACF文件，随后通过启动命令将启动游戏指向特定游戏。做不到在Steam玩没有入库的游戏，理论上不会触发红信，但无法保证不会出现，如果出现出现，开发者不承担责任**
+- **请支持正版游戏**
+- **本工具仅用于学习和研究目的**
+- **使用本工具产生的任何问题，开发者不承担责任**
 
 ## 免责声明
-
-本工具仅用于学习和研究目的。
-使用本工具产生的任何问题，开发者不承担责任。请支持正版游戏。
-无法保证不会导致steam红信，至少从理论上来说符合steam的机制不会有问题。
-请自行承担相关风险和后果！！！
+- 本软件的开发离不开以下项目和资料网站：
+- https://github.com/babalae/better-genshin-impact
+- https://github.com/Scighost/Starward
+- https://www.pcgamingwiki.com/
 
 ## 许可证
-
 本项目遵循开源协议，具体请查看 LICENSE 文件。
