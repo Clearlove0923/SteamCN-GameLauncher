@@ -2,6 +2,18 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-10-28 15:29:41 +08:00
+
+1. 推送人员：`Violet0923`
+2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.2.1` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
+3. 推送提交：`release: 发布 v3.2.1 Steam 信息与首页内容更新`
+4. 实现内容：
+   1. 发布 SteamKit 匿名直连、Steam 本机缓存与备用接口的完整版本信息选择，避免旧 BuildID/Manifest 覆盖配置；按用户反馈移除 Steam 运行时的一键更新拦截。
+   2. 新增《洛克王国：世界》首页的腾讯启动器本地背景、资讯、轮播与官网回退；修复首页 Worker 启动时序和加载提示。
+   3. ACF 备份期限从 30 天延长到 60 天，更新时自动清理过期备份；四处版本号、CHANGELOG、Release 正文及官网下载信息同步为 v3.2.1。
+5. 验证结果：Debug x64 构建成功，0 警告、0 错误；C# 测试 SteamAppInfo 47 项、ManifestUpdate 41 项、CustomNavigation 70 项通过；Python 31 项与 35 个子测试通过；Release x64 自包含构建、基于 v3.2.0 publish 的 Kachina 差分及 Inno 安装包生成成功。安装包 145219920 字节、SHA-256 96611dca3801f9b94e137a16dcf954f8265ebac66158db9053cebc90d6424d5b；更新包 189748807 字节、SHA-256 61103a6de2aa35e7ee6c322efccbae325d43f0636759683b41ad6eb00e000e50。
+6. 当前限制：Steam 直连依赖网络与公开信息范围，备用接口和本机缓存可能滞后；腾讯内部内容接口不承诺稳定 SLA；尚未重新完成真实游戏 UI 与移动网络下官网完整下载回归。应用与安装包未商业代码签名。
+
 ## 2026-10-28 15:00:08 +08:00
 
 1. 推送人员：`Violet0923`
@@ -57,15 +69,3 @@
    2. Release x64 自包含构建、基于 v3.1.8 publish 的 Kachina 差分生成及 Inno Setup 编译成功；发布目录未混入 `GameTime`、`HomeCache` 等用户数据，内嵌 Python 与 HoYoPlay Provider 导入验证成功。
    3. 安装包 `SteamCN-GameLauncher-v3.1.9-win-x64-setup.exe` 为 142046956 字节，SHA-256 `c6800821613bc3f2bea8182116c7c80aba801475ec1ffa4b483713bfa25e4385`；更新包 `SteamCN-GameLauncher.Update.3.1.9.exe` 为 185724807 字节，SHA-256 `7a15b9119e735c5f93f3de24e5e5a2776c9cbcd90af6ac552a380e8ebb2517f4`；`SHA256SUMS.txt` 为 216 字节，SHA-256 `285830738220c1984fe95f1e2cacb4ed51f56c54647c70f68527a030a903bab7`。
 6. 当前限制：旧版本已经清除背景元数据且本地没有剩余有效缓存时，无法凭空恢复动画，需要等待厂商重新下发背景或重新建立有效缓存；应用与安装包尚未商业代码签名。
-
-## 2026-10-13 20:27:08 +08:00
-
-1. 推送人员：`Violet0923`
-2. 目标分支：GitHub `master`
-3. 推送提交：`docs: update Calabiyau bridge to v1.2`
-4. 实现内容：
-   1. 将《卡拉彼丘》特殊设置说明更新至桥接器 v1.2，并替换下载链接、附件名和 SHA-256。
-   2. 说明 v1.2 为 Windows x64 原生单文件，可直接复制运行，无需安装 .NET、重命名或创建配置。
-   3. 更新 SteamCN-GameLauncher 可执行文件名及手动 Steam 启动选项示例。
-5. 验证结果：文档中的版本、附件名、下载标签和 SHA-256 与 GitHub、CNB v1.2 公开发布附件一致；两端附件下载校验通过。
-6. 当前限制：v1.2 尚未重新完成实机回归；首次使用仍需通过对应渠道官方启动器成功进入游戏一次。

@@ -1,8 +1,8 @@
 {
-  "version": "3.2.0",
-  "releaseDate": "2026-10-14",
-  "availableAfter": "2026-10-14T00:00:00+08:00",
-  "message": "3.2.0 更新：修复删除首页内容缓存后，厂商暂时未下发背景时无法重新恢复首页动画的问题。",
+  "version": "3.2.1",
+  "releaseDate": "2026-10-28",
+  "availableAfter": "2026-10-28T00:00:00+08:00",
+  "message": "3.2.1 更新：新增 Steam 直连查询与洛克王国：世界首页支持，修复旧版本配置覆盖及首页加载问题，ACF 备份保留期限延长至 60 天。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"

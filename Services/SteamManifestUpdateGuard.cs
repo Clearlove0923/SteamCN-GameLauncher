@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -13,13 +12,6 @@ public static class SteamManifestUpdateGuard
         if (File.Exists(path))
             Validate(await File.ReadAllTextAsync(path, cancellationToken), appId, candidateBuildId);
         cancellationToken.ThrowIfCancellationRequested();
-        var processes = Process.GetProcessesByName("steam");
-        try
-        {
-            if (processes.Length > 0)
-                throw new SteamAppInfoException("请先通过 Steam 菜单完全退出 Steam，再执行一键更新，避免配置被 Steam 写回覆盖。原配置未修改。");
-        }
-        finally { foreach (var process in processes) process.Dispose(); }
     }
 
     public static void Validate(string acf, string appId, string candidateBuildId)
