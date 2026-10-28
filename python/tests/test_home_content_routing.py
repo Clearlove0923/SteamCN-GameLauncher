@@ -112,6 +112,36 @@ class HomeContentRoutingTests(unittest.TestCase):
             "https://h72.fp.ps.netease.com/file/6a39fae9fb7d0ec11d494d33Dh7Ufxa207",
         )
 
+    def test_roco_install_routes_tencent_provider_and_preserves_local_path(self) -> None:
+        server = importlib.import_module("home_content.server.app")
+        captured = []
+
+        class FakeProvider:
+            async def fetch(self, request):
+                captured.append(request)
+                return HomeContent()
+
+        async def request():
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),
+                                         base_url="http://test") as client:
+                return await client.post("/v1/home-content", json={
+                    "requestId": "route-roco", "gameId": "stale",
+                    "providerId": "auto",
+                    "executablePath": r"E:\Games\洛克王国世界\洛克王国：世界(2002304)\Win64\NRC.exe",
+                    "installDirectory": r"E:\Games\洛克王国世界\洛克王国：世界(2002304)",
+                })
+
+        with patch.object(server, "create_provider", return_value=FakeProvider()):
+            response = asyncio.run(request())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["providerId"], "tencent")
+        self.assertEqual(captured[0].game_id, "rock-kingdom-world")
+        self.assertEqual(captured[0].provider_options["weGameGameId"], "2002304")
+        self.assertEqual(
+            captured[0].install_directory,
+            r"E:\Games\洛克王国世界\洛克王国：世界(2002304)",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

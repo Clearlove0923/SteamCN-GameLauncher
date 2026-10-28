@@ -9,12 +9,16 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <None Update="Fixtures/*.acf" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../../Models/SteamDepotConfig.cs" Link="Models/SteamDepotConfig.cs" />
     <Compile Include="../../Models/SteamAppInfo.cs" Link="Models/SteamAppInfo.cs" />
     <Compile Include="../../Services/SteamAppInfoService.cs" Link="Services/SteamAppInfoService.cs" />
     <Compile Include="../../Services/SteamAppSelectionService.cs" Link="Services/SteamAppSelectionService.cs" />
     <Compile Include="../../Services/SteamPathValidator.cs" Link="Services/SteamPathValidator.cs" />
     <Compile Include="../../Services/ManifestFileService.cs" Link="Services/ManifestFileService.cs" />
+    <Compile Include="../../Services/SteamManifestUpdateGuard.cs" Link="Services/SteamManifestUpdateGuard.cs" />
+    <Compile Include="../../Services/SteamAppCacheReader.cs" Link="Services/SteamAppCacheReader.cs" />
+    <Compile Include="../../Services/SteamUpdateInfoResolver.cs" Link="Services/SteamUpdateInfoResolver.cs" />
     <Compile Include="../../Services/AcfContentBuilder.cs" Link="Services/AcfContentBuilder.cs" />
   </ItemGroup>
 </Project>

@@ -57,6 +57,7 @@ public sealed partial class HomeBannerAndNews : UserControl
         IReadOnlyList<string>? categoryOrder = null)
     {
         // 同一控件按游戏配置重建分类，不把“鸣潮的新闻”等厂商差异写死在 XAML。
+        var isLoading = content is null;
         content ??= new HomeContent();
         _bannerTimer.Stop();
         BannerItems.Clear();
@@ -74,6 +75,8 @@ public sealed partial class HomeBannerAndNews : UserControl
         BannerFlipView.SelectedIndex = BannerItems.Count > 0 ? 0 : -1;
         BannerFlipView.Visibility = BannerItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         BannerEmptyState.Visibility = BannerItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        BannerEmptyText.Text = isLoading ? "正在加载首页内容" : "暂无可用轮播内容";
+        NewsEmptyState.Text = isLoading ? "正在加载资讯" : "暂无资讯";
         UpdateBannerCounter();
         StartBannerTimerIfNeeded();
     }

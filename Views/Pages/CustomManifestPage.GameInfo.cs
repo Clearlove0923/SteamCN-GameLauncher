@@ -7,9 +7,10 @@ namespace SteamCNGameLauncher.Views.Pages;
 
 public sealed partial class CustomManifestPage
 {
-    private readonly ISteamAppInfoService _appInfoService = new SteamAppInfoService();
+    private readonly ISteamAppInfoService _appInfoService = new FreshSteamAppInfoService();
     private CancellationTokenSource? _gameInfoRequest;
     private SteamAppSelection? _gameInfoSelection;
+    private string _gameInfoSourceDescription = "";
     private List<SteamDepotConfig> _selectedSteamDepots = new();
     private bool _applyingGameInfo;
     private readonly Dictionary<string, string> _gameInfoIssues = new();
@@ -55,6 +56,7 @@ public sealed partial class CustomManifestPage
     {
         CancelGameInfoRequest();
         _gameInfoSelection = null;
+        _gameInfoSourceDescription = "";
         _gameInfoIssues.Clear();
         cmbDepotCandidates.ItemsSource = null;
         cmbExecutableCandidates.ItemsSource = null;
@@ -161,7 +163,7 @@ public sealed partial class CustomManifestPage
         btnFetchGameInfo.IsEnabled = false;
         btnFetchGameInfo.Content = "正在获取…";
         ShowGameInfoStatus("正在获取游戏信息", "请稍候。", InfoBarSeverity.Informational);
-        _logService.AddLog($"[自定义页] 正在获取 AppID={appId} 的游戏信息（steamcmd.net）");
+        _logService.AddLog($"[自定义页] 正在直连 Steam 获取 AppID={appId} 的公开产品信息");
 
         try
         {
@@ -176,6 +178,8 @@ public sealed partial class CustomManifestPage
                 return;
             }
             var selection = SteamAppSelectionService.Select(app, options);
+            _gameInfoSourceDescription = $"来源：{app.Source}；查询时间：{app.RetrievedAt?.ToLocalTime():yyyy-MM-dd HH:mm:ss zzz}。";
+            _logService.AddLog($"[自定义页] 来源：{app.Source}；查询时间：{app.RetrievedAt:O}");
             var depotSet = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(selection);
             _applyingGameInfo = true;
             try
@@ -310,7 +314,7 @@ public sealed partial class CustomManifestPage
         var messages = _gameInfoIssues.Select(i => $"{i.Key}：{i.Value}。")
             .Concat(_gameInfoSelection.Warnings).ToList();
         ShowGameInfoStatus(messages.Count == 0 ? "已填入游戏信息" : "已获取，请检查以下字段",
-            messages.Count == 0 ? "可继续编辑；保存预设和生成配置沿用原有操作。" : string.Join("\n", messages),
+            _gameInfoSourceDescription + "\n" + (messages.Count == 0 ? "可继续编辑；保存预设和生成配置沿用原有操作。" : string.Join("\n", messages)),
             messages.Count == 0 ? InfoBarSeverity.Success : InfoBarSeverity.Warning);
     }
 }

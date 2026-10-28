@@ -4,7 +4,7 @@ namespace SteamCNGameLauncher.Services;
 
 public sealed record ManifestBackupOptions(int MaximumCount, TimeSpan MaximumAge)
 {
-    public static ManifestBackupOptions Default { get; } = new(2, TimeSpan.FromDays(30));
+    public static ManifestBackupOptions Default { get; } = new(2, TimeSpan.FromDays(60));
 }
 
 public sealed record ManifestWriteResult(bool Changed, string? BackupPath, int RemovedBackupCount);
@@ -30,12 +30,17 @@ public sealed class ManifestFileService
     }
 
     public async Task<ManifestWriteResult> WriteWithBackupAsync(string targetPath, string content,
-        string appId, string previousBuildId, CancellationToken cancellationToken = default)
+        string appId, string previousBuildId, CancellationToken cancellationToken = default,
+        string? candidateBuildId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
         if (!SteamAppInfoService.TryNormalizeAppId(appId, out var normalizedAppId))
             throw new ArgumentException("AppID 必须为有效的正整数。", nameof(appId));
+
+        // Recheck immediately before any backup or write, after the UI's initial check.
+        if (candidateBuildId != null)
+            await SteamManifestUpdateGuard.EnsureWritableAsync(targetPath, normalizedAppId, candidateBuildId, cancellationToken);
 
         var targetDirectory = Path.GetDirectoryName(targetPath)
             ?? throw new ArgumentException("配置文件路径缺少目录。", nameof(targetPath));

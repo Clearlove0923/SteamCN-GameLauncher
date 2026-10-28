@@ -46,13 +46,21 @@ public sealed partial class CustomManifestPage
         btnOneClickUpdate.IsEnabled = false;
         btnOneClickUpdate.Content = "正在更新…";
         btnFetchGameInfo.IsEnabled = false;
-        ShowGameInfoStatus("正在一键更新配置", "正在获取并验证最新游戏信息，请稍候。",
+        ShowGameInfoStatus("正在一键更新配置", "正在获取游戏信息并检查本机版本冲突，请稍候。",
             InfoBarSeverity.Informational);
-        _logService.AddLog($"[一键更新] 正在获取 AppID={appId} 的最新游戏信息");
+        _logService.AddLog($"[一键更新] 正在比较本机 Steam 缓存与游戏信息接口的 AppID={appId} public 分支信息");
 
         try
         {
-            var app = await _appInfoService.GetAppInfoAsync(appId, request.Token);
+            var libraryPath = _settings.SteamLibraryPath.Trim();
+            var steamappsPath = Path.Combine(libraryPath, "steamapps");
+            var acfPath = Path.Combine(steamappsPath, $"appmanifest_{appId}.acf");
+            var resolved = await new SteamUpdateInfoResolver(_appInfoService).ResolveAsync(appId,
+                Path.Combine(_settings.SteamInstallPath.Trim(), "appcache", "appinfo.vdf"),
+                acfPath, options, request.Token);
+            var app = resolved.App;
+            foreach (var diagnostic in resolved.Diagnostics) _logService.AddLog("[一键更新] " + diagnostic);
+            _logService.AddLog($"[一键更新] 采用来源：{resolved.Source}");
             if (_gameInfoRequest != request || request.IsCancellationRequested || PresetId != presetId
                 || !SteamAppInfoService.TryNormalizeAppId(txtAppId.Text, out var currentId) || currentId != appId)
                 return;
@@ -63,6 +71,11 @@ public sealed partial class CustomManifestPage
             }
 
             var selection = SteamAppSelectionService.Select(app, options);
+            // Check before applying fetched fields: a stale result must not replace the preset.
+            await SteamManifestUpdateGuard.EnsureWritableAsync(acfPath, appId, selection.BuildId, request.Token);
+            if (_gameInfoRequest != request || request.IsCancellationRequested || PresetId != presetId
+                || SelectedGameLanguage != options.Language || inputSnapshot.Any(pair => pair.Key.Text != pair.Value))
+                return;
             // Depot 是一个安装集合：所有通过平台、架构、语言和 DLC 过滤且拥有
             // public Manifest 的候选都会按上游顺序共同写入。
             var depotSet = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(selection);
@@ -72,6 +85,7 @@ public sealed partial class CustomManifestPage
             try
             {
                 _gameInfoSelection = selection;
+                _gameInfoSourceDescription = $"来源：{resolved.Source}。";
                 cmbDepotCandidates.ItemsSource = selection.Depots;
                 cmbDepotCandidates.Visibility = Visibility.Collapsed;
                 cmbExecutableCandidates.ItemsSource = selection.Executables;
@@ -123,9 +137,6 @@ public sealed partial class CustomManifestPage
             }
             executablePath = Path.Combine(executablePath.Split('/', '\\'));
 
-            var libraryPath = _settings.SteamLibraryPath.Trim();
-            var steamappsPath = Path.Combine(libraryPath, "steamapps");
-            var acfPath = Path.Combine(steamappsPath, $"appmanifest_{appId}.acf");
             var acfContent = _steamService.GenerateAcfContent(new AcfParameters(
                 AppId: appId,
                 Depots: GetConfiguredDepots(),
@@ -141,7 +152,7 @@ public sealed partial class CustomManifestPage
             var placeholder = _steamService.EnsureGameDirAndPlaceholder(
                 libraryPath, txtInstallDir.Text.Trim(), executablePath);
             var write = await _manifestFileService.WriteWithBackupAsync(
-                acfPath, acfContent, appId, originalBuildId, request.Token);
+                acfPath, acfContent, appId, originalBuildId, request.Token, selection.BuildId);
             if (!PersistCurrentPreset())
                 throw new IOException("配置文件已更新，但助手预设保存失败。请检查设置目录权限。");
 
@@ -156,17 +167,18 @@ public sealed partial class CustomManifestPage
                 ? (write.Changed ? "原文件不存在，无需备份。" : "内容没有变化，未生成备份。")
                 : $"原配置已备份到：\n{write.BackupPath}";
             var placeholderMessage = placeholder.ExeCreated ? "已创建占位 EXE。" : "占位 EXE 已存在，未覆盖。";
-            ShowGameInfoStatus("一键更新完成",
+            ShowGameInfoStatus(write.Changed ? "配置已写入" : "配置内容未变化",
                 $"已写入 Depot：{string.Join(", ", depotSet.Candidates.Select(candidate => candidate.Depot.Id))}\nBuildID：{selection.BuildId}\n{backupMessage}\n{placeholderMessage}\n请完全重启 Steam。",
                 InfoBarSeverity.Success);
             await ShowInfoAsync(string.Join("\n", new[]
             {
-                "配置更新完成。",
+                write.Changed ? "配置已按接口返回的信息写入。" : "接口返回的配置内容未变化。",
+                $"来源：{resolved.Source}（public 分支）。BuildID：{selection.BuildId}。",
                 "",
                 backupMessage,
                 placeholderMessage,
                 "每个 AppID 最多保留 2 份。",
-                "备份最长保留 30 天。",
+                "备份最长保留 60 天（约 2 个月），每次更新时自动清理过期备份。",
                 "请完全重启 Steam。"
             }));
         }

@@ -5,7 +5,7 @@
 ## 当前状态
 
 - C# DTO、服务接口、传输接口和 JSON 解析入口已经建立。
-- Python Pydantic 模型、Provider 基类、七个 Provider 类和注册表已经建立，已接入的 Provider 使用固定样本测试其请求与解析逻辑。
+- Python Pydantic 模型、Provider 基类、公司 Provider、来源适配器和注册表已经建立，已接入的 Provider 使用固定样本测试其请求与解析逻辑。
 - 首页资讯栏已通过 `HomeBannerAndNews` 消费统一 DTO，并由 `IHomeContentService` 提供数据。客户端通过
   `FastApiHomeContentService` 请求本机 Worker；没有明确配置 Provider 时，会按已验证的 AppID 映射选择 Provider。
 - 截图目录使用独立接口，不属于 `HomeContent`。
@@ -90,6 +90,7 @@ Provider 注册表位于 `python/home_content/provider_registry.py`，当前稳�
 | `NextJsDataProvider` | `nextjs-data` |
 | `NetEaseStaticCmsProvider` | `netease-static-cms` |
 | `LocalLauncherAssetProvider` | `local-launcher-asset` |
+| `TencentProvider` | `tencent` |
 
 实现 Provider 时继承 `HomeContentProvider` 并实现：
 
@@ -99,6 +100,8 @@ async def fetch(self, request: HomeContentRequest) -> HomeContent:
 ```
 
 Provider 负责把来源数据转换为统一模型。C# 不接收厂商原始响应，也不感知 Provider 类名。
+
+`TencentProvider` 当前为《洛克王国：世界》读取本机启动器动画，并优先请求实机确认的腾讯 CMC 启动器内容流（`serviceId=467`、`source=pc_launcher`）。标签 `137617`、`137629`、`139435` 用于识别轮播、资讯和公告；接口不可用或结构不兼容时才回退 `rocom.qq.com` 官网页面。该内容流是启动器内部来源，不作为具有稳定 SLA 的开放 API 描述。
 
 ## 动画与资讯链接
 

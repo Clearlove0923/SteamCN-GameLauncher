@@ -1,5 +1,23 @@
 [
   {
+    "appId": "",
+    "gameId": "rock-kingdom-world",
+    "exeNames": ["洛克王国：世界.exe", "nrc_launcher.exe", "NRC.exe", "NRC-Win64-Shipping.exe"],
+    "folderNames": ["洛克王国：世界(2002304)", "洛克王国：世界", "洛克王国世界"],
+    "matchNotes": "2026-10-15 本机核对腾讯国服外层入口、NRC 启动器、Unreal 引导程序与游戏本体；启动器首页动画位于 launcher\\tpf_ui\\res\\videos\\main_ui\\main_video.mp4。独立启动器 Chromium 缓存实机确认资讯由腾讯 CMC serviceId=467、source=pc_launcher 下发，标签 137617/137629/139435 分别包含轮播、资讯和公告；139426 为启动器请求保留标签，当前无内容。排除卸载器、崩溃上报、WebView、ACE 反作弊、安装和诊断程序；该内部内容接口不承诺稳定 SLA，失败时回退 rocom.qq.com 官网。",
+    "matchSources": ["https://rocom.qq.com/", "https://apps.game.qq.com/cmc/cross?serviceId=467&source=pc_launcher&limit=50&filter=tag&tagids=139426,137617,137629,139435&logic=or"],
+    "providerId": "tencent",
+    "newsCategoryLabels": { "资讯": "新闻资讯", "公告": "公告", "活动": "活动" },
+    "newsCategoryOrder": ["资讯", "公告", "活动"],
+    "providerOptions": {
+      "region": "cn",
+      "weGameGameId": "2002304",
+      "launcherContentUrl": "https://apps.game.qq.com/cmc/cross?serviceId=467&source=pc_launcher&limit=50&filter=tag&tagids=139426,137617,137629,139435&logic=or",
+      "homePageUrl": "https://rocom.qq.com/",
+      "contentRevision": "launcher-local-video-cmc-feed-v3"
+    }
+  },
+  {
     "appId": "1282270",
     "gameId": "calabiyau",
     "exeNames": ["CalabiYau.exe", "Calabiyau-Win64-Shipping.exe", "Strinova.exe", "Strinova-Win64-Shipping.exe"],

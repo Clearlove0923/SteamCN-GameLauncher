@@ -2,6 +2,13 @@ using System.Net;
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
 
+if (args.Length == 2 && args[0] == "--live")
+{
+    var current = await new SteamLiveAppInfoService().GetAppInfoAsync(args[1]);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(current));
+    return;
+}
+
 // Dependency-free regression runner: dotnet run --project Tests/SteamAppInfo.Tests
 var checks = 0;
 void Check(bool condition, string name)
@@ -98,6 +105,7 @@ using var http = new HttpClient(new StubHandler((request, token) =>
 }));
 var service = new SteamAppInfoService(http, new Uri("https://example.test/info/"));
 var fetched = await service.GetAppInfoAsync("000123");
+await LiveInfoTests.Run(Check, fetched);
 Check(calls == 1 && fetched.Name == "Example Game" && fetched.Depots.Count == 4, "one HTTP request supplies all metadata");
 
 async Task CheckServiceError(HttpStatusCode status, string body, string expected)

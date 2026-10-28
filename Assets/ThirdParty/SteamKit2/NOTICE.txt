@@ -1,0 +1,6 @@
+SteamKit2 3.4.0 is used as an unmodified, separately distributed DLL.
+Copyright and license: see LICENSE.txt (LGPL-2.1-only).
+Source for this exact release: https://github.com/SteamRE/SteamKit/tree/3.4.0
+Source archive: https://github.com/SteamRE/SteamKit/archive/refs/tags/3.4.0.tar.gz
+Upstream third-party notices: THIRD-PARTY.txt.
+SteamKit2 is a community library; it is not an official Valve SDK.

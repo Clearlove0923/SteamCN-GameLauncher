@@ -1,6 +1,13 @@
 using SteamCNGameLauncher.Models;
 using SteamCNGameLauncher.Services;
 
+if (args.Length == 2)
+{
+    var inspected = await SteamAppCacheReader.ReadAsync(args[0], args[1]);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(inspected));
+    return;
+}
+
 var checks = 0;
 void Check(bool condition, string message)
 {
@@ -8,6 +15,29 @@ void Check(bool condition, string message)
     checks++;
     Console.WriteLine("PASS: " + message);
 }
+
+void Reject(string content, string appId, string build, string message)
+{
+    try { SteamManifestUpdateGuard.Validate(content, appId, build); }
+    catch (SteamAppInfoException) { Check(true, message); return; }
+    throw new Exception("FAILED: " + message);
+}
+var pending = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "nte-update-pending.acf"));
+await CacheTests.Run(Check, pending);
+Reject(pending, "4706890", "26092471", "NTE stale API result is rejected against Steam target");
+Reject(pending, "4706890", "26236513", "different target is a conflict even with a higher candidate ID");
+Reject(pending, "123", "26236512", "wrong AppID is rejected");
+SteamManifestUpdateGuard.Validate(pending, "4706890", "26236512");
+Check(true, "matching target passes version comparison");
+var noTarget = pending.Replace("\"TargetBuildID\" \"26236512\"", "\"TargetBuildID\" \"0\"");
+SteamManifestUpdateGuard.Validate(noTarget, "4706890", "26092471");
+Check(true, "zero target is not a conflict");
+Reject(noTarget, "4706890", "26092470", "automatic rollback is rejected");
+Reject(pending[..^3], "4706890", "26236512", "truncated ACF fails closed");
+Reject(pending.Replace("\"StateFlags\" \"6\"", "\"buildid\" \"1\""), "4706890", "26236512", "duplicate fields fail closed");
+Reject(pending.Replace("\"26236512\"", "\"unknown\""), "4706890", "26236512", "invalid target fails closed");
+SteamManifestUpdateGuard.Validate("// comment\n\"AppState\" { \"appid\" \"123\" \"BUILDID\" \"10\" \"Nested\" { \"TargetBuildID\" \"999\" } }", "123", "10");
+Check(true, "nested fields are ignored and field casing and comments are supported");
 
 SteamDepotCandidate Depot(string id, string manifest) => new(
     new SteamDepotInfo(id, id, new("windows", "64", "schinese"), "0",
@@ -54,7 +84,7 @@ try
 }
 catch (ArgumentException) { Check(true, "ACF rejects an empty depot set"); }
 
-var root = Path.Combine(Path.GetTempPath(), "manifest-update-" + Guid.NewGuid().ToString("N"));
+var root = Path.Combine(AppContext.BaseDirectory, "manifest-update-" + Guid.NewGuid().ToString("N"));
 var target = Path.Combine(root, "library", "steamapps", "appmanifest_123.acf");
 var backups = Path.Combine(root, "backups");
 var now = new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero);
@@ -65,6 +95,19 @@ try
     Directory.CreateDirectory(Path.GetDirectoryName(target)!);
     await File.WriteAllTextAsync(target, "version-0");
     var service = new ManifestFileService(backups, ManifestBackupOptions.Default, () => now);
+    var conflictTarget = Path.Combine(Path.GetDirectoryName(target)!, "appmanifest_4706890.acf");
+    await File.WriteAllTextAsync(conflictTarget, pending);
+    try
+    {
+        await service.WriteWithBackupAsync(conflictTarget, "must not be written", "4706890", "26092471",
+            candidateBuildId: "26092471");
+        throw new Exception("FAILED: conflicting write accepted");
+    }
+    catch (SteamAppInfoException)
+    {
+        Check(await File.ReadAllTextAsync(conflictTarget) == pending && !Directory.Exists(backups),
+            "conflicting write preserves original bytes and creates no backups");
+    }
     for (var version = 1; version <= 3; version++)
     {
         now = now.AddMinutes(1);
@@ -83,9 +126,17 @@ try
 
     var stale = retained[0];
     File.SetLastWriteTimeUtc(stale, now.AddDays(-31).UtcDateTime);
-    Check(service.CleanupBackups("123") == 1
+    var withinRetention = await service.WriteWithBackupAsync(target, "version-3", "123", "3");
+    Check(withinRetention.RemovedBackupCount == 0 && File.Exists(stale),
+        "31-day-old backup survives an unchanged update");
+    File.SetLastWriteTimeUtc(stale, now.AddDays(-60).UtcDateTime);
+    Check(service.CleanupBackups("123") == 0 && File.Exists(stale),
+        "backup exactly 60 days old is retained");
+    File.SetLastWriteTimeUtc(stale, now.AddDays(-61).UtcDateTime);
+    var expiredUpdate = await service.WriteWithBackupAsync(target, "version-3", "123", "3");
+    Check(!expiredUpdate.Changed && expiredUpdate.RemovedBackupCount == 1
         && Directory.GetFiles(Path.Combine(backups, "123"), "*.acf").Length == 1,
-        "backups older than 30 days are removed");
+        "unchanged update automatically removes backups older than 60 days");
 
     var otherTarget = Path.Combine(root, "library", "steamapps", "appmanifest_456.acf");
     await File.WriteAllTextAsync(otherTarget, "other-0");

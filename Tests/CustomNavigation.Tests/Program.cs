@@ -69,6 +69,7 @@ try
         (@"D:\无限暖暖\InfinityNikki.exe", "infinity-nikki", "papergames", null),
         (@"D:\燕云十六声\wwm.exe", "where-winds-meet", "netease", null),
         (@"D:\卡拉彼丘\CalabiYau.exe", "calabiyau", "idreamsky", null),
+        (@"D:\洛克王国世界\NRC.exe", "rock-kingdom-world", "tencent", null),
     };
     foreach (var (path, gameId, providerId, gameBiz) in sourceCases)
     {

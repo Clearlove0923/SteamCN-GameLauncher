@@ -18,7 +18,7 @@ public class SteamService
 
     public SteamService(ISteamAppInfoService? appInfoService = null)
     {
-        _appInfoService = appInfoService ?? new SteamAppInfoService();
+        _appInfoService = appInfoService ?? new FreshSteamAppInfoService();
     }
 
     private const string SteamRegistryKey = @"SOFTWARE\WOW6432Node\Valve\Steam";

@@ -365,6 +365,7 @@ FodyWeavers.xsd
 
 #�Զ�������ļ�
 *.acf
+!Tests/ManifestUpdate.Tests/Fixtures/*.acf
 /Docs/*.acf
 /Docs/apprequirement.md
 .claude
@@ -388,6 +389,7 @@ docs/*
 !docs/LOCAL_LAUNCHER_ASSET_PROVIDER.md
 !docs/PYTHON_BACKEND_INTEGRATION.md
 !docs/PUSH_HISTORY.md
+!docs/STEAM_MANIFEST_UPDATE.md
 
 # Raw sample captures live in contracts/samples/_raw_*; keep them out of the
 # committed snapshot so the canonical fixtures are the only ones tracked.

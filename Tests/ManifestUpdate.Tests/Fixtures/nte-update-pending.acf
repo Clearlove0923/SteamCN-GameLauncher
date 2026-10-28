@@ -1,0 +1,15 @@
+"AppState"
+{
+    "appid" "4706890"
+    "StateFlags" "6"
+    "buildid" "26092471"
+    "TargetBuildID" "26236512"
+    "InstalledDepots"
+    {
+        "4706891"
+        {
+            "manifest" "3646058931896810596"
+            "size" "0"
+        }
+    }
+}

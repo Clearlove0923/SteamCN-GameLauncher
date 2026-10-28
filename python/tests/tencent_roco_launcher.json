@@ -1,0 +1,48 @@
+{
+  "status": 0,
+  "msg": "success",
+  "data": {
+    "total": 4,
+    "cache": 1,
+    "items": [
+      {
+        "iNewsId": 18852696,
+        "sTitle": "S4赛季「月涌狂想」魔法快报",
+        "sRedirectURL": "https://rocom.qq.com/web202507/sub/detail.html?newsid=18852680",
+        "sIMG": "//static.gametalk.qq.com/image/467/magic-news.jpg",
+        "sIdxTime": "2026-09-07 21:20:42",
+        "sTagInfo": "137629|wegame-launcher-资讯,139435|wegame-launcher-公告",
+        "sTagids": [137629, 139435]
+      },
+      {
+        "iNewsId": 18852691,
+        "sTitle": "S4赛季「月涌狂想」版本更新公告",
+        "sRedirectURL": "https://rocom.qq.com/web202507/sub/detail.html?newsid=18852676",
+        "sIMG": "//static.gametalk.qq.com/image/467/update-banner.jpg",
+        "sIdxTime": "2026-09-07 21:20:42",
+        "sTagInfo": "137617|wegame-launcher-轮播banner,137629|wegame-launcher-资讯,139435|wegame-launcher-公告",
+        "sTagIds": "137617,137629,139435"
+      },
+      {
+        "iNewsId": 18852694,
+        "sTitle": "S3赛季下架与继承",
+        "sRedirectURL": "https://rocom.qq.com/web202507/sub/detail.html?newsid=18852678",
+        "sIMG": "//static.gametalk.qq.com/image/467/season-inherit.jpg",
+        "sIdxTime": "2026-09-07 21:20:42",
+        "sTagInfoList": [
+          {"id": 137629, "name": "wegame-launcher-资讯"},
+          {"id": 139435, "name": "wegame-launcher-公告"},
+          {"id": 137617, "name": "wegame-launcher-轮播banner"}
+        ]
+      },
+      {
+        "iNewsId": 99999999,
+        "sTitle": "不受信任链接样本",
+        "sRedirectURL": "http://example.invalid/article",
+        "sIMG": "https://example.invalid/image.jpg",
+        "sCreated": "invalid-date",
+        "sTagInfo": "137629|wegame-launcher-资讯"
+      }
+    ]
+  }
+}

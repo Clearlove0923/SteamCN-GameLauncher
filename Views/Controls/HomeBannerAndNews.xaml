@@ -44,7 +44,7 @@
                                     HorizontalAlignment="Center" VerticalAlignment="Center"
                                     Spacing="10">
                             <FontIcon Glyph="&#xE8A5;" FontSize="42" Foreground="White"/>
-                            <TextBlock Text="等待 Python 首页内容"
+                            <TextBlock x:Name="BannerEmptyText" Text="等待 Python 首页内容"
                                        FontSize="18" FontWeight="SemiBold" Foreground="White"/>
                         </StackPanel>
 
@@ -136,7 +136,7 @@
                             </ItemsRepeater.ItemTemplate>
                         </ItemsRepeater>
                     </ScrollViewer>
-                    <TextBlock x:Name="NewsEmptyState" Text="暂无内容"
+                    <TextBlock x:Name="NewsEmptyState" Text="正在加载资讯"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                Foreground="#FFB8B8B8"/>
                 </Grid>

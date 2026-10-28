@@ -8,7 +8,11 @@ public sealed record SteamAppInfo(
     string InstallDirectory,
     IReadOnlyDictionary<string, string> BranchBuildIds,
     IReadOnlyList<SteamDepotInfo> Depots,
-    IReadOnlyList<SteamLaunchInfo> LaunchOptions);
+    IReadOnlyList<SteamLaunchInfo> LaunchOptions)
+{
+    public string Source { get; init; } = "";
+    public DateTimeOffset? RetrievedAt { get; init; }
+}
 
 public sealed record SteamPlatformFilter(string OperatingSystems, string Architecture, string Language);
 

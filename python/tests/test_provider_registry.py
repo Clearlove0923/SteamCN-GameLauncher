@@ -33,6 +33,7 @@ from home_content.providers import (
     PerfectWorldProvider,
     PaperGamesProvider,
     NetEaseProvider,
+    TencentProvider,
 )
 from home_content.providers.base import HomeContentProvider
 
@@ -44,6 +45,7 @@ EXPECTED_PROVIDERS: dict[str, type[HomeContentProvider]] = {
     "perfect-world": PerfectWorldProvider,
     "papergames": PaperGamesProvider,
     "netease": NetEaseProvider,
+    "tencent": TencentProvider,
     "local-launcher-asset": LocalLauncherAssetProvider,
 }
 

@@ -35,10 +35,12 @@ public partial class App : Application
     {
         try
         {
+            // 页面等待此任务得到本次启动专属的 Worker 端口；窗口仍立即显示。
+            // 必须在构造 MainWindow 前赋值：窗口构造过程会导航到首页，若此时任务仍为空，
+            // 首页会把传输临时绑定到 127.0.0.1:1，之后启动成功的 Worker 也无法刷新该服务。
+            WorkerStartupTask = TrySpawnWorkerAsync();
             MainWindow = new MainWindow();
             MainWindow.Closed += (sender, e) => OnMainWindowClosed();
-            // 页面等待此任务得到本次启动专属的 Worker 端口；窗口仍立即显示。
-            WorkerStartupTask = TrySpawnWorkerAsync();
             MainWindow.Activate();
 
             // 后台静默检查更新，不阻塞启动

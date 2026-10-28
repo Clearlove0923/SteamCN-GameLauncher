@@ -15,6 +15,7 @@ from .providers import (
     PerfectWorldProvider,
     PaperGamesProvider,
     NetEaseProvider,
+    TencentProvider,
 )
 from .providers.base import HomeContentProvider
 
@@ -29,6 +30,7 @@ PROVIDER_TYPES: dict[str, type[HomeContentProvider]] = {
         PerfectWorldProvider,
         PaperGamesProvider,
         NetEaseProvider,
+        TencentProvider,
         LocalLauncherAssetProvider,
     )
 }
