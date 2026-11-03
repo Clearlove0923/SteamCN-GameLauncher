@@ -62,7 +62,7 @@ public sealed class SteamLaunchService
             return new(SteamLaunchStatus.ManifestMissing,
                 $"未找到 appmanifest_{appId}.acf，请先在游戏配置页生成配置文件并重启 Steam。");
 
-        return new(SteamLaunchStatus.Ready, "Steam 已运行并登录，可以开始游戏。");
+        return new(SteamLaunchStatus.Ready, "已检测到 Steam 正在运行，并已找到当前游戏的 ACF，可以开始游戏。");
     }
 
     public SteamLaunchResult Launch(AppSettings settings, CustomManifestPreset preset)

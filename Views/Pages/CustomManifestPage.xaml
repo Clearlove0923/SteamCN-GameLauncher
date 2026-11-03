@@ -22,7 +22,7 @@
             <InfoBar x:Name="globalConfigInfoBar"
                      Severity="Warning"
                      Title="请先在「设置」中配置 Steam 全局参数"
-                     Message="自定义 Manifest 页依赖 Steam 安装路径、SteamLibrary 路径、SteamID 三项。"
+                     Message="生成 ACF、写入账号配置和从 Steam 启动游戏，需要 Steam 安装目录、游戏库目录和 SteamID64。SteamID64 可在设置页从本机账号记录自动检测。"
                      IsOpen="False"
                      IsClosable="False"/>
 

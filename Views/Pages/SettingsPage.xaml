@@ -58,7 +58,7 @@
                     CornerRadius="8" Padding="16">
                 <StackPanel Spacing="16">
                     <TextBlock Text="Steam 全局配置" FontSize="16" FontWeight="SemiBold"/>
-                    <TextBlock Text="以下三项为所有游戏共享配置，鸣潮页与自定义 Manifest 页都使用这些值。"
+                    <TextBlock Text="以下配置由所有已添加游戏共享，用于生成 Steam 配置、读取本机 Steam 信息以及从 Steam 启动游戏。"
                                FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                TextWrapping="Wrap"/>
 
@@ -72,12 +72,12 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="txtSteamPath"
-                                     PlaceholderText="Steam 安装路径（含 steam.exe）"
+                                     PlaceholderText="Steam 安装目录（目录内包含 steam.exe）"
                                      LostFocus="SteamPath_LostFocus"/>
                             <Button Grid.Column="1" Content="浏览" Click="BrowseSteamPath_Click"/>
                             <Button Grid.Column="2" Content="自动检测" Click="DetectSteamPath_Click"/>
                         </Grid>
-                        <TextBlock Text="提示：Steam 安装目录应包含 steam.exe 文件"
+                        <TextBlock Text="可自动检测，也可选择包含 steam.exe 的 Steam 安装目录。"
                                    FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
 
@@ -124,7 +124,7 @@
                                   Visibility="Collapsed"
                                   SelectionChanged="SteamAccount_SelectionChanged"/>
                         <TextBlock x:Name="txtSteamIdStatus"
-                                   Text="可从 Steam 本地 config\loginusers.vdf 自动获取，也可手动填写。"
+                                   Text="仅从本机 Steam 账号记录读取，不会上传账号信息；多账号时需要手动确认，也可直接填写。"
                                    TextWrapping="Wrap"
                                    FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
@@ -145,7 +145,7 @@
                         <TextBlock x:Name="txtHomeCacheStatus" Text="正在计算缓存大小…"
                                    FontSize="12" TextWrapping="Wrap"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Text="用户配置和公告资讯元数据保存在用户目录；背景动画、轮播图和资讯图片按游戏保存在软件目录的 HomeCache 文件夹。"
+                        <TextBlock Text="首页元数据和媒体资源会按游戏缓存在本机；清理缓存不会删除软件设置、游戏配置或已保存的背景历史。"
                                    FontSize="12" TextWrapping="Wrap"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <StackPanel Orientation="Horizontal" Spacing="18">

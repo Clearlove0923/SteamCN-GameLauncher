@@ -8,7 +8,7 @@
         <StackPanel Padding="28" Spacing="18" MaxWidth="820" HorizontalAlignment="Center">
             <StackPanel Spacing="6">
                 <TextBlock Text="从 Steam 开始游戏" FontSize="28" FontWeight="SemiBold"/>
-                <TextBlock Text="测试功能：游戏由 Steam 按 AppID 启动，运行时 Steam 将跟踪对应的游戏中状态。"
+                <TextBlock Text="游戏将由 Steam 按 AppID 启动，并由 Steam 跟踪对应的游戏中状态。"
                            TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
@@ -40,7 +40,7 @@
                         <TextBlock Text="真实游戏 EXE" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <TextBlock x:Name="txtGameExe" Grid.Column="1" Text="—" TextWrapping="Wrap"/>
                     </Grid>
-                    <Button x:Name="btnRefresh" Content="手动刷新 Steam 登录状态"
+                    <Button x:Name="btnRefresh" Content="重新检查启动条件"
                             HorizontalAlignment="Stretch" Click="Refresh_Click"/>
                     <Button x:Name="btnLaunch" Content="开始游戏"
                             Style="{StaticResource AccentButtonStyle}"
@@ -54,7 +54,7 @@
                     CornerRadius="8" Padding="20">
                 <StackPanel Spacing="8">
                     <TextBlock Text="使用前须知" FontSize="16" FontWeight="SemiBold"/>
-                    <TextBlock Text="请先生成该游戏的 ACF、重启 Steam，并把游戏配置页生成的启动命令填写到 Steam 的启动选项。该测试页不会直接运行 EXE，也不会修改 Steam 登录信息。"
+                    <TextBlock Text="请先生成该游戏的 ACF、重启并登录 Steam，再把游戏配置页生成的命令填写到 Steam 启动选项。本页只请求 Steam 启动对应 AppID，不会直接运行真实游戏 EXE，也不会读取或修改登录凭据。"
                                TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </StackPanel>
             </Border>

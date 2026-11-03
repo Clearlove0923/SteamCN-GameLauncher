@@ -86,12 +86,13 @@ public sealed partial class SettingsPage : Page
             var bytes = await HomeContentServiceFactory.Instance.GetCacheSizeAsync();
             if (!IsLoaded) return;
             txtHomeCacheStatus.Text = bytes == 0
-                ? $"当前没有首页缓存。媒体目录：{HomeContentServiceFactory.MediaCacheRoot}"
-                : $"当前占用 {FormatBytes(bytes)}；容量上限 {_settings.HomeCacheMaximumMegabytes} MB，最长保留 {_settings.HomeCacheRetentionDays} 天。媒体目录：{HomeContentServiceFactory.MediaCacheRoot}";
+                ? "当前没有首页缓存。打开受支持游戏的首页后会按需获取内容。"
+                : $"当前占用 {FormatBytes(bytes)}；容量上限 {_settings.HomeCacheMaximumMegabytes} MB，最长保留 {_settings.HomeCacheRetentionDays} 天。";
         }
         catch (Exception ex)
         {
-            if (IsLoaded) txtHomeCacheStatus.Text = $"无法读取缓存大小：{ex.Message}";
+            _logService.AddLog($"[首页缓存] 无法读取缓存大小：{ex.GetType().Name}: {ex.Message}");
+            if (IsLoaded) txtHomeCacheStatus.Text = "无法读取缓存大小，请稍后重试或检查缓存目录权限。";
         }
     }
 
@@ -106,7 +107,8 @@ public sealed partial class SettingsPage : Page
         }
         catch (Exception ex)
         {
-            txtHomeCacheStatus.Text = $"清理失败：{ex.Message}";
+            _logService.AddLog($"[首页缓存] 清理失败：{ex.GetType().Name}: {ex.Message}");
+            txtHomeCacheStatus.Text = "缓存清理失败，请稍后重试或检查缓存目录权限。";
         }
         finally
         {
