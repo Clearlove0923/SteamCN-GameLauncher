@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.ApplicationModel.DynamicDependency;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
@@ -37,7 +38,7 @@ internal static class Program
     {
         WriteEarlyLog("Program.Main.Start", null);
 
-        _singleInstanceMutex = new Mutex(true, @"Local\SteamCN-GameLauncher_SingleInstance", out var isFirstInstance);
+        _singleInstanceMutex = new Mutex(true, GetSingleInstanceMutexName(), out var isFirstInstance);
         if (!isFirstInstance)
         {
             var hwnd = FindWindow(null, AppInfo.WindowTitle);
@@ -109,6 +110,22 @@ internal static class Program
             }
 #endif
         }
+    }
+
+    private static string GetSingleInstanceMutexName()
+    {
+#if DEBUG
+        // UI regression/demo instances already use an isolated settings file. Give each
+        // such environment its own mutex as well, so it cannot focus or modify the real app.
+        var testSettingsPath = Environment.GetEnvironmentVariable("STEAMCN_TEST_SETTINGS_PATH");
+        if (!string.IsNullOrWhiteSpace(testSettingsPath) && Path.IsPathFullyQualified(testSettingsPath))
+        {
+            var normalized = Path.GetFullPath(testSettingsPath).ToUpperInvariant();
+            var suffix = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..16];
+            return $@"Local\SteamCN-GameLauncher_Test_{suffix}";
+        }
+#endif
+        return @"Local\SteamCN-GameLauncher_SingleInstance";
     }
 
     private static void WriteEarlyLog(string source, Exception? ex)

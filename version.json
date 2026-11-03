@@ -1,8 +1,8 @@
 {
-  "version": "3.2.1",
+  "version": "3.2.2",
   "releaseDate": "2026-10-28",
   "availableAfter": "2026-10-28T00:00:00+08:00",
-  "message": "3.2.1 更新：新增 Steam 直连查询与洛克王国：世界首页支持，修复旧版本配置覆盖及首页加载问题，ACF 备份保留期限延长至 60 天。",
+  "message": "3.2.2 更新：新增 SteamID64 本地自动检测，支持单账号自动填写与多账号选择，并改进自定义 Steam 路径和错误提示。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"

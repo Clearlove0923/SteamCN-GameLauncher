@@ -107,10 +107,25 @@
                     <!-- Steam ID -->
                     <StackPanel Spacing="8">
                         <TextBlock Text="Steam ID（SteamID64）" FontSize="14" FontWeight="Medium"/>
-                        <TextBox x:Name="txtSteamId"
-                                 PlaceholderText="输入您的 SteamID64（17 位数字）"
-                                 LostFocus="SteamId_LostFocus"/>
-                        <TextBlock Text="获取方式：访问 steamid.io 或 steamdb.info/calculator，登录后复制 SteamID64"
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="txtSteamId"
+                                     PlaceholderText="输入您的 SteamID64（17 位数字）"
+                                     LostFocus="SteamId_LostFocus"/>
+                            <Button Grid.Column="1" Content="自动检测" Click="DetectSteamId_Click"/>
+                        </Grid>
+                        <ComboBox x:Name="cmbSteamAccounts"
+                                  Header="检测到多个 Steam 账号，请选择"
+                                  PlaceholderText="选择要写入配置的账号"
+                                  DisplayMemberPath="DisplayText"
+                                  Visibility="Collapsed"
+                                  SelectionChanged="SteamAccount_SelectionChanged"/>
+                        <TextBlock x:Name="txtSteamIdStatus"
+                                   Text="可从 Steam 本地 config\loginusers.vdf 自动获取，也可手动填写。"
+                                   TextWrapping="Wrap"
                                    FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </StackPanel>

@@ -12,6 +12,7 @@ public sealed partial class SettingsPage : Page
 {
     private readonly SettingsService _settingsService = new();
     private readonly SteamService _steamService = new();
+    private readonly SteamAccountService _steamAccountService = new();
     private readonly LogService _logService = LogService.Instance;
     private AppSettings _settings = new();
 
@@ -48,6 +49,7 @@ public sealed partial class SettingsPage : Page
 
         // 若 Steam 路径与库路径为空，尝试自动检测填入
         AutoDetectGlobalPaths();
+        if (string.IsNullOrWhiteSpace(txtSteamId.Text)) DetectSteamAccounts(showError: false);
 
         tglDeveloperMode.IsOn = _settings.DeveloperMode;
         tglDebugMode.IsOn = _settings.DebugMode;
@@ -182,6 +184,7 @@ public sealed partial class SettingsPage : Page
         if (value == _settings.SteamInstallPath) return;
         _settings.SteamInstallPath = value;
         SaveSettings();
+        if (string.IsNullOrWhiteSpace(txtSteamId.Text)) DetectSteamAccounts(showError: false);
     }
 
     private void LibraryPath_LostFocus(object sender, RoutedEventArgs e)
@@ -199,7 +202,60 @@ public sealed partial class SettingsPage : Page
         var value = txtSteamId.Text.Trim();
         if (value == _settings.SteamId) return;
         _settings.SteamId = value;
+        cmbSteamAccounts.ItemsSource = null;
+        cmbSteamAccounts.Visibility = Visibility.Collapsed;
+        txtSteamIdStatus.Text = string.IsNullOrWhiteSpace(value)
+            ? "SteamID 已清空，可使用“自动检测”重新读取本地账号。"
+            : "已保存手动填写的 SteamID64。";
         SaveSettings();
+    }
+
+    private void DetectSteamId_Click(object sender, RoutedEventArgs e)
+        => DetectSteamAccounts(showError: true);
+
+    private void DetectSteamAccounts(bool showError)
+    {
+        cmbSteamAccounts.ItemsSource = null;
+        cmbSteamAccounts.SelectedItem = null;
+        cmbSteamAccounts.Visibility = Visibility.Collapsed;
+
+        var result = _steamAccountService.Discover(txtSteamPath.Text);
+        if (!result.IsSuccess)
+        {
+            txtSteamIdStatus.Text = result.Error;
+            if (showError) _logService.AddLog($"SteamID 自动检测失败：{result.Error}");
+            return;
+        }
+
+        if (result.Accounts.Count == 1)
+        {
+            ApplySteamAccount(result.Accounts[0]);
+            txtSteamIdStatus.Text = $"已从 Steam 本地配置识别账号：{result.Accounts[0].DisplayText}";
+            return;
+        }
+
+        cmbSteamAccounts.ItemsSource = result.Accounts;
+        cmbSteamAccounts.Visibility = Visibility.Visible;
+        txtSteamIdStatus.Text = $"检测到 {result.Accounts.Count} 个账号；最近登录账号排在首位，请确认要使用的账号。";
+
+        var current = result.Accounts.FirstOrDefault(account => account.SteamId == txtSteamId.Text.Trim());
+        if (current != null) cmbSteamAccounts.SelectedItem = current;
+    }
+
+    private void SteamAccount_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading || cmbSteamAccounts.SelectedItem is not SteamAccountInfo account) return;
+        ApplySteamAccount(account);
+        txtSteamIdStatus.Text = $"已选择 Steam 账号：{account.DisplayText}";
+    }
+
+    private void ApplySteamAccount(SteamAccountInfo account)
+    {
+        txtSteamId.Text = account.SteamId;
+        if (_settings.SteamId == account.SteamId) return;
+        _settings.SteamId = account.SteamId;
+        SaveSettings();
+        _logService.AddLog($"已从 Steam 本地配置获取 SteamID64：{account.SteamId}");
     }
 
     private void DetectSteamPath_Click(object sender, RoutedEventArgs e)
@@ -211,6 +267,7 @@ public sealed partial class SettingsPage : Page
             _settings.SteamInstallPath = steamPath;
             SaveSettings();
             _logService.AddLog($"已自动识别 Steam 安装路径：{steamPath}");
+            if (string.IsNullOrWhiteSpace(txtSteamId.Text)) DetectSteamAccounts(showError: false);
         }
         else
         {
@@ -247,6 +304,7 @@ public sealed partial class SettingsPage : Page
         _settings.SteamInstallPath = folder.Path;
         SaveSettings();
         _logService.AddLog($"已手动选择 Steam 安装路径：{folder.Path}");
+        if (string.IsNullOrWhiteSpace(txtSteamId.Text)) DetectSteamAccounts(showError: false);
     }
 
     private async void DetectLibraryPath_Click(object sender, RoutedEventArgs e)
