@@ -34,15 +34,19 @@
     "gameId": "wuthering-waves",
     "exeNames": ["Client-Win64-Shipping.exe", "Wuthering Waves.exe", "launcher.exe", "launcher_main.exe"],
     "folderNames": ["Wuthering Waves Game", "Wuthering Waves", "鸣潮"],
-    "matchNotes": "2026-09-27 本机安装目录核对游戏本体与启动器入口；崩溃处理、WebView、反作弊、安装和更新程序不作为匹配关键字。共享 launcher.exe 需结合游戏目录。",
+    "matchNotes": "2026-11-12 本机实机核对新版国服官方启动器：内容已从旧 launcher 命名空间迁移到 game/app 分层端点，启动器首页背景经 official channel 下发；同时核对游戏本体与启动器入口。崩溃处理、WebView、反作弊、安装和更新程序不作为匹配关键字；共享 launcher.exe 需结合游戏目录。该内部启动器端点不承诺稳定 SLA。",
+    "matchSources": ["https://prod-cn-alicdn-gamestarter.kurogame.com/launcher/game/10003_oLNgHF1CESo51DGHN2odtp40e3oI1HfZ/G152/official/index.json"],
     "providerId": "kuro",
     "newsCategoryLabels": { "资讯": "新闻" },
     "newsCategoryOrder": ["活动", "公告", "新闻"],
     "providerOptions": {
       "region": "cn",
       "appId": "10003",
-      "appKey": "Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5",
-      "gameId": "G152"
+      "appKey": "oLNgHF1CESo51DGHN2odtp40e3oI1HfZ",
+      "gameId": "G152",
+      "channel": "official",
+      "endpointLayout": "game-app-v2",
+      "contentRevision": "cn-game-app-v2-20261112"
     }
   },
   {

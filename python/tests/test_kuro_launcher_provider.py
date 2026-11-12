@@ -28,6 +28,7 @@ from home_content.providers.kuro_launcher import (
     DEFAULT_APP_KEY,
     DEFAULT_CN_APP_ID,
     DEFAULT_CN_APP_KEY,
+    DEFAULT_CN_CHANNEL,
     DEFAULT_CN_GAME_ID,
     DEFAULT_GAME_ID,
     DEFAULT_LANGUAGE,
@@ -35,7 +36,9 @@ from home_content.providers.kuro_launcher import (
     DEFAULT_LANGUAGE_OS,
     DEFAULT_REGION,
     KuroLauncherProvider,
+    LEGACY_CN_APP_KEY,
     _allowed,
+    _background_hash,
     _build_background,
     _build_banners,
     _build_news_items,
@@ -115,8 +118,9 @@ def test_default_launcher_constants() -> None:
     # audience and the only region Kuro ships zh-Hans.json on.
     assert DEFAULT_REGION == "cn"
     assert DEFAULT_CN_APP_ID == "10003"
-    assert DEFAULT_CN_APP_KEY == "Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5"
+    assert DEFAULT_CN_APP_KEY == "oLNgHF1CESo51DGHN2odtp40e3oI1HfZ"
     assert DEFAULT_CN_GAME_ID == "G152"
+    assert DEFAULT_CN_CHANNEL == "official"
     assert DEFAULT_LANGUAGE_CN == "zh-Hans"
     assert DEFAULT_LANGUAGE_OS == "en"
     # OS constants are kept around for backwards compatibility and the
@@ -316,6 +320,19 @@ def test_loads_all_cn_fixtures() -> None:
     assert len(news["guidance"]["news"]["contents"]) >= 1
 
 
+def test_loads_current_cn_launcher_background_fixtures() -> None:
+    config = _load("kuro-cn-game-index-20261111.json")
+    wallpaper = _load("kuro-cn-background-20261106.json")
+    assert _background_hash(config) == "HASH32_CN_V2"
+    assert "/game/10003/G152/official/assets/background/20261106/" in wallpaper["backgroundFile"]
+
+
+def test_background_hash_supports_legacy_and_current_config_shapes() -> None:
+    assert _background_hash({"functionCode": {"background": "legacy"}}) == "legacy"
+    assert _background_hash({"config": {"functionCode": {"background": "current"}}}) == "current"
+    assert _background_hash({"config": {}}) == ""
+
+
 def test_resolve_region_defaults_to_cn_and_falls_back_on_unknown() -> None:
     assert _resolve_region({}) == "cn"
     assert _resolve_region({"region": "CN"}) == "cn"  # case-insensitive
@@ -383,8 +400,8 @@ def test_build_news_items_cn_parses_chinese_titles_and_dates() -> None:
 
 @pytest.mark.asyncio
 async def test_fetch_cn_returns_chinese_content_for_zh_locale() -> None:
-    config = _load("kuro-cn-launcher-config.json")
-    wallpaper = _load("kuro-cn-bg-zh-Hans.json")
+    config = _load("kuro-cn-game-index-20261111.json")
+    wallpaper = _load("kuro-cn-background-20261106.json")
     news = _load("kuro-cn-info-zh-Hans.json")
 
     seen_urls: list[str] = []
@@ -418,7 +435,35 @@ async def test_fetch_cn_returns_chinese_content_for_zh_locale() -> None:
     assert any("prod-cn-alicdn-gamestarter.kurogame.com" in u for u in seen_urls)
     assert any("/zh-Hans.json" in u for u in seen_urls)
     # CN appId/appKey/gameId are in the path.
-    assert any("10003_Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5/G152" in u for u in seen_urls)
+    assert any("/game/10003_oLNgHF1CESo51DGHN2odtp40e3oI1HfZ/G152/official/index.json" in u for u in seen_urls)
+    assert any("/game/10003_oLNgHF1CESo51DGHN2odtp40e3oI1HfZ/G152/official/background/HASH32_CN_V2/" in u for u in seen_urls)
+    assert any("/app/10003_oLNgHF1CESo51DGHN2odtp40e3oI1HfZ/G152/official/information/" in u for u in seen_urls)
+
+
+@pytest.mark.asyncio
+async def test_fetch_cn_persisted_legacy_app_key_keeps_legacy_layout() -> None:
+    seen_urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_urls.append(str(request.url))
+        if request.url.path.endswith("/index.json"):
+            return httpx.Response(200, json={"functionCode": {"background": "legacy-hash"}})
+        return httpx.Response(200, json={})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider = KuroLauncherProvider(client=client)
+    try:
+        await provider.fetch(_request(locale="zh-CN", options={
+            "region": "cn",
+            "appId": "10003",
+            "appKey": LEGACY_CN_APP_KEY,
+            "gameId": "G152",
+        }))
+    finally:
+        await client.aclose()
+
+    assert any("/launcher/10003_" + LEGACY_CN_APP_KEY + "/G152/index.json" in url for url in seen_urls)
+    assert not any("/game/10003_" in url for url in seen_urls)
 
 
 @pytest.mark.asyncio

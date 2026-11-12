@@ -1,0 +1,12 @@
+{
+  "resourcePacks": {
+    "common": {
+      "version": "3.8.0"
+    }
+  },
+  "config": {
+    "functionCode": {
+      "background": "HASH32_CN_V2"
+    }
+  }
+}

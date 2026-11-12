@@ -12,12 +12,14 @@
 ## 验证
 
 - **OS / Global 采样**:2026-09-14,游戏 `G153` (Wuthering Waves Global),语言 `en.json`
-- **CN / 国服 采样**:2026-09-25,游戏 `G152` (Wuthering Waves 国服),语言 `zh-Hans.json`
+- **CN / 国服 采样**:2026-11-12,游戏 `G152` (Wuthering Waves 国服),语言 `zh-Hans.json`;已核对新版 `game` / `app` 分层端点和 `official` channel
 - **OS 脱敏样本**:
   - `contracts/samples/kuro-launcher-config.json`
   - `contracts/samples/kuro-wallpapers-slogan.json`
   - `contracts/samples/kuro-news-notices.json`
 - **CN 脱敏样本**:
+  - `contracts/samples/kuro-cn-game-index-20261111.json`
+  - `contracts/samples/kuro-cn-background-20261106.json`
   - `contracts/samples/kuro-cn-launcher-config.json`
   - `contracts/samples/kuro-cn-bg-zh-Hans.json`
   - `contracts/samples/kuro-cn-info-zh-Hans.json`
@@ -28,7 +30,7 @@
 
 | Region | CDN base | appId | appKey | gameId | 主语言 | 备用语言 |
 |---|---|---|---|---|---|---|
-| `cn` (默认) | `prod-cn-alicdn-gamestarter.kurogame.com` | `10003` | `Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5` | `G152` | `zh-Hans` | `en` |
+| `cn` (默认) | `prod-cn-alicdn-gamestarter.kurogame.com` | `10003` | `oLNgHF1CESo51DGHN2odtp40e3oI1HfZ` | `G152` | `zh-Hans` | `en` |
 | `os` | `prod-alicdn-gamestarter.kurogame.com` | `50004` | `obOHXFrFanqsaIEOmuKroCcbZkQRBC7c` | `G153` | `en` | — |
 
 `providerOptions['region']` 控制选择哪个区域;**默认 `cn`** —— 这是启动器目标受众的所在区域,
@@ -53,23 +55,25 @@
 
 ## 三层端点
 
-每个区域按顺序抓取以下三个端点:
+每个区域按顺序抓取以下三个端点。新版 CN 启动器使用
+`game` / `app` 分层路径；OS 和已持久化的旧 CN appKey 仍保留原有路径兼容。
 
 ### 1. launcher-config
 
 ```
-https://<cdn>/launcher/launcher/<appId>_<appKey>/<gameId>/index.json
+CN v2: https://<cdn>/launcher/game/<appId>_<appKey>/<gameId>/<channel>/index.json
+legacy / OS: https://<cdn>/launcher/launcher/<appId>_<appKey>/<gameId>/index.json
 ```
 
-(注意 OS / CN 两套 URL 在 `/launcher/` 前缀上完全相同,只是 CDN + 段值不同。)
-
-响应里 `functionCode.background` 是动态背景 hash,会随版本更新而变化。Provider 用它
+新版 CN 响应把动态背景 hash 放在 `config.functionCode.background`;
+旧版及 OS 仍为根级 `functionCode.background`。Provider 同时兼容两种布局,并用该 hash
 构造下一步的 wallpapers-slogan URL。
 
 ### 2. wallpapers-slogan
 
 ```
-https://<cdn>/launcher/<appId>_<appKey>/<gameId>/background/<hash>/<lang>.json
+CN v2: https://<cdn>/launcher/game/<appId>_<appKey>/<gameId>/<channel>/background/<hash>/<lang>.json
+legacy / OS: https://<cdn>/launcher/<appId>_<appKey>/<gameId>/background/<hash>/<lang>.json
 ```
 
 响应包含:
@@ -84,7 +88,8 @@ https://<cdn>/launcher/<appId>_<appKey>/<gameId>/background/<hash>/<lang>.json
 ### 3. news-notices
 
 ```
-https://<cdn>/launcher/<appId>_<appKey>/<gameId>/information/<lang>.json
+CN v2: https://<cdn>/launcher/app/<appId>_<appKey>/<gameId>/<channel>/information/<lang>.json
+legacy / OS: https://<cdn>/launcher/<appId>_<appKey>/<gameId>/information/<lang>.json
 ```
 
 响应结构:
@@ -117,7 +122,8 @@ https://<cdn>/launcher/<appId>_<appKey>/<gameId>/information/<lang>.json
 |---|---|---|
 | `DEFAULT_REGION` | `cn` | 默认区域 |
 | `DEFAULT_CN_APP_ID` | `10003` | 国服应用 ID |
-| `DEFAULT_CN_APP_KEY` | `Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5` | 国服 appKey |
+| `DEFAULT_CN_APP_KEY` | `oLNgHF1CESo51DGHN2odtp40e3oI1HfZ` | 国服 appKey |
+| `DEFAULT_CN_CHANNEL` | `official` | 国服官方渠道 |
 | `DEFAULT_CN_GAME_ID` | `G152` | Wuthering 鸣潮 (国服) |
 | `DEFAULT_LANGUAGE_CN` | `zh-Hans` | CN 主语言 |
 | `DEFAULT_APP_ID` | `50004` | OS 应用 ID(向后兼容) |
@@ -132,8 +138,10 @@ https://<cdn>/launcher/<appId>_<appKey>/<gameId>/information/<lang>.json
   "providerOptions": {
     "region": "cn",
     "appId": "10003",
-    "appKey": "Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5",
+    "appKey": "oLNgHF1CESo51DGHN2odtp40e3oI1HfZ",
     "gameId": "G152",
+    "channel": "official",
+    "endpointLayout": "game-app-v2",
     "language": "zh-Hans"
   }
 }
@@ -177,13 +185,14 @@ C# 客户端降级到上次成功缓存或静态背景。
 
 ## 测试
 
-- **Provider 单元测试**:`python/tests/test_kuro_launcher_provider.py`(28 项 pytest,0.3s)
+- **Provider 单元测试**:`python/tests/test_kuro_launcher_provider.py`(pytest)
   - 13 项原有 OS / `_allowed` / `_build_*` 覆盖
   - 5 项新增 CN 常量 + region 解析 + locale→language
   - 4 项新增 CN 内容校验(中文标题 / 时间解析 / 中文 banner 副标题 / 完整 fetch)
   - 3 项新增 fetch 边界(全部 4xx、单端点 4xx、zh-Hans→en 回落)
   - 1 项 MM-DD 时间解析
   - 2 项跨语言 fallback 校验
+  - CN v2 嵌套 hash、`game` / `app` 分层路径和旧 appKey 兼容校验
 - **HTTP 端到端**:`Tests/HomeContentE2E.Tests/`(dotnet)— 调 `/v1/home-content` 时用 `providerId=kuro-launcher`
 
 ## 已知限制
@@ -203,6 +212,6 @@ C# 客户端降级到上次成功缓存或静态背景。
 - **当前 CN 端点的 banner 图片 MD5 / jp(e)g 路径包含日期戳**(`...20260908.jpg`),
   这些都是 CDN 真实资源;Provider 不做改写也不缓存图片本体,只是把它们放进
   `HomeBanner.image_url`。媒体缓存按 AGENTS.md 规则走 URL+内容 hash 文件名。
-- **区域常量直接硬编码**:国服 / OS 的 `appId` / `appKey` / `gameId` 是从官方启动器
+- **区域常量直接硬编码**:国服 / OS 的 `appId` / `appKey` / `gameId` / `channel` 是从官方启动器
   `KRApp.conf` 解出来的常量,任何 Kuro 端改 appKey 都要求同步更新代码 + 重采样样本;
   没有运行时发现机制。

@@ -7,13 +7,17 @@ The official Kuro launcher serves a three-layer JSON pipeline under either
 ``prod-cn-alicdn-gamestarter.kurogame.com`` (Mainland China / CN). The
 Provider walks it in order:
 
-1. ``launcher-config`` (``.../launcher/<APP>_<APPKEY>/<GAME>/index.json``)
+1. ``launcher-config`` (current CN:
+   ``.../game/<APP>_<APPKEY>/<GAME>/<CHANNEL>/index.json``; legacy / OS:
+   ``.../launcher/<APP>_<APPKEY>/<GAME>/index.json``)
    — returns ``functionCode.background``, the dynamic hash that selects the
    active background JSON for the current version.
-2. ``wallpapers-slogan`` (``.../<APP>_<APPKEY>/<GAME>/background/<HASH>/<LANG>.json``)
+2. ``wallpapers-slogan`` (current CN uses the ``game`` namespace and channel;
+   legacy / OS uses the original path)
    — returns ``backgroundFile`` (MP4), ``firstFrameImage`` (WebP) and
    ``slogan`` (PNG title overlay).
-3. ``news-notices`` (``.../<APP>_<APPKEY>/<GAME>/information/<LANG>.json``)
+3. ``news-notices`` (current CN uses the ``app`` namespace and channel;
+   legacy / OS uses the original path)
    — returns ``guidance.{activity,notice,news}`` for the news list and
    ``slideshow`` for the banner carousel.
 
@@ -29,7 +33,9 @@ the region with ``providerOptions['region']`` (``'cn'`` | ``'os'``).
 This endpoint chain is shipped inside the Kuro desktop launcher and is
 not a public API. Sampled 2026-09-14 (OS, en.json) and 2026-09-25
 (CN, zh-Hans.json). URL constants were verified against the published
-``KRApp.conf`` (base64(XOR(data, 0x63))) on both launchers.
+``KRApp.conf`` (base64(XOR(data, 0x63))) on both launchers. On 2026-11-12
+the CN launcher was re-verified after it migrated from the legacy
+``launcher`` namespace to separate ``game`` / ``app`` namespaces.
 
 Fallback surface
 ----------------
@@ -77,8 +83,10 @@ DEFAULT_GAME_ID = "G153"
 # 10003_Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5/G152/index.json``.
 CDN_BASE_CN = "https://prod-cn-alicdn-gamestarter.kurogame.com/launcher"
 DEFAULT_CN_APP_ID = "10003"
-DEFAULT_CN_APP_KEY = "Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5"
+DEFAULT_CN_APP_KEY = "oLNgHF1CESo51DGHN2odtp40e3oI1HfZ"
+LEGACY_CN_APP_KEY = "Y8xXrXk65DqFHEDgApn3cpK5lfczpFx5"
 DEFAULT_CN_GAME_ID = "G152"
+DEFAULT_CN_CHANNEL = "official"
 
 # Default region: CN. The launcher's target audience is 国服 users, and
 # the CN endpoint is the only one that ships Chinese news content.
@@ -97,6 +105,8 @@ _REGION_CONSTANTS: dict[str, dict[str, str]] = {
         "app_id": DEFAULT_CN_APP_ID,
         "app_key": DEFAULT_CN_APP_KEY,
         "game_id": DEFAULT_CN_GAME_ID,
+        "endpoint_layout": "game-app-v2",
+        "channel": DEFAULT_CN_CHANNEL,
         "primary_language": DEFAULT_LANGUAGE_CN,  # "zh-Hans"
         "fallback_language": DEFAULT_LANGUAGE_OS,  # "en"
     },
@@ -105,6 +115,8 @@ _REGION_CONSTANTS: dict[str, dict[str, str]] = {
         "app_id": DEFAULT_APP_ID,
         "app_key": DEFAULT_APP_KEY,
         "game_id": DEFAULT_GAME_ID,
+        "endpoint_layout": "legacy",
+        "channel": "",
         "primary_language": DEFAULT_LANGUAGE_OS,  # "en"
         "fallback_language": DEFAULT_LANGUAGE_CN,  # "zh-Hans" (theoretically)
     },
@@ -150,6 +162,19 @@ class KuroLauncherProvider(HomeContentProvider):
         app_id = str(options.get("appId", constants["app_id"]))
         app_key = str(options.get("appKey", constants["app_key"]))
         game_id = str(options.get("gameId", constants["game_id"]))
+        endpoint_layout = str(
+            options.get("endpointLayout", constants["endpoint_layout"])
+        ).strip()
+        # Config persisted by builds before the 2026-11 CN launcher migration
+        # contains the old appKey but no layout marker. Keep that exact tuple
+        # on the legacy path instead of combining an old key with the new URL.
+        if (
+            region == "cn"
+            and "endpointLayout" not in options
+            and app_key == LEGACY_CN_APP_KEY
+        ):
+            endpoint_layout = "legacy"
+        channel = str(options.get("channel", constants["channel"])).strip()
         app_segment = f"{app_id}_{app_key}"
         cdn_base = constants["cdn_base"]
 
@@ -157,9 +182,16 @@ class KuroLauncherProvider(HomeContentProvider):
         # region's primary language for the *config* file as well, but
         # the config endpoint itself does not embed any per-language
         # payload — the path component is cosmetic.
-        config_url = f"{cdn_base}/launcher/{app_segment}/{game_id}/index.json"
+        if endpoint_layout == "game-app-v2":
+            if not channel:
+                raise ValueError("Kuro 新版端点缺少 channel。")
+            config_url = (
+                f"{cdn_base}/game/{app_segment}/{game_id}/{channel}/index.json"
+            )
+        else:
+            config_url = f"{cdn_base}/launcher/{app_segment}/{game_id}/index.json"
         config = await self._fetch_json(config_url)
-        bg_hash = str(config.get("functionCode", {}).get("background", "")).strip()
+        bg_hash = _background_hash(config)
         if not bg_hash:
             raise ValueError(
                 f"Kuro {region.upper()} 启动器配置缺少 functionCode.background。"
@@ -175,6 +207,8 @@ class KuroLauncherProvider(HomeContentProvider):
             game_id=game_id,
             bg_hash=bg_hash,
             candidates=candidates,
+            endpoint_layout=endpoint_layout,
+            channel=channel,
         )
 
         if wallpaper is None and news is None:
@@ -214,6 +248,8 @@ class KuroLauncherProvider(HomeContentProvider):
         game_id: str,
         bg_hash: str,
         candidates: list[str],
+        endpoint_layout: str,
+        channel: str,
     ) -> tuple[Optional[dict[str, Any]], Optional[dict[str, Any]], str]:
         """Try each language; return first pair where at least one of
         (wallpaper, news) succeeds. Both endpoints are fetched in
@@ -221,12 +257,22 @@ class KuroLauncherProvider(HomeContentProvider):
         """
         last_err: Optional[Exception] = None
         for lang in candidates:
-            wallpaper_url = (
-                f"{cdn_base}/{app_segment}/{game_id}/background/{bg_hash}/{lang}.json"
-            )
-            news_url = (
-                f"{cdn_base}/{app_segment}/{game_id}/information/{lang}.json"
-            )
+            if endpoint_layout == "game-app-v2":
+                wallpaper_url = (
+                    f"{cdn_base}/game/{app_segment}/{game_id}/{channel}/"
+                    f"background/{bg_hash}/{lang}.json"
+                )
+                news_url = (
+                    f"{cdn_base}/app/{app_segment}/{game_id}/{channel}/"
+                    f"information/{lang}.json"
+                )
+            else:
+                wallpaper_url = (
+                    f"{cdn_base}/{app_segment}/{game_id}/background/{bg_hash}/{lang}.json"
+                )
+                news_url = (
+                    f"{cdn_base}/{app_segment}/{game_id}/information/{lang}.json"
+                )
 
             wallpaper_result, news_result = await asyncio.gather(
                 self._fetch_json(wallpaper_url),
@@ -298,6 +344,25 @@ def _language_candidates(
 
 def _format_candidates(candidates: list[str]) -> str:
     return " / ".join(repr(c) for c in candidates)
+
+
+def _background_hash(config: dict[str, Any]) -> str:
+    """Read both generations of Kuro launcher config.
+
+    Legacy configs expose ``functionCode`` at the root. The current CN game
+    index nests it under ``config`` alongside resource-pack metadata.
+    """
+    root_function_code = config.get("functionCode")
+    if isinstance(root_function_code, dict):
+        value = root_function_code.get("background")
+        if value is not None:
+            return str(value).strip()
+    nested_config = config.get("config")
+    if isinstance(nested_config, dict):
+        nested_function_code = nested_config.get("functionCode")
+        if isinstance(nested_function_code, dict):
+            return str(nested_function_code.get("background", "")).strip()
+    return ""
 
 
 # ---------------------------------------------------------------------------
