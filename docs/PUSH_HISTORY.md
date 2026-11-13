@@ -2,6 +2,18 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-11-14 00:52:45 +08:00
+
+1. 推送人员：`Violet0923`
+2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.2.4` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
+3. 推送提交：`release: 发布 v3.2.4 鸣潮一键更新修复`
+4. 实现内容：
+   1. 发布鸣潮共享运行库缺少独立 Manifest 导致一键更新误报信息不完整的修复，统一一键更新与自动获取游戏信息的 Depot 筛选规则。
+   2. 四处版本号、`version.json`、`CHANGELOG.md` 和用户审核后的 Release 正文同步为 `3.2.4`，tag 使用 `v3.2.4`。
+   3. 官网版本配置、下载直链、首页兜底地址和发布日期同步为 v3.2.4。
+5. 验证结果：按用户要求跳过本次测试阶段，未重新执行测试用例；Release x64 自包含构建、Kachina 完整在线更新包和 Inno 安装包生成成功，版本一致性与提交差异检查通过。安装包 145212464 字节、SHA-256 `288a1e78265e64ce6713a9bd64617d1861589e4aa8810cc8d452ab4a3bd5886a`；更新包 189495218 字节、SHA-256 `2f77ffad492a54763db127b04d61a70b9798c019d58e24259429a77c5c7e7370`。
+6. 当前限制：本次不附带可选二进制差分；Kachina 更新器经 SHA-256、大小和内容标识比对与上一版完全相同，复用其已发布压缩资源。未进行真实 Steam 配置覆盖与移动网络下载验证；构建产生 2 个 `NU1900` 警告，应用与安装包尚未商业代码签名。
+
 ## 2026-11-14 00:28:11 +08:00
 
 1. 推送人员：`Violet0923`
@@ -49,15 +61,3 @@
    3. 保持软件版本 `3.2.2` 和正式 tag `v3.2.2` 不变，在 Release“修复与优化”中追加本次 Info 文案更新说明。
 5. 验证结果：Debug x64 主程序构建成功，0 错误（NuGet 漏洞数据源不可访问产生 2 个 `NU1900` 警告）；按用户要求跳过额外测试。Release x64 自包含构建、基于原 v3.2.2 publish 的 Kachina 差分及 Inno 安装包生成成功。安装包 145233200 字节、SHA-256 `e82fad699f11ee7b1b8e76eb02cf4097f4a900adbc696110690650ea18040128`；更新包 189541357 字节、SHA-256 `2366277931c79d9673d45b48a9595aa0454453d7c567be0bef4f305e15bd3b7d`。
 6. 当前限制：版本号保持不变，因此已经安装 `3.2.2` 的客户端不会将本次覆盖识别为新版本；本次附件主要供后续新下载使用。应用与安装包尚未商业代码签名。
-
-## 2026-11-03 16:42:38 +08:00
-
-1. 推送人员：`Violet0923`
-2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.2.2` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
-3. 推送提交：`release: 发布 v3.2.2 SteamID 自动检测`
-4. 实现内容：
-   1. 设置页新增 SteamID64 本地自动检测，读取 Steam `config/loginusers.vdf`；单账号自动填写保存，多账号按最近登录优先展示并要求用户确认。
-   2. 账号候选展示昵称、SteamID64 和最近登录标记，保留手动填写；兼容默认路径、自定义 Steam 目录和 `steam.exe` 完整路径，并为缺失、未登录、不可读或无有效账号提供明确提示。
-   3. 四处版本号、`version.json`、`CHANGELOG.md` 与正式 Release 正文同步升级为 `3.2.2`，tag 使用不带额外后缀的 `v3.2.2`。
-5. 验证结果：Debug x64 主程序构建成功，0 警告、0 错误；SteamAccount 5 项、CustomNavigation 70 项、SteamAppInfo 47 项、ManifestUpdate 41 项及 UpdateService 32 项测试通过；Release x64 自包含构建、基于 v3.2.1 publish 的 Kachina 差分及 Inno 安装包生成成功。安装包 145202260 字节、SHA-256 `fce3f2abbda65f86bd267b29c005ddcc1cb06d6911117b03bb045beff0b95d9e`；更新包 189705616 字节、SHA-256 `60d1bbeea1f9dd9541909a6236d606285c984df3fe4e13eb00006fe620917cab`。
-6. 当前限制：自动检测仅能读取 Steam 已写入 `loginusers.vdf` 的账号；多账号仍需用户确认，未记录账号须手动填写。NuGet 漏洞数据源在发布构建期间不可访问，但还原、构建和打包均成功；应用与安装包尚未商业代码签名。

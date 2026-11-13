@@ -1,8 +1,8 @@
 {
-  "version": "3.2.3",
-  "releaseDate": "2026-11-13",
-  "availableAfter": "2026-11-13T00:00:00+08:00",
-  "message": "3.2.3 更新：适配《鸣潮》国服新版官方启动器首页内容接口，修复首页动画未跟随官方更新的问题。",
+  "version": "3.2.4",
+  "releaseDate": "2026-11-14",
+  "availableAfter": "2026-11-14T00:00:00+08:00",
+  "message": "3.2.4 更新：修复《鸣潮》一键更新误报游戏信息不完整的问题，统一 Depot 筛选规则。",
   "downloadUrl": {
     "domestic": "https://cnb.cool/SteamCN-GameLauncher/SteamCN-GameLauncher/-/releases/latest",
     "global": "https://github.com/Clearlove0923/SteamCN-GameLauncher/releases/latest"
