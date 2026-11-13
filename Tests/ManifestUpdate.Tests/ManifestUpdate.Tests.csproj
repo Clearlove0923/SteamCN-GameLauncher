@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Update="Fixtures/*.acf" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../../Models/SteamDepotConfig.cs" Link="Models/SteamDepotConfig.cs" />
     <Compile Include="../../Models/SteamAppInfo.cs" Link="Models/SteamAppInfo.cs" />
     <Compile Include="../../Services/SteamAppInfoService.cs" Link="Services/SteamAppInfoService.cs" />

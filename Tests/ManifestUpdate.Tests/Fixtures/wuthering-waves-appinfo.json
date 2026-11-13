@@ -1,0 +1,20 @@
+{
+  "status": "success",
+  "data": {
+    "3513350": {
+      "appid": "3513350",
+      "common": { "name": "Wuthering Waves" },
+      "config": {
+        "installdir": "Wuthering Waves",
+        "launch": {
+          "0": { "config": { "osarch": "64", "oslist": "windows" }, "executable": "launcher.exe" }
+        }
+      },
+      "depots": {
+        "228989": { "config": { "oslist": "windows" }, "depotfromapp": "228980", "sharedinstall": "1" },
+        "3513351": { "manifests": { "public": { "gid": "8365405370030265327" } } },
+        "branches": { "public": { "buildid": "26373309" } }
+      }
+    }
+  }
+}

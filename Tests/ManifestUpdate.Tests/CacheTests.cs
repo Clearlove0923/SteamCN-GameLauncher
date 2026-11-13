@@ -29,6 +29,40 @@ internal static class CacheTests
             Depots = new[] { local!.Depots[0] with { Manifests = new Dictionary<string, string> { ["public"] = "3646058931896810596" } } }
         };
         var options = new SteamAppSelectionOptions();
+        // Reduced public SteamCMD response verified 2026-11-14: the shared runtime
+        // has no app-local manifest, but the game's public depot is usable.
+        var waves = SteamAppInfoParser.Parse(await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "wuthering-waves-appinfo.json")), "3513350");
+        var wavesAcf = "\"AppState\" { \"appid\" \"3513350\" \"buildid\" \"25950293\" \"TargetBuildID\" \"26373309\" }";
+        var wavesResolved = SteamUpdateInfoResolver.Choose(new[] { (waves, "fixture") }, wavesAcf, "3513350", options);
+        var wavesDepots = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(
+            SteamAppSelectionService.Select(wavesResolved.App, options));
+        check(wavesDepots.Candidates.Single().Depot.Id == "3513351"
+            && wavesDepots.Candidates.Single().Manifest == "8365405370030265327",
+            "Wuthering Waves resolves its game depot despite the manifest-less shared runtime");
+        var wavesContent = AcfContentBuilder.Build(new AcfParameters("3513350",
+            wavesDepots.Candidates.Select(d => new SteamDepotConfig
+                { DepotId = d.Depot.Id, ManifestId = d.Manifest }).ToArray(),
+            "steam.exe", "Wuthering Waves", "Wuthering Waves",
+            wavesResolved.App.BranchBuildIds["public"], "76561198000000000"));
+        SteamManifestUpdateGuard.Validate(wavesContent, "3513350", "26373309");
+        var installedDepots = wavesContent.Split("\"InstalledDepots\"")[1].Split("\"SharedDepots\"")[0];
+        check(installedDepots.Contains("8365405370030265327") && !installedDepots.Contains("228989")
+            && wavesContent.Contains("\"228989\"\t\t\"228980\""),
+            "Wuthering Waves ACF writes the game manifest and keeps the runtime under SharedDepots");
+        foreach (var invalidWaves in new[]
+        {
+            waves with { Depots = new[] { waves.Depots[0] } },
+            waves with { BranchBuildIds = new Dictionary<string, string> { ["public"] = "25950293" } }
+        })
+        {
+            try
+            {
+                SteamUpdateInfoResolver.Choose(new[] { (invalidWaves, "fixture") }, wavesAcf, "3513350", options);
+                throw new Exception("invalid Wuthering Waves metadata was accepted");
+            }
+            catch (SteamAppInfoException) { check(true, "Wuthering Waves still rejects missing game manifests or conflicting builds"); }
+        }
         var chosen = SteamUpdateInfoResolver.Choose(new[] { (local!, "local"), (remote, "remote") }, pending, "4706890", options);
         check(chosen.Source == "local" && chosen.App.Depots[0].Manifests["public"] == "5084594620537324499"
             && chosen.Diagnostics.Count == 1, "NTE chooses complete local snapshot and rejects stale API");

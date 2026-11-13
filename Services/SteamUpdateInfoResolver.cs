@@ -36,10 +36,12 @@ public sealed class SteamUpdateInfoResolver(ISteamAppInfoService remote)
             try
             {
                 var selection = SteamAppSelectionService.Select(candidate.App, options);
+                // Use the same install set as fetching/generating and the final automatic write.
+                // Shared runtime depots may have no manifest in this app's metadata.
+                var depotSet = SteamAppSelectionService.ChooseDepotsForAutomaticUpdate(selection);
                 if (candidate.App.AppId != appId || !ulong.TryParse(selection.BuildId, out var build) || build == 0
                     || string.IsNullOrWhiteSpace(selection.DisplayName) || string.IsNullOrWhiteSpace(selection.InstallDirectory)
-                    || selection.Executables.Count == 0 || selection.Depots.Count == 0
-                    || selection.Depots.Any(d => string.IsNullOrEmpty(d.Manifest)))
+                    || selection.Executables.Count == 0 || !depotSet.IsSuccess)
                     throw new SteamAppInfoException("缺少完整的版本、Depot 或启动信息");
                 if (acf != null) SteamManifestUpdateGuard.Validate(acf, appId, selection.BuildId);
                 valid.Add((candidate.App, candidate.Source, build));

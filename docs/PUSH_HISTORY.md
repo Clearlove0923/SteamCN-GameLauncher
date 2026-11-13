@@ -2,6 +2,18 @@
 
 本文件按时间倒序记录每次推送实现的功能。每次推送前在现有记录上方追加新条目。
 
+## 2026-11-14 00:28:11 +08:00
+
+1. 推送人员：`Violet0923`
+2. 目标分支：GitHub/CNB `master_preview`、`master`
+3. 推送提交：`fix: 修复鸣潮共享运行库导致一键更新失败`
+4. 实现内容：
+   1. 一键更新来源完整性检查复用自动获取与写入阶段的 Depot 筛选规则，避免将无独立 Manifest 的共享运行库误判为整份游戏信息不完整。
+   2. 保留可用游戏 Depot、BuildID、启动信息及现有 ACF 版本冲突校验；共享运行库继续写入 `SharedDepots`，不作为游戏 Manifest 写入 `InstalledDepots`。
+   3. 增加鸣潮公开产品信息的精简固定样本，以及共享运行库、配置生成、缺失游戏 Manifest 和版本冲突的回归检查。
+5. 验证结果：ManifestUpdate 45 项检查全部通过，覆盖鸣潮样本与异环原有版本冲突保护；x64 Debug 主程序构建成功，0 错误、2 个 `NU1900` 警告（NuGet 漏洞信息服务不可达）；提交差异检查通过。
+6. 当前限制：本次仅推送修复，不修改版本号、不创建 tag 或发布 Release，发布说明待用户审核；尚未逐款游戏实机验证，也未覆盖用户 Steam 配置进行实机测试。
+
 ## 2026-11-13 01:02:23 +08:00
 
 1. 推送人员：`Violet0923`
@@ -49,15 +61,3 @@
    3. 四处版本号、`version.json`、`CHANGELOG.md` 与正式 Release 正文同步升级为 `3.2.2`，tag 使用不带额外后缀的 `v3.2.2`。
 5. 验证结果：Debug x64 主程序构建成功，0 警告、0 错误；SteamAccount 5 项、CustomNavigation 70 项、SteamAppInfo 47 项、ManifestUpdate 41 项及 UpdateService 32 项测试通过；Release x64 自包含构建、基于 v3.2.1 publish 的 Kachina 差分及 Inno 安装包生成成功。安装包 145202260 字节、SHA-256 `fce3f2abbda65f86bd267b29c005ddcc1cb06d6911117b03bb045beff0b95d9e`；更新包 189705616 字节、SHA-256 `60d1bbeea1f9dd9541909a6236d606285c984df3fe4e13eb00006fe620917cab`。
 6. 当前限制：自动检测仅能读取 Steam 已写入 `loginusers.vdf` 的账号；多账号仍需用户确认，未记录账号须手动填写。NuGet 漏洞数据源在发布构建期间不可访问，但还原、构建和打包均成功；应用与安装包尚未商业代码签名。
-
-## 2026-10-28 15:29:41 +08:00
-
-1. 推送人员：`Violet0923`
-2. 目标分支：GitHub/CNB `master_preview`、`master`；GitHub/CNB `v3.2.1` Release；官网 `Clearlove0923/clearlove0923.github.io` `main`
-3. 推送提交：`release: 发布 v3.2.1 Steam 信息与首页内容更新`
-4. 实现内容：
-   1. 发布 SteamKit 匿名直连、Steam 本机缓存与备用接口的完整版本信息选择，避免旧 BuildID/Manifest 覆盖配置；按用户反馈移除 Steam 运行时的一键更新拦截。
-   2. 新增《洛克王国：世界》首页的腾讯启动器本地背景、资讯、轮播与官网回退；修复首页 Worker 启动时序和加载提示。
-   3. ACF 备份期限从 30 天延长到 60 天，更新时自动清理过期备份；四处版本号、CHANGELOG、Release 正文及官网下载信息同步为 v3.2.1。
-5. 验证结果：Debug x64 构建成功，0 警告、0 错误；C# 测试 SteamAppInfo 47 项、ManifestUpdate 41 项、CustomNavigation 70 项通过；Python 31 项与 35 个子测试通过；Release x64 自包含构建、基于 v3.2.0 publish 的 Kachina 差分及 Inno 安装包生成成功。安装包 145219920 字节、SHA-256 96611dca3801f9b94e137a16dcf954f8265ebac66158db9053cebc90d6424d5b；更新包 189748807 字节、SHA-256 61103a6de2aa35e7ee6c322efccbae325d43f0636759683b41ad6eb00e000e50。
-6. 当前限制：Steam 直连依赖网络与公开信息范围，备用接口和本机缓存可能滞后；腾讯内部内容接口不承诺稳定 SLA；尚未重新完成真实游戏 UI 与移动网络下官网完整下载回归。应用与安装包未商业代码签名。
